@@ -1,0 +1,6 @@
+- Login to your account -> done
+- upvote
+- share
+- open post
+- open subreddit
+- settings
