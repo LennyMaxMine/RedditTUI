@@ -2,6 +2,7 @@ import click
 import requests
 import praw
 import qrcode
+from datetime import datetime
 
 REDDIT_URL = "https://www.reddit.com/.json"
 
@@ -14,7 +15,7 @@ available_commands = [
 
 reddit_instance = None
 
-@click.group(invoke_without_command=True)
+@click.group(invoke_without_command=True) 
 @click.pass_context
 def reddit_cli(ctx):
     if not ctx.invoked_subcommand:
@@ -38,21 +39,43 @@ def help():
 @reddit_cli.command()
 @click.option('--limit', default=5, help='Number of posts to display')
 def showmainpage(limit):
+    global reddit_instance
     headers = {'User-Agent': 'RedditCLI/0.1'}
+
     try:
-        response = requests.get(REDDIT_URL, headers=headers)
-        response.raise_for_status()
-        data = response.json()
-        posts = data['data']['children'][:limit]
+        if reddit_instance:
+            # Use the logged-in account to fetch posts
+            posts = reddit_instance.front.hot(limit=limit)
+            click.echo(f"\nTop {limit} posts from Reddit's front page (using logged-in account):\n")
+            for idx, post in enumerate(posts, start=1):
+                title = post.title
+                subreddit = post.subreddit
+                score = post.score
+                url = post.url
+                author = post.author_fullname
+                created_date = datetime.utcfromtimestamp(post.created_utc).strftime('%Y-%m-%d %H:%M:%S')
+                click.echo("=" * 80)
+                click.echo(f"Subreddit: r/{subreddit.display_name} | Author: u/{author} | Posted: {created_date}")
+                click.echo(f"Title: {title}")
+                click.echo(f"Score: {score} | Comments: {post.num_comments} | Upvote Ratio: {post.upvote_ratio:.2f}")
+                click.echo(f"URL: {url}")
+                click.echo("=" * 80)
+                click.echo("")
+        else:
+            # Fallback to public API if not logged in
+            response = requests.get(REDDIT_URL, headers=headers)
+            response.raise_for_stattype
+            data = response.json()
+            posts = data['data']['children'][:limit]
 
-        click.echo(f"\nTop {limit} posts from Reddit's front page:\n")
-        for idx, post in enumerate(posts, start=1):
-            title = post['data']['title']
-            score = post['data']['score']
-            url = post['data']['url']
-            click.echo(f"{idx}. {title} (Score: {score})\n   {url}\n")
+            click.echo(f"\nTop {limit} posts from Reddit's front page (using public API):\n")
+            for idx, post in enumerate(posts, start=1):
+                title = post['data']['title']
+                score = post['data']['score']
+                url = post['data']['url']
+                click.echo(f"{idx}. {title} (Score: {score})\n   {url}\n")
 
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         click.echo(f"Error fetching data: {e}")
 
 @reddit_cli.command()
