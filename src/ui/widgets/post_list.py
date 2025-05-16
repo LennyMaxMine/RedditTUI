@@ -43,3 +43,15 @@ class PostList:
         self.posts = new_posts
         self.selected_index = 0
         self.scroll_offset = 0
+
+    def scroll_up(self):
+        if self.selected_index > 0:
+            self.selected_index -= 1
+            if self.selected_index < self.scroll_offset:
+                self.scroll_offset = self.selected_index
+
+    def scroll_down(self):
+        if self.selected_index < len(self.posts) - 1:
+            self.selected_index += 1
+            if self.selected_index >= self.scroll_offset + self.visible_posts:
+                self.scroll_offset = self.selected_index - self.visible_posts + 1

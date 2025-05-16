@@ -5,30 +5,46 @@ from textual.containers import Container, Horizontal
 from textual.reactive import Reactive
 from textual import events
 from blessed import Terminal
+import textwrap
 
 class PostView:
     def __init__(self, terminal):
         self.terminal = terminal
         self.current_post = None
+        self.content_width = 35
 
     def display(self):
         if not self.current_post:
             return ""
         
-        width = self.terminal.width
-        
+        width = self.content_width
         output = []
         output.append("=" * width)
-        output.append(f"Title: {self.current_post.title}")
-        output.append(f"Subreddit: r/{self.current_post.subreddit.display_name}")
-        output.append(f"Author: u/{self.current_post.author}")
-        output.append(f"Score: {self.current_post.score}")
-        output.append(f"Comments: {self.current_post.num_comments}")
+        output.append("Post Details".center(width))
+        output.append("=" * width)
+        
+        title = textwrap.fill(f"Title: {self.current_post.title}", width=width-2)
+        output.append(title)
+        output.append("-" * width)
+        
+        subreddit = f"Subreddit: r/{self.current_post.subreddit.display_name}"
+        output.append(subreddit[:width-1])
+        
+        author = f"Author: u/{self.current_post.author}"
+        output.append(author[:width-1])
+        
+        score = f"Score: {self.current_post.score}"
+        output.append(score)
+        
+        comments = f"Comments: {self.current_post.num_comments}"
+        output.append(comments)
+        
         output.append("=" * width)
         
         if hasattr(self.current_post, 'selftext') and self.current_post.selftext:
-            output.append("\nContent:")
-            output.append(self.current_post.selftext)
+            output.append("Content:")
+            content = textwrap.fill(self.current_post.selftext, width=width-2)
+            output.append(content)
         
         return "\n".join(output)
 
