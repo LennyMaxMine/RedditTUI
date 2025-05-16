@@ -9,11 +9,13 @@ REDDIT_URL = "https://www.reddit.com/.json"
 available_commands = [
     "showmainpage",
     "help",
+    "viewpost",
     "exit",
     "login"
 ]
 
 reddit_instance = None
+fetched_posts = []
 
 @click.group(invoke_without_command=True) 
 @click.pass_context
@@ -32,14 +34,16 @@ def reddit_cli(ctx):
 @reddit_cli.command()
 def help():
     click.echo("Available commands:")
-    click.echo("1. showmainpage - Show the main page of Reddit")
-    click.echo("2. login - Login to your Reddit account")
-    click.echo("3. exit - Exit the application")
+    click.echo("showmainpage - Show the main page of Reddit")
+    click.echo("help - Show the current page")
+    click.echo("viewpost - In work")
+    click.echo("login - Login to your Reddit account")
+    click.echo("exit - Exit the application")
 
 @reddit_cli.command()
 @click.option('--limit', default=5, help='Number of posts to display')
 def showmainpage(limit):
-    global reddit_instance
+    global reddit_instance, fetched_posts
     headers = {'User-Agent': 'RedditCLI/0.1'}
 
     try:
@@ -48,6 +52,7 @@ def showmainpage(limit):
             posts = reddit_instance.front.hot(limit=limit)
             click.echo(f"\nTop {limit} posts from Reddit's front page (using logged-in account):\n")
             for idx, post in enumerate(posts, start=1):
+                #fetched_posts.append(post['data'])
                 title = post.title
                 subreddit = post.subreddit
                 score = post.score
@@ -55,28 +60,67 @@ def showmainpage(limit):
                 author = post.author_fullname
                 created_date = datetime.utcfromtimestamp(post.created_utc).strftime('%Y-%m-%d %H:%M:%S')
                 click.echo("=" * 80)
+                click.echo(f"Post Number: {idx}")
                 click.echo(f"Subreddit: r/{subreddit.display_name} | Author: u/{author} | Posted: {created_date}")
                 click.echo(f"Title: {title}")
                 click.echo(f"Score: {score} | Comments: {post.num_comments} | Upvote Ratio: {post.upvote_ratio:.2f}")
-                click.echo(f"URL: {url}")
+                #click.echo(f"URL: {url}")
                 click.echo("=" * 80)
                 click.echo("")
         else:
             # Fallback to public API if not logged in
             response = requests.get(REDDIT_URL, headers=headers)
-            response.raise_for_stattype
+            response.raise_for_stat()
             data = response.json()
             posts = data['data']['children'][:limit]
+            #fetched_posts.append(post['data'])
 
             click.echo(f"\nTop {limit} posts from Reddit's front page (using public API):\n")
             for idx, post in enumerate(posts, start=1):
                 title = post['data']['title']
                 score = post['data']['score']
                 url = post['data']['url']
-                click.echo(f"{idx}. {title} (Score: {score})\n   {url}\n")
+                click.echo(f"{idx}. {title} (Score: {score})\n")
 
     except Exception as e:
         click.echo(f"Error fetching data: {e}")
+
+
+@reddit_cli.command()
+@click.argument('number', type=int)
+def viewpost(number):
+    global fetched_posts
+    if number < 1 or number > len(fetched_posts):
+        click.echo("Invalid post number. Please choose a valid number from the list.")
+        return
+
+    try:
+        post = fetched_posts[number - 1]
+        if reddit_instance:
+            # Display post details for logged-in account
+            click.echo("=" * 80)
+            click.echo(f"Title: {post.title}")
+            click.echo(f"Subreddit: r/{post.subreddit.display_name}")
+            click.echo(f"Author: u/{post.author_fullname}")
+            click.echo(f"Score: {post.score}")
+            click.echo(f"Comments: {post.num_comments}")
+            click.echo(f"Upvote Ratio: {post.upvote_ratio:.2f}")
+            click.echo(f"URL: {post.url}")
+            click.echo("=" * 80)
+        else:
+            # Display post details for public API
+            click.echo("=" * 80)
+            click.echo(f"Title: {post['title']}")
+            click.echo(f"Subreddit: r/{post['subreddit']}")
+            click.echo(f"Author: u/{post['author']}")
+            click.echo(f"Score: {post['score']}")
+            click.echo(f"Comments: {post['num_comments']}")
+            click.echo(f"URL: {post['url']}")
+            click.echo("=" * 80)
+
+    except Exception as e:
+        click.echo(f"Error displaying post: {e}")
+
 
 @reddit_cli.command()
 @click.option('--client-id', prompt=True, help='Your Reddit app client ID')
