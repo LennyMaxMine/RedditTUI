@@ -12,7 +12,7 @@ Coming soon!
 
 1. Clone the repository:
    ```
-   git clone [<repository-url>](https://github.com/LennyMaxMine/RedditTUI)
+   git clone https://github.com/LennyMaxMine/RedditTUI
    cd reddittui
    ```
 
