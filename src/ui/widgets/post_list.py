@@ -18,16 +18,16 @@ class PostList:
         output = []
         
         # Header
-        output.append("=" * width)
-        output.append("Reddit Posts".center(width))
-        output.append("=" * width)
+        output.append(self.terminal.blue("=" * width))
+        output.append(self.terminal.blue("Reddit Posts".center(width)))
+        output.append(self.terminal.blue("=" * width))
         
         start_idx = self.scroll_offset
         end_idx = min(start_idx + self.visible_posts, len(self.posts))
         
         for idx, post in enumerate(self.posts[start_idx:end_idx], start=start_idx + 1):
             if idx - 1 == self.selected_index:
-                prefix = "> "
+                prefix = self.terminal.green("> ")
             else:
                 prefix = "  "
             
@@ -35,19 +35,19 @@ class PostList:
             title = post.title
             if len(title) > width - 4:
                 title = title[:width-7] + "..."
-            output.append(f"{prefix}{title}")
+            output.append(f"{prefix}{self.terminal.bold_white(title)}")
             
             # Metadata line
             metadata = []
-            metadata.append(f"r/{post.subreddit.display_name}")
-            metadata.append(f"u/{post.author}")
-            metadata.append(f"↑{post.score}")
-            metadata.append(f"💬{post.num_comments}")
+            metadata.append(self.terminal.cyan(f"r/{post.subreddit.display_name}"))
+            metadata.append(self.terminal.yellow(f"u/{post.author}"))
+            metadata.append(self.terminal.green(f"↑{post.score}"))
+            metadata.append(self.terminal.magenta(f"💬{post.num_comments}"))
             
             if hasattr(post, 'over_18') and post.over_18:
-                metadata.append("NSFW")
+                metadata.append(self.terminal.red("NSFW"))
             if hasattr(post, 'stickied') and post.stickied:
-                metadata.append("📌")
+                metadata.append(self.terminal.yellow("📌"))
             
             # Format metadata with proper spacing
             metadata_line = "    " + " | ".join(metadata)
@@ -67,13 +67,13 @@ class PostList:
                         first_line = wrapped_desc[0]
                         if len(first_line) > width - 6:
                             first_line = first_line[:width-9] + "..."
-                        output.append(f"    {first_line}")
+                        output.append(f"    {self.terminal.dim(first_line)}")
                 except Exception:
                     # If anything goes wrong with the description, skip it
                     pass
             
             # Add a separator line between posts
-            output.append("  " + "-" * (width - 2))
+            output.append("  " + self.terminal.blue("-" * (width - 2)))
         
         return "\n".join(output)
 

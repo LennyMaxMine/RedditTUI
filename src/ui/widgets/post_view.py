@@ -21,42 +21,54 @@ class PostView:
         output = []
         
         # Title section
-        output.append("=" * width)
-        output.append(f"{self.current_post.title}".center(width))
-        output.append("=" * width)
+        output.append(self.terminal.blue("=" * width))
+        output.append(self.terminal.bold_white(f"{self.current_post.title}".center(width)))
+        output.append(self.terminal.blue("=" * width))
         
         # Metadata section
         metadata = []
-        metadata.append(f"Subreddit: r/{self.current_post.subreddit.display_name}")
-        metadata.append(f"Author: u/{self.current_post.author}")
-        metadata.append(f"Score: {self.current_post.score}")
-        metadata.append(f"Comments: {self.current_post.num_comments}")
+        metadata.append(self.terminal.cyan(f"Subreddit: r/{self.current_post.subreddit.display_name}"))
+        metadata.append(self.terminal.yellow(f"Author: u/{self.current_post.author}"))
+        metadata.append(self.terminal.green(f"Score: {self.current_post.score}"))
+        metadata.append(self.terminal.magenta(f"Comments: {self.current_post.num_comments}"))
         
         if hasattr(self.current_post, 'created_utc'):
             import datetime
             dt = datetime.datetime.utcfromtimestamp(self.current_post.created_utc)
-            metadata.append(f"Posted: {dt.strftime('%Y-%m-%d %H:%M UTC')}")
+            metadata.append(self.terminal.blue(f"Posted: {dt.strftime('%Y-%m-%d %H:%M UTC')}"))
         
         if hasattr(self.current_post, 'url'):
-            metadata.append(f"URL: {self.current_post.url}")
+            metadata.append(self.terminal.cyan(f"URL: {self.current_post.url}"))
             
         if hasattr(self.current_post, 'is_self'):
-            metadata.append(f"Type: {'Self Post' if self.current_post.is_self else 'Link Post'}")
+            metadata.append(self.terminal.yellow(f"Type: {'Self Post' if self.current_post.is_self else 'Link Post'}"))
             
         if hasattr(self.current_post, 'upvote_ratio'):
-            metadata.append(f"Upvote Ratio: {self.current_post.upvote_ratio:.1%}")
+            metadata.append(self.terminal.green(f"Upvote Ratio: {self.current_post.upvote_ratio:.1%}"))
             
         if hasattr(self.current_post, 'over_18'):
-            metadata.append(f"NSFW: {'Yes' if self.current_post.over_18 else 'No'}")
+            if self.current_post.over_18:
+                metadata.append(self.terminal.red("NSFW: Yes"))
+            else:
+                metadata.append(self.terminal.green("NSFW: No"))
             
         if hasattr(self.current_post, 'spoiler'):
-            metadata.append(f"Spoiler: {'Yes' if self.current_post.spoiler else 'No'}")
+            if self.current_post.spoiler:
+                metadata.append(self.terminal.yellow("Spoiler: Yes"))
+            else:
+                metadata.append(self.terminal.green("Spoiler: No"))
             
         if hasattr(self.current_post, 'locked'):
-            metadata.append(f"Locked: {'Yes' if self.current_post.locked else 'No'}")
+            if self.current_post.locked:
+                metadata.append(self.terminal.red("Locked: Yes"))
+            else:
+                metadata.append(self.terminal.green("Locked: No"))
             
         if hasattr(self.current_post, 'stickied'):
-            metadata.append(f"Stickied: {'Yes' if self.current_post.stickied else 'No'}")
+            if self.current_post.stickied:
+                metadata.append(self.terminal.yellow("Stickied: Yes"))
+            else:
+                metadata.append(self.terminal.green("Stickied: No"))
         
         # Format metadata in two columns
         metadata_lines = []
@@ -67,23 +79,23 @@ class PostView:
             metadata_lines.append(line)
         
         output.extend(metadata_lines)
-        output.append("-" * width)
+        output.append(self.terminal.blue("-" * width))
         
         # Content section
         if hasattr(self.current_post, 'selftext') and self.current_post.selftext:
-            output.append("Content:")
+            output.append(self.terminal.bold_white("Content:"))
             content = textwrap.fill(self.current_post.selftext, width=width-2)
-            output.append(content)
+            output.append(self.terminal.white(content))
         elif hasattr(self.current_post, 'url'):
-            output.append("Link Post:")
-            output.append(f"URL: {self.current_post.url}")
+            output.append(self.terminal.bold_white("Link Post:"))
+            output.append(self.terminal.cyan(f"URL: {self.current_post.url}"))
             if hasattr(self.current_post, 'preview') and self.current_post.preview:
-                output.append("Preview available (not shown)")
+                output.append(self.terminal.yellow("Preview available (not shown)"))
         
         # Comments section
         if self.comments:
-            output.append("=" * width)
-            output.append("Top Comments:")
+            output.append(self.terminal.blue("=" * width))
+            output.append(self.terminal.bold_white("Top Comments:"))
             for idx, comment in enumerate(self.comments[:5], 1):
                 if hasattr(comment, 'body'):
                     author = getattr(comment, 'author', '[deleted]')
@@ -94,11 +106,15 @@ class PostView:
                         dt = datetime.datetime.utcfromtimestamp(created)
                         created_str = f" | {dt.strftime('%Y-%m-%d %H:%M UTC')}"
                     
-                    output.append(f"  {idx}. u/{author} | {score} points{created_str}:")
+                    # Comment header with metadata
+                    comment_header = f"  {idx}. {self.terminal.yellow(f'u/{author}')} | {self.terminal.green(f'{score} points')}{self.terminal.blue(created_str)}:"
+                    output.append(comment_header)
+                    
+                    # Comment body
                     comment_body = textwrap.fill(comment.body, width=width-6)
                     for line in comment_body.splitlines():
-                        output.append(f"      {line}")
-                    output.append("  -" + "-" * (width-4))
+                        output.append(f"      {self.terminal.white(line)}")
+                    output.append("  " + self.terminal.blue("-" * (width-4)))
         
         return "\n".join(output)
 
