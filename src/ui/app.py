@@ -28,6 +28,9 @@ class RedditTUI:
                     self.subreddit = type('Subreddit', (), {'display_name': subreddit})
                     self.score = score
                     self.num_comments = num_comments
+                    self.author = "test_user"
+                    self.over_18 = False
+                    self.stickied = False
 
             test_posts = [
                 MockPost("Welcome to Reddit TUI", "reddit", 100, 50),
@@ -83,18 +86,25 @@ class RedditTUI:
         
         print(self.header.display())
         
+        # Calculate available height for content
+        content_height = self.term.height - 3  # Subtract header height
+        
+        # Display sidebar
         sidebar_lines = self.sidebar.display().split('\n')
         for i, line in enumerate(sidebar_lines):
             print(self.term.move(i + 3, 0) + line)
         
+        # Display main content
         if self.current_screen == 'home':
             post_list_lines = self.post_list.display().split('\n')
             for i, line in enumerate(post_list_lines):
-                print(self.term.move(i + 3, 22) + line)
+                if i < content_height:  # Ensure we don't exceed screen height
+                    print(self.term.move(i + 3, 22) + line)
         elif self.current_screen == 'post':
             post_view_lines = self.post_view.display().split('\n')
             for i, line in enumerate(post_view_lines):
-                print(self.term.move(i + 3, 22) + line)
+                if i < content_height:  # Ensure we don't exceed screen height
+                    print(self.term.move(i + 3, 22) + line)
 
     def run(self):
         print(self.term.enter_fullscreen())

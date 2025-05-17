@@ -19,33 +19,87 @@ class PostView:
             return ""
         width = self.content_width
         output = []
+        
+        # Title section
         output.append("=" * width)
         output.append(f"{self.current_post.title}".center(width))
         output.append("=" * width)
-        output.append(f"Subreddit: r/{self.current_post.subreddit.display_name}    Author: u/{self.current_post.author}    Score: {self.current_post.score}    Comments: {self.current_post.num_comments}")
+        
+        # Metadata section
+        metadata = []
+        metadata.append(f"Subreddit: r/{self.current_post.subreddit.display_name}")
+        metadata.append(f"Author: u/{self.current_post.author}")
+        metadata.append(f"Score: {self.current_post.score}")
+        metadata.append(f"Comments: {self.current_post.num_comments}")
+        
         if hasattr(self.current_post, 'created_utc'):
             import datetime
             dt = datetime.datetime.utcfromtimestamp(self.current_post.created_utc)
-            output.append(f"Posted: {dt.strftime('%Y-%m-%d %H:%M UTC')}")
+            metadata.append(f"Posted: {dt.strftime('%Y-%m-%d %H:%M UTC')}")
+        
         if hasattr(self.current_post, 'url'):
-            output.append(f"URL: {self.current_post.url}")
+            metadata.append(f"URL: {self.current_post.url}")
+            
+        if hasattr(self.current_post, 'is_self'):
+            metadata.append(f"Type: {'Self Post' if self.current_post.is_self else 'Link Post'}")
+            
+        if hasattr(self.current_post, 'upvote_ratio'):
+            metadata.append(f"Upvote Ratio: {self.current_post.upvote_ratio:.1%}")
+            
+        if hasattr(self.current_post, 'over_18'):
+            metadata.append(f"NSFW: {'Yes' if self.current_post.over_18 else 'No'}")
+            
+        if hasattr(self.current_post, 'spoiler'):
+            metadata.append(f"Spoiler: {'Yes' if self.current_post.spoiler else 'No'}")
+            
+        if hasattr(self.current_post, 'locked'):
+            metadata.append(f"Locked: {'Yes' if self.current_post.locked else 'No'}")
+            
+        if hasattr(self.current_post, 'stickied'):
+            metadata.append(f"Stickied: {'Yes' if self.current_post.stickied else 'No'}")
+        
+        # Format metadata in two columns
+        metadata_lines = []
+        for i in range(0, len(metadata), 2):
+            line = metadata[i]
+            if i + 1 < len(metadata):
+                line = line.ljust(width // 2) + metadata[i + 1]
+            metadata_lines.append(line)
+        
+        output.extend(metadata_lines)
         output.append("-" * width)
+        
+        # Content section
         if hasattr(self.current_post, 'selftext') and self.current_post.selftext:
             output.append("Content:")
             content = textwrap.fill(self.current_post.selftext, width=width-2)
             output.append(content)
-        output.append("=" * width)
+        elif hasattr(self.current_post, 'url'):
+            output.append("Link Post:")
+            output.append(f"URL: {self.current_post.url}")
+            if hasattr(self.current_post, 'preview') and self.current_post.preview:
+                output.append("Preview available (not shown)")
+        
+        # Comments section
         if self.comments:
+            output.append("=" * width)
             output.append("Top Comments:")
             for idx, comment in enumerate(self.comments[:5], 1):
                 if hasattr(comment, 'body'):
                     author = getattr(comment, 'author', '[deleted]')
                     score = getattr(comment, 'score', 0)
-                    output.append(f"  {idx}. u/{author} | {score} points:")
+                    created = getattr(comment, 'created_utc', None)
+                    created_str = ""
+                    if created:
+                        dt = datetime.datetime.utcfromtimestamp(created)
+                        created_str = f" | {dt.strftime('%Y-%m-%d %H:%M UTC')}"
+                    
+                    output.append(f"  {idx}. u/{author} | {score} points{created_str}:")
                     comment_body = textwrap.fill(comment.body, width=width-6)
                     for line in comment_body.splitlines():
                         output.append(f"      {line}")
                     output.append("  -" + "-" * (width-4))
+        
         return "\n".join(output)
 
     def display_post(self, post, comments=None):
@@ -64,7 +118,7 @@ class PostList:
         if not self.posts:
             return "No posts available"
         
-        width = self.terminal.width
+        width = self.terminal.width - 22  # Account for sidebar
         output = []
         output.append("=" * width)
         output.append("Reddit Posts".center(width))
@@ -79,10 +133,42 @@ class PostList:
             else:
                 prefix = "  "
             
-            post_line = f"{prefix}{idx}. {post.title}"
-            if len(post_line) > width - 4:
-                post_line = post_line[:width-7] + "..."
-            output.append(post_line)
+            # Format post number and title
+            post_num = f"{idx}."
+            title = post.title
+            if len(title) > width - 40:  # Leave space for metadata
+                title = title[:width-43] + "..."
+            
+            # Get post metadata
+            subreddit = f"r/{post.subreddit.display_name}"
+            author = f"u/{post.author}"
+            score = f"↑{post.score}"
+            comments = f"💬{post.num_comments}"
+            
+            # Format the post line with metadata
+            post_line = f"{prefix}{post_num} {title}"
+            metadata = f" | {subreddit} | {author} | {score} | {comments}"
+            
+            # Add NSFW tag if applicable
+            if hasattr(post, 'over_18') and post.over_18:
+                metadata += " | NSFW"
+            
+            # Add stickied tag if applicable
+            if hasattr(post, 'stickied') and post.stickied:
+                metadata += " | 📌"
+            
+            # Combine title and metadata, ensuring it fits in the width
+            full_line = post_line + metadata
+            if len(full_line) > width - 2:
+                # Truncate the title to make room for metadata
+                available_space = width - 2 - len(metadata)
+                post_line = f"{prefix}{post_num} {title[:available_space-3]}..."
+                full_line = post_line + metadata
+            
+            output.append(full_line)
+            
+            # Add a separator line between posts
+            output.append("  " + "-" * (width - 2))
         
         return "\n".join(output)
 

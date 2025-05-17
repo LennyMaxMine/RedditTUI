@@ -1,19 +1,23 @@
 from blessed import Terminal
+import textwrap
 
 class PostList:
     def __init__(self, terminal):
         self.terminal = terminal
         self.posts = []
         self.selected_index = 0
-        self.visible_posts = 10
         self.scroll_offset = 0
+        self.visible_posts = 10
 
     def display(self):
         if not self.posts:
             return "No posts available"
         
-        width = self.terminal.width
+        # Calculate width accounting for sidebar and margins
+        width = self.terminal.width - 24  # Account for sidebar (20) and margins (4)
         output = []
+        
+        # Header
         output.append("=" * width)
         output.append("Reddit Posts".center(width))
         output.append("=" * width)
@@ -27,10 +31,49 @@ class PostList:
             else:
                 prefix = "  "
             
-            post_line = f"{prefix}{idx}. {post.title}"
-            if len(post_line) > width - 4:
-                post_line = post_line[:width-7] + "..."
-            output.append(post_line)
+            # Title line
+            title = post.title
+            if len(title) > width - 4:
+                title = title[:width-7] + "..."
+            output.append(f"{prefix}{title}")
+            
+            # Metadata line
+            metadata = []
+            metadata.append(f"r/{post.subreddit.display_name}")
+            metadata.append(f"u/{post.author}")
+            metadata.append(f"↑{post.score}")
+            metadata.append(f"💬{post.num_comments}")
+            
+            if hasattr(post, 'over_18') and post.over_18:
+                metadata.append("NSFW")
+            if hasattr(post, 'stickied') and post.stickied:
+                metadata.append("📌")
+            
+            # Format metadata with proper spacing
+            metadata_line = "    " + " | ".join(metadata)
+            output.append(metadata_line)
+            
+            # Description line (if available)
+            if hasattr(post, 'selftext') and post.selftext:
+                try:
+                    # Clean and wrap the description
+                    desc = post.selftext.replace('\n', ' ').strip()
+                    # Remove any control characters
+                    desc = ''.join(char for char in desc if ord(char) >= 32 or char == '\n')
+                    # Wrap the text
+                    wrapped_desc = textwrap.wrap(desc, width=width-6)
+                    # Take only the first line if it's too long
+                    if wrapped_desc:
+                        first_line = wrapped_desc[0]
+                        if len(first_line) > width - 6:
+                            first_line = first_line[:width-9] + "..."
+                        output.append(f"    {first_line}")
+                except Exception:
+                    # If anything goes wrong with the description, skip it
+                    pass
+            
+            # Add a separator line between posts
+            output.append("  " + "-" * (width - 2))
         
         return "\n".join(output)
 
