@@ -11,45 +11,46 @@ class PostView:
     def __init__(self, terminal):
         self.terminal = terminal
         self.current_post = None
-        self.content_width = 35
+        self.comments = []
+        self.content_width = max(35, self.terminal.width - 24)  # Use more space
 
     def display(self):
         if not self.current_post:
             return ""
-        
         width = self.content_width
         output = []
         output.append("=" * width)
-        output.append("Post Details".center(width))
+        output.append(f"{self.current_post.title}".center(width))
         output.append("=" * width)
-        
-        title = textwrap.fill(f"Title: {self.current_post.title}", width=width-2)
-        output.append(title)
+        output.append(f"Subreddit: r/{self.current_post.subreddit.display_name}    Author: u/{self.current_post.author}    Score: {self.current_post.score}    Comments: {self.current_post.num_comments}")
+        if hasattr(self.current_post, 'created_utc'):
+            import datetime
+            dt = datetime.datetime.utcfromtimestamp(self.current_post.created_utc)
+            output.append(f"Posted: {dt.strftime('%Y-%m-%d %H:%M UTC')}")
+        if hasattr(self.current_post, 'url'):
+            output.append(f"URL: {self.current_post.url}")
         output.append("-" * width)
-        
-        subreddit = f"Subreddit: r/{self.current_post.subreddit.display_name}"
-        output.append(subreddit[:width-1])
-        
-        author = f"Author: u/{self.current_post.author}"
-        output.append(author[:width-1])
-        
-        score = f"Score: {self.current_post.score}"
-        output.append(score)
-        
-        comments = f"Comments: {self.current_post.num_comments}"
-        output.append(comments)
-        
-        output.append("=" * width)
-        
         if hasattr(self.current_post, 'selftext') and self.current_post.selftext:
             output.append("Content:")
             content = textwrap.fill(self.current_post.selftext, width=width-2)
             output.append(content)
-        
+        output.append("=" * width)
+        if self.comments:
+            output.append("Top Comments:")
+            for idx, comment in enumerate(self.comments[:5], 1):
+                if hasattr(comment, 'body'):
+                    author = getattr(comment, 'author', '[deleted]')
+                    score = getattr(comment, 'score', 0)
+                    output.append(f"  {idx}. u/{author} | {score} points:")
+                    comment_body = textwrap.fill(comment.body, width=width-6)
+                    for line in comment_body.splitlines():
+                        output.append(f"      {line}")
+                    output.append("  -" + "-" * (width-4))
         return "\n".join(output)
 
-    def display_post(self, post):
+    def display_post(self, post, comments=None):
         self.current_post = post
+        self.comments = comments or []
 
 class PostList:
     def __init__(self, terminal):

@@ -87,13 +87,14 @@ class RedditTUI:
         for i, line in enumerate(sidebar_lines):
             print(self.term.move(i + 3, 0) + line)
         
-        post_list_lines = self.post_list.display().split('\n')
-        for i, line in enumerate(post_list_lines):
-            print(self.term.move(i + 3, 22) + line)
-
-        post_view_lines = self.post_view.display().split('\n')
-        for i, line in enumerate(post_view_lines):
-            print(self.term.move(i + 3, 75) + line)
+        if self.current_screen == 'home':
+            post_list_lines = self.post_list.display().split('\n')
+            for i, line in enumerate(post_list_lines):
+                print(self.term.move(i + 3, 22) + line)
+        elif self.current_screen == 'post':
+            post_view_lines = self.post_view.display().split('\n')
+            for i, line in enumerate(post_view_lines):
+                print(self.term.move(i + 3, 22) + line)
 
     def run(self):
         print(self.term.enter_fullscreen())
@@ -106,22 +107,27 @@ class RedditTUI:
                     
                     if key.lower() == 'q':
                         break
+                    elif key == '\x1b':  # Escape key
+                        if self.current_screen == 'post':
+                            self.current_screen = 'home'
+                            self.active_component = 'post_list'
+                            continue
                     elif key == '\x1b[A':  # Up arrow
                         if self.active_component == 'sidebar':
                             self.sidebar.navigate("up")
-                        else:
+                        elif self.current_screen == 'home':
                             self.post_list.scroll_up()
                     elif key == '\x1b[B':  # Down arrow
                         if self.active_component == 'sidebar':
                             self.sidebar.navigate("down")
-                        else:
+                        elif self.current_screen == 'home':
                             self.post_list.scroll_down()
                     elif key == '\x1b[5~':  # Page Up
-                        if self.active_component == 'post_list':
+                        if self.current_screen == 'home':
                             for _ in range(5):
                                 self.post_list.scroll_up()
                     elif key == '\x1b[6~':  # Page Down
-                        if self.active_component == 'post_list':
+                        if self.current_screen == 'home':
                             for _ in range(5):
                                 self.post_list.scroll_down()
                     elif key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:
@@ -129,10 +135,19 @@ class RedditTUI:
                             selected_option = self.sidebar.get_selected_option()
                             if self.handle_sidebar_option(selected_option):
                                 break
-                        else:
+                        elif self.current_screen == 'home':
                             selected_post = self.post_list.get_selected_post()
                             if selected_post:
-                                self.post_view.display_post(selected_post)
+                                # Fetch top 5 comments if possible
+                                comments = []
+                                try:
+                                    if hasattr(selected_post, 'comments'):
+                                        selected_post.comments.replace_more(limit=0)
+                                        comments = [c for c in selected_post.comments.list()[:5] if hasattr(c, 'body')]
+                                except Exception as e:
+                                    comments = []
+                                self.post_view.display_post(selected_post, comments)
+                                self.current_screen = 'post'
         finally:
             print(self.term.exit_fullscreen())
 

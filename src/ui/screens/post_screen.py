@@ -30,14 +30,22 @@ class PostScreen:
         return sidebar_content
 
     def create_post_view(self):
+        # Create a formatted post content with proper spacing and alignment
+        post_content = f"""
+Title: {self.post['title']}
+Subreddit: r/{self.post['subreddit']}
+Author: u/{self.post['author']}
+Score: {self.post['score']}
+Comments: {self.post['num_comments']}
+
+{self.post['content']}
+"""
         post_content = Panel(
-            Text(f"Title: {self.post['title']}\n\n"
-                 f"Author: {self.post['author']}\n"
-                 f"Score: {self.post['score']}\n"
-                 f"Comments: {self.post['num_comments']}\n\n"
-                 f"{self.post['content']}", style="white"),
+            Text(post_content, style="white"),
             title="Post Details",
             box=box.SIMPLE,
+            expand=True,
+            padding=(1, 2)  # Add some padding inside the panel
         )
         return post_content
 
