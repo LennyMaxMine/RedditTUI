@@ -12,8 +12,8 @@ Coming soon!
 
 1. Clone the repository:
    ```
-   git clone <repository-url>
-   cd reddit-tui
+   git clone https://github.com/LennyMaxMine/RedditTUI
+   cd reddittui
    ```
 
 2. Install the required dependencies:
