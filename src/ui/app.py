@@ -18,7 +18,8 @@ class RedditTUI:
         self.login_screen = LoginScreen(self.reddit_instance)
         self.search_screen = SearchScreen(self.term, self.reddit_instance)
         self.reddit_instance = self.login_screen.reddit_instance
-        self.last_loaded_post = None  # Keep track of the last loaded post for pagination
+        self.search_screen.reddit_instance = self.reddit_instance
+        self.last_loaded_post = None
 
         if self.reddit_instance:
             self.header.update_title(f"Reddit TUI - Logged in as {self.reddit_instance.user.me().name}")
@@ -47,9 +48,7 @@ class RedditTUI:
 
     def handle_sidebar_option(self, option):
         print(self.term.move(self.term.height - 4, 0) + f"Handling option: {option}")
-        if option == "View Post":
-            self.active_component = 'post_list'
-        elif option == "Search":
+        if option == "Search":
             self.current_screen = 'search'
             self.search_screen.reddit_instance = self.reddit_instance
         elif option == "Login":
@@ -98,18 +97,16 @@ class RedditTUI:
                 print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error fetching posts: {e}"))
                 self.post_list.loading_more = False
 
-    def load_more_comments(self, post):
-        """Load more comments for a post"""
+    def load_post_comments(self, post):
+        """Load comments for a post efficiently"""
+        if not post or not hasattr(post, 'comments'):
+            return []
         try:
-            if hasattr(post, 'comments'):
-                # Load more comments and their replies
-                post.comments.replace_more(limit=5)  # Load 5 more levels of comments
-                new_comments = list(post.comments.list())  # Get all comments
-                self.post_view.append_comments(new_comments)
-                return True
+            post.comments.replace_more(limit=0)  # Don't load MoreComments objects initially
+            return list(post.comments.list())
         except Exception as e:
-            print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error loading more comments: {e}"))
-        return False
+            print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error loading comments: {e}"))
+            return []
 
     def render(self):
         print(self.term.clear())
@@ -117,37 +114,28 @@ class RedditTUI:
         
         print(self.header.display())
         
-        # Calculate available height for content
-        content_height = self.term.height - 3  # Subtract header height
+        content_height = self.term.height - 3
         
-        # Display sidebar
         sidebar_lines = self.sidebar.display().split('\n')
         for i, line in enumerate(sidebar_lines):
-            if i < content_height:  # Ensure sidebar doesn't exceed screen height
+            if i < content_height:
                 print(self.term.move(i + 3, 0) + line)
         
-        # Display main content
         if self.current_screen == 'home':
             post_list_lines = self.post_list.display().split('\n')
-            # Calculate how many lines we can show
             available_lines = content_height
-            # Show as many lines as we can fit
             for i, line in enumerate(post_list_lines):
                 if i < available_lines:
                     print(self.term.move(i + 3, 22) + line)
         elif self.current_screen == 'post':
             post_view_lines = self.post_view.display().split('\n')
-            # Calculate how many lines we can show
             available_lines = content_height
-            # Show as many lines as we can fit
             for i, line in enumerate(post_view_lines):
                 if i < available_lines:
                     print(self.term.move(i + 3, 22) + line)
         elif self.current_screen == 'search':
             search_lines = self.search_screen.display().split('\n')
-            # Calculate how many lines we can show
             available_lines = content_height
-            # Show as many lines as we can fit
             for i, line in enumerate(search_lines):
                 if i < available_lines:
                     print(self.term.move(i + 3, 22) + line)
@@ -161,17 +149,25 @@ class RedditTUI:
                     self.render()
                     key = self.term.inkey()
                     
-                    if key.lower() == 'q':
+                    if key.lower() == 'q':  # Quit
                         break
-                    elif key == '\x1b':  # Escape key
+                    elif key == '\x1b':  # Escape
                         if self.current_screen == 'post':
-                            self.current_screen = 'home'
-                            self.active_component = 'post_list'
+                            if self.post_view.from_search:
+                                self.current_screen = 'search'
+                                self.post_view.from_search = False
+                            else:
+                                self.current_screen = 'home'
+                                self.active_component = 'post_list'
+                            self.post_view.current_post = None
+                            self.post_view.comments = []
                         elif self.current_screen == 'search':
                             self.current_screen = 'home'
                             self.active_component = 'sidebar'
+                        elif self.current_screen == 'home' and self.active_component == 'post_list':
+                            self.active_component = 'sidebar'
                         continue
-                    elif key == '\x1b[A':  # Up arrow
+                    elif key == '\x1b[A':  # Up Arrow
                         if self.active_component == 'sidebar':
                             self.sidebar.navigate("up")
                         elif self.current_screen == 'home':
@@ -180,56 +176,71 @@ class RedditTUI:
                             self.post_view.scroll_comments_up()
                         elif self.current_screen == 'search':
                             self.search_screen.scroll_up()
-                    elif key == '\x1b[B':  # Down arrow
+                    elif key == '\x1b[B':  # Down Arrow
                         if self.active_component == 'sidebar':
                             self.sidebar.navigate("down")
                         elif self.current_screen == 'home':
-                            if self.post_list.scroll_down():  # If we need to load more posts
+                            if self.post_list.scroll_down():
                                 self.update_posts_from_reddit(load_more=True)
                         elif self.current_screen == 'post':
-                            if self.post_view.scroll_comments_down():  # If we need to load more comments
+                            if self.post_view.scroll_comments_down():
                                 if self.post_view.need_more_comments:
                                     self.load_more_comments(self.post_view.current_post)
                         elif self.current_screen == 'search':
                             self.search_screen.scroll_down()
-                    elif key == '\t':  # Tab key
+                    elif key == '\x1b[C':  # Right Arrow
+                        if self.current_screen == 'home' and self.active_component == 'sidebar':
+                            self.active_component = 'post_list'
+                        elif self.current_screen == 'home' and self.active_component == 'post_list':
+                            selected_post = self.post_list.get_selected_post()
+                            if selected_post:
+                                comments = self.load_post_comments(selected_post)
+                                self.post_view.display_post(selected_post, comments)
+                                self.post_view.from_search = False
+                                self.current_screen = 'post'
+                        elif self.current_screen == 'search':
+                            selected_post = self.search_screen.get_selected_post()
+                            if selected_post:
+                                comments = self.load_post_comments(selected_post)
+                                self.post_view.display_post(selected_post, comments)
+                                self.post_view.from_search = True
+                                self.current_screen = 'post'
+                    elif key == '\x1b[D':  # Left Arrow
+                        if self.current_screen == 'post':
+                            self.current_screen = 'home'
+                            self.active_component = 'post_list'
+                            self.post_view.current_post = None
+                            self.post_view.comments = []
+                        elif self.current_screen == 'home' and self.active_component == 'post_list':
+                            self.active_component = 'sidebar'
+                    elif key == '\t':  # Tab
                         if self.current_screen == 'search':
                             self.search_screen.next_search_type()
                     elif key == '\x7f':  # Backspace
                         if self.current_screen == 'search':
                             self.search_screen.backspace()
-                    elif key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter key
+                    elif key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter
                         if self.active_component == 'sidebar':
                             selected_option = self.sidebar.get_selected_option()
                             if self.handle_sidebar_option(selected_option):
                                 break
-                        elif self.current_screen == 'home':
+                            else:
+                                self.active_component = 'post_list'
+                        elif self.current_screen == 'home' and self.active_component == 'post_list':
                             selected_post = self.post_list.get_selected_post()
                             if selected_post:
-                                # Fetch comments with replies
-                                comments = []
-                                try:
-                                    if hasattr(selected_post, 'comments'):
-                                        selected_post.comments.replace_more(limit=5)  # Load more comments
-                                        comments = list(selected_post.comments.list())  # Get all comments
-                                except Exception as e:
-                                    comments = []
+                                comments = self.load_post_comments(selected_post)
                                 self.post_view.display_post(selected_post, comments)
+                                self.post_view.from_search = False
                                 self.current_screen = 'post'
                         elif self.current_screen == 'search':
                             selected_post = self.search_screen.get_selected_post()
                             if selected_post:
-                                # Fetch comments with replies
-                                comments = []
-                                try:
-                                    if hasattr(selected_post, 'comments'):
-                                        selected_post.comments.replace_more(limit=5)  # Load more comments
-                                        comments = list(selected_post.comments.list())  # Get all comments
-                                except Exception as e:
-                                    comments = []
+                                comments = self.load_post_comments(selected_post)
                                 self.post_view.display_post(selected_post, comments)
+                                self.post_view.from_search = True
                                 self.current_screen = 'post'
-                    elif len(key) == 1 and key.isprintable():  # Regular character
+                    elif len(key) == 1 and key.isprintable():  # Regular characters
                         if self.current_screen == 'search':
                             self.search_screen.add_char(key)
                             self.search_screen.search()

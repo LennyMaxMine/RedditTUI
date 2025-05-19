@@ -1,5 +1,6 @@
 from blessed import Terminal
 import textwrap
+import time
 
 class SearchScreen:
     def __init__(self, terminal, reddit_instance):
@@ -13,6 +14,9 @@ class SearchScreen:
         self.search_type = "all"
         self.search_types = ["all", "subreddit", "user"]
         self.type_index = 0
+        self.last_search_time = 0
+        self.search_delay = 0.5  # 500ms delay between searches
+        self.pending_search = False
 
     def display(self):
         width = self.terminal.width - 22
@@ -24,7 +28,7 @@ class SearchScreen:
         
         output.append(self.terminal.cyan("Search Query: ") + self.terminal.white(self.search_query))
         
-        type_line = "Search Type: "
+        type_line = self.terminal.cyan("Search Type: ")
         for i, stype in enumerate(self.search_types):
             if i == self.type_index:
                 type_line += self.terminal.green(f"[{stype}] ")
@@ -41,7 +45,7 @@ class SearchScreen:
             
             for idx, post in enumerate(self.search_results[start_idx:end_idx], start=start_idx + 1):
                 if idx - 1 == self.selected_index:
-                    prefix = "> "
+                    prefix = self.terminal.green("> ")
                 else:
                     prefix = "  "
                 
@@ -50,28 +54,28 @@ class SearchScreen:
                 if len(title) > width - 40:
                     title = title[:width-43] + "..."
                 
-                subreddit = f"r/{post.subreddit.display_name}"
-                author = f"u/{post.author}"
-                score = f"↑{post.score}"
-                comments = f"💬{post.num_comments}"
+                subreddit = self.terminal.cyan(f"r/{post.subreddit.display_name}")
+                author = self.terminal.yellow(f"u/{post.author}")
+                score = self.terminal.green(f"↑{post.score}")
+                comments = self.terminal.magenta(f"💬{post.num_comments}")
                 
-                post_line = f"{prefix}{post_num} {title}"
+                post_line = f"{prefix}{self.terminal.bold_white(post_num)} {self.terminal.white(title)}"
                 metadata = f" | {subreddit} | {author} | {score} | {comments}"
                 
                 if hasattr(post, 'over_18') and post.over_18:
-                    metadata += " | NSFW"
+                    metadata += f" | {self.terminal.red('NSFW')}"
                 
                 if hasattr(post, 'stickied') and post.stickied:
-                    metadata += " | 📌"
+                    metadata += f" | {self.terminal.yellow('📌')}"
                 
                 full_line = post_line + metadata
                 if len(full_line) > width - 2:
                     available_space = width - 2 - len(metadata)
-                    post_line = f"{prefix}{post_num} {title[:available_space-3]}..."
+                    post_line = f"{prefix}{self.terminal.bold_white(post_num)} {self.terminal.white(title[:available_space-3])}..."
                     full_line = post_line + metadata
                 
                 output.append(full_line)
-                output.append("  " + "-" * (width - 2))
+                output.append("  " + self.terminal.blue("-" * (width - 2)))
         else:
             output.append(self.terminal.yellow("No search results. Enter a query to search."))
         
@@ -80,6 +84,7 @@ class SearchScreen:
         output.append(self.terminal.cyan("Instructions:"))
         output.append(self.terminal.white("• Type to enter search query"))
         output.append(self.terminal.white("• Tab to switch search type"))
+        output.append(self.terminal.white("• Up/Down to navigate results"))
         output.append(self.terminal.white("• Enter to select result"))
         output.append(self.terminal.white("• Esc to return to main screen"))
         output.append(self.terminal.blue("=" * width))
@@ -89,6 +94,12 @@ class SearchScreen:
     def add_char(self, char):
         """Add a character to the search query"""
         self.search_query += char
+        self.pending_search = True
+        current_time = time.time()
+        if current_time - self.last_search_time >= self.search_delay:
+            self.search()
+            self.last_search_time = current_time
+            self.pending_search = False
 
     def backspace(self):
         """Remove the last character from the search query"""
@@ -100,21 +111,21 @@ class SearchScreen:
 
     def search(self):
         """Perform the search using Reddit's API"""
-        if not self.search_query or not self.reddit_instance:
+        if not self.search_query or not self.reddit_instance or not self.pending_search:
             return
         
         try:
             if self.search_type == "all":
                 self.search_results = list(self.reddit_instance.subreddit("all").search(
-                    self.search_query, limit=25, sort="relevance"
+                    self.search_query, limit=25, sort="relevance", syntax="lucene"
                 ))
             elif self.search_type == "subreddit":
                 self.search_results = list(self.reddit_instance.front.search(
-                    self.search_query, limit=25, sort="relevance"
+                    self.search_query, limit=25, sort="relevance", syntax="lucene"
                 ))
             elif self.search_type == "user":
                 self.search_results = list(self.reddit_instance.user.me().submissions.search(
-                    self.search_query, limit=25, sort="relevance"
+                    self.search_query, limit=25, sort="relevance", syntax="lucene"
                 ))
             
             self.selected_index = 0

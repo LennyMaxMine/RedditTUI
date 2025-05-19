@@ -5,7 +5,7 @@ class Sidebar:
         self.terminal = terminal
         self.options = [
             "Home",
-            "View Post",
+            #"View Post",
             "Search",
             "Login",
             "Help",

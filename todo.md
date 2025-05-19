@@ -1,7 +1,9 @@
 - Login to your account -> done
+- multi-account -> todo
 - upvote
 - share
 - open post -> kinda done
 - open subreddit -> todo
 - search -> kinda done
 - settings
+- help screen -> add tutorials/keybinds

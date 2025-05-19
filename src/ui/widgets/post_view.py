@@ -22,6 +22,7 @@ class PostView:
         self.comment_scroll_offset = 0
         self.comment_lines = []  # Store all comment lines for scrolling
         self.need_more_comments = False  # Flag to indicate if we need to load more comments
+        self.from_search = False  # Flag to track if post was opened from search
 
     def display_comment(self, comment, depth=0, width=0):
         """Helper function to display a single comment with its replies"""
