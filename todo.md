@@ -1,6 +1,7 @@
 - Login to your account -> done
 - upvote
 - share
-- open post
-- open subreddit
+- open post -> kinda done
+- open subreddit -> todo
+- search -> kinda done
 - settings

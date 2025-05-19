@@ -6,6 +6,7 @@ class Sidebar:
         self.options = [
             "Home",
             "View Post",
+            "Search",
             "Login",
             "Help",
             "Exit"

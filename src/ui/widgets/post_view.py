@@ -6,13 +6,78 @@ from textual.reactive import Reactive
 from textual import events
 from blessed import Terminal
 import textwrap
+import requests
+from PIL import Image
+from io import BytesIO
+import os
+import tempfile
+import datetime
 
 class PostView:
     def __init__(self, terminal):
         self.terminal = terminal
         self.current_post = None
         self.comments = []
-        self.content_width = max(35, self.terminal.width - 24)  # Use more space
+        self.content_width = max(35, self.terminal.width - 24)
+        self.comment_scroll_offset = 0
+        self.comment_lines = []  # Store all comment lines for scrolling
+        self.need_more_comments = False  # Flag to indicate if we need to load more comments
+
+    def display_comment(self, comment, depth=0, width=0):
+        """Helper function to display a single comment with its replies"""
+        output = []
+        indent = "  " * depth
+        
+        if hasattr(comment, 'body'):
+            author = getattr(comment, 'author', '[deleted]')
+            score = getattr(comment, 'score', 0)
+            created = getattr(comment, 'created_utc', None)
+            created_str = ""
+            if created:
+                dt = datetime.datetime.utcfromtimestamp(created)
+                created_str = f" | {dt.strftime('%Y-%m-%d %H:%M UTC')}"
+            
+            comment_header = f"{indent}{self.terminal.yellow(f'u/{author}')} | {self.terminal.green(f'{score} points')}{self.terminal.blue(created_str)}:"
+            output.append(comment_header)
+            
+            comment_body = textwrap.fill(comment.body, width=width-6-(depth*2))
+            for line in comment_body.splitlines():
+                output.append(f"{indent}  {self.terminal.white(line)}")
+            
+            separator = "-" * (width-6-(depth*2))
+            output.append(f"{indent}  {self.terminal.blue(separator)}")
+            
+            # Display replies if any
+            if hasattr(comment, 'replies') and comment.replies:
+                for reply in comment.replies:
+                    if hasattr(reply, 'body'):  # Only show comments with content
+                        output.extend(self.display_comment(reply, depth + 1, width))
+        
+        return output
+
+    def scroll_comments_up(self):
+        """Scroll comments up"""
+        if self.comment_scroll_offset > 0:
+            self.comment_scroll_offset -= 1
+
+    def scroll_comments_down(self):
+        """Scroll comments down"""
+        if self.comment_scroll_offset < len(self.comment_lines) - self.terminal.height + 10:  # Leave some space for post content
+            self.comment_scroll_offset += 1
+            # Check if we're near the bottom and need more comments
+            if self.comment_scroll_offset >= len(self.comment_lines) - self.terminal.height + 15:
+                self.need_more_comments = True
+            return True
+        return False
+
+    def append_comments(self, new_comments):
+        """Append new comments to the existing list"""
+        self.comments.extend(new_comments)
+        self.comment_lines = []
+        for comment in self.comments:
+            if hasattr(comment, 'body'):  # Only show comments with content
+                self.comment_lines.extend(self.display_comment(comment, 0, self.content_width))
+        self.need_more_comments = False
 
     def display(self):
         if not self.current_post:
@@ -33,7 +98,6 @@ class PostView:
         metadata.append(self.terminal.magenta(f"Comments: {self.current_post.num_comments}"))
         
         if hasattr(self.current_post, 'created_utc'):
-            import datetime
             dt = datetime.datetime.utcfromtimestamp(self.current_post.created_utc)
             metadata.append(self.terminal.blue(f"Posted: {dt.strftime('%Y-%m-%d %H:%M UTC')}"))
         
@@ -95,26 +159,23 @@ class PostView:
         # Comments section
         if self.comments:
             output.append(self.terminal.blue("=" * width))
-            output.append(self.terminal.bold_white("Top Comments:"))
-            for idx, comment in enumerate(self.comments[:5], 1):
-                if hasattr(comment, 'body'):
-                    author = getattr(comment, 'author', '[deleted]')
-                    score = getattr(comment, 'score', 0)
-                    created = getattr(comment, 'created_utc', None)
-                    created_str = ""
-                    if created:
-                        dt = datetime.datetime.utcfromtimestamp(created)
-                        created_str = f" | {dt.strftime('%Y-%m-%d %H:%M UTC')}"
-                    
-                    # Comment header with metadata
-                    comment_header = f"  {idx}. {self.terminal.yellow(f'u/{author}')} | {self.terminal.green(f'{score} points')}{self.terminal.blue(created_str)}:"
-                    output.append(comment_header)
-                    
-                    # Comment body
-                    comment_body = textwrap.fill(comment.body, width=width-6)
-                    for line in comment_body.splitlines():
-                        output.append(f"      {self.terminal.white(line)}")
-                    output.append("  " + self.terminal.blue("-" * (width-4)))
+            output.append(self.terminal.bold_white("Comments:"))
+            output.append(self.terminal.blue("-" * width))
+            
+            self.comment_lines = []
+            for comment in self.comments:
+                if hasattr(comment, 'body'):  # Only show comments with content
+                    self.comment_lines.extend(self.display_comment(comment, 0, width))
+            
+            # Add scroll indicator if there are more comments
+            if len(self.comment_lines) > self.terminal.height - 10:
+                scroll_info = f"Scroll: {self.comment_scroll_offset + 1}-{min(self.comment_scroll_offset + self.terminal.height - 10, len(self.comment_lines))} of {len(self.comment_lines)}"
+                output.append(self.terminal.blue(scroll_info.center(width)))
+                output.append(self.terminal.blue("-" * width))
+            
+            # Add visible comment lines based on scroll position
+            visible_lines = self.comment_lines[self.comment_scroll_offset:self.comment_scroll_offset + self.terminal.height - 10]
+            output.extend(visible_lines)
         
         return "\n".join(output)
 
@@ -176,7 +237,6 @@ class PostList:
             # Combine title and metadata, ensuring it fits in the width
             full_line = post_line + metadata
             if len(full_line) > width - 2:
-                # Truncate the title to make room for metadata
                 available_space = width - 2 - len(metadata)
                 post_line = f"{prefix}{post_num} {title[:available_space-3]}..."
                 full_line = post_line + metadata
@@ -203,7 +263,7 @@ class Sidebar:
         self.terminal = terminal
         self.options = [
             "Home",
-            "View Post",
+            "Search",
             "Login",
             "Help",
             "Exit"
@@ -213,16 +273,16 @@ class Sidebar:
     def display(self):
         width = 20
         output = []
-        output.append("=" * width)
-        output.append("Navigation".center(width))
-        output.append("=" * width)
+        output.append(self.terminal.blue("=" * width))
+        output.append(self.terminal.blue("Navigation".center(width)))
+        output.append(self.terminal.blue("=" * width))
         
         for idx, option in enumerate(self.options):
             if idx == self.selected_index:
-                prefix = "> "
+                prefix = self.terminal.green("> ")
             else:
                 prefix = "  "
-            output.append(f"{prefix}{option}")
+            output.append(f"{prefix}{self.terminal.white(option)}")
         
         return "\n".join(output)
 
