@@ -7,6 +7,7 @@ class Sidebar:
             "Home",
             #"View Post",
             "Search",
+            "Subreddits",
             "Login",
             "Help",
             "Settings",

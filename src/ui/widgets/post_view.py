@@ -88,7 +88,7 @@ class PostView:
         
         # Title section
         output.append(self.terminal.blue("=" * width))
-        output.append(self.terminal.bold_white(f"{self.current_post.title}".center(width)))
+        output.append(self.terminal.bold_white(f"r/{self.current_post.subreddit.display_name}/{self.current_post.title}".center(width)))
         output.append(self.terminal.blue("=" * width))
         
         # Metadata section

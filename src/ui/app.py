@@ -7,6 +7,7 @@ from ui.screens.login_screen import LoginScreen
 from ui.screens.search_screen import SearchScreen
 from ui.screens.help_screen import HelpScreen
 from ui.screens.settings_screen import SettingsScreen
+from ui.screens.subreddits_screen import SubredditsScreen
 import praw
 
 class RedditTUI:
@@ -21,8 +22,10 @@ class RedditTUI:
         self.search_screen = SearchScreen(self.term, self.reddit_instance)
         self.help_screen = HelpScreen(self.term)
         self.settings_screen = SettingsScreen(self.term)
+        self.subreddits_screen = SubredditsScreen(self.term, self.reddit_instance)
         self.reddit_instance = self.login_screen.reddit_instance
         self.search_screen.reddit_instance = self.reddit_instance
+        self.subreddits_screen.reddit_instance = self.reddit_instance
         self.last_loaded_post = None
 
         if self.reddit_instance:
@@ -51,7 +54,6 @@ class RedditTUI:
         self.active_component = 'sidebar'
 
     def handle_sidebar_option(self, option):
-        print(self.term.move(self.term.height - 4, 0) + f"Handling option: {option}")
         if option == "Search":
             self.current_screen = 'search'
             self.search_screen.reddit_instance = self.reddit_instance
@@ -61,6 +63,10 @@ class RedditTUI:
             self.current_screen = 'help'
         elif option == "Settings":
             self.current_screen = 'settings'
+        elif option == "Subreddits":
+            self.current_screen = 'subreddits'
+            self.subreddits_screen.reddit_instance = self.reddit_instance
+            self.subreddits_screen.load_subreddits()
         elif option == "Exit":
             return True
         return False
@@ -157,6 +163,35 @@ class RedditTUI:
             for i, line in enumerate(settings_lines):
                 if i < available_lines:
                     print(self.term.move(i + 3, 22) + line)
+        elif self.current_screen == 'subreddits':
+            subreddits_lines = self.subreddits_screen.display().split('\n')
+            available_lines = content_height
+            for i, line in enumerate(subreddits_lines):
+                if i < available_lines:
+                    print(self.term.move(i + 3, 22) + line)
+
+    def update_posts_from_subreddit(self, subreddit, category="hot"):
+        if self.reddit_instance:
+            try:
+                if category == "hot":
+                    posts = list(subreddit.hot(limit=25))
+                elif category == "new":
+                    posts = list(subreddit.new(limit=25))
+                elif category == "top":
+                    posts = list(subreddit.top(limit=25))
+                elif category == "rising":
+                    posts = list(subreddit.rising(limit=25))
+                else:
+                    posts = list(subreddit.hot(limit=25))
+
+                if posts:
+                    self.post_list.update_posts(posts)
+                    self.last_loaded_post = posts[-1].fullname
+                    self.post_list.loading_more = False
+            except Exception as e:
+                print(self.term.move(self.term.height - 3, 0) + 
+                      self.term.red(f"Error fetching {category} posts: {e}"))
+                self.post_list.loading_more = False
 
     def run(self):
         print(self.term.enter_fullscreen())
@@ -177,15 +212,9 @@ class RedditTUI:
                             else:
                                 self.current_screen = 'home'
                                 self.active_component = 'post_list'
-                            self.post_view.current_post = None
-                            self.post_view.comments = []
-                        elif self.current_screen == 'search':
-                            self.current_screen = 'home'
-                            self.active_component = 'sidebar'
-                        elif self.current_screen == 'help':
-                            self.current_screen = 'home'
-                            self.active_component = 'sidebar'
-                        elif self.current_screen == 'settings':
+                                self.post_view.current_post = None
+                                self.post_view.comments = []
+                        elif self.current_screen in ['search', 'help', 'settings', 'subreddits']:
                             self.current_screen = 'home'
                             self.active_component = 'sidebar'
                         elif self.current_screen == 'home' and self.active_component == 'post_list':
@@ -204,6 +233,8 @@ class RedditTUI:
                             self.help_screen.previous_section()
                         elif self.current_screen == 'settings':
                             self.settings_screen.previous_option()
+                        elif self.current_screen == 'subreddits':
+                            self.subreddits_screen.scroll_up()
                     elif key == '\x1b[B':  # Down Arrow
                         if self.active_component == 'sidebar':
                             self.sidebar.navigate("down")
@@ -220,6 +251,8 @@ class RedditTUI:
                             self.help_screen.next_section()
                         elif self.current_screen == 'settings':
                             self.settings_screen.next_option()
+                        elif self.current_screen == 'subreddits':
+                            self.subreddits_screen.scroll_down()
                     elif key == '\x1b[C':  # Right Arrow
                         if self.current_screen == 'home' and self.active_component == 'sidebar':
                             self.active_component = 'post_list'
@@ -241,6 +274,8 @@ class RedditTUI:
                             if self.settings_screen.next_value():
                                 self.current_screen = 'home'
                                 self.active_component = 'sidebar'
+                        elif self.current_screen == 'subreddits':
+                            self.subreddits_screen.next_category()
                     elif key == '\x1b[D':  # Left Arrow
                         if self.current_screen == 'post':
                             self.current_screen = 'home'
@@ -251,15 +286,19 @@ class RedditTUI:
                             self.active_component = 'sidebar'
                         elif self.current_screen == 'settings':
                             self.settings_screen.next_value()
+                        elif self.current_screen == 'subreddits':
+                            self.subreddits_screen.previous_category()
                     elif key == '\t':  # Tab
                         if self.current_screen == 'search':
                             self.search_screen.next_search_type()
                         elif self.current_screen == 'help':
                             self.help_screen.next_section()
                         elif self.current_screen == 'settings':
-                            a = self.settings_screen.next_value()
-                            if a == True:
+                            if self.settings_screen.next_value():
+                                self.current_screen = 'home'
                                 self.active_component = 'sidebar'
+                        elif self.current_screen == 'subreddits':
+                            self.subreddits_screen.next_category()
                     elif key == '\x7f':  # Backspace
                         if self.current_screen == 'search':
                             self.search_screen.backspace()
@@ -288,6 +327,12 @@ class RedditTUI:
                             if self.settings_screen.handle_enter():
                                 self.current_screen = 'settings'
                                 self.active_component = 'sidebar'
+                        elif self.current_screen == 'subreddits':
+                            selected_subreddit, category = self.subreddits_screen.get_selected_subreddit()
+                            if selected_subreddit:
+                                self.current_screen = 'home'
+                                self.active_component = 'post_list'
+                                self.update_posts_from_subreddit(selected_subreddit, category)
                     elif len(key) == 1 and key.isprintable():  # Regular character input
                         if self.current_screen == 'search':
                             self.search_screen.add_char(key)
