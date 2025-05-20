@@ -5,5 +5,5 @@
 - open post -> kinda done
 - open subreddit -> todo
 - search -> kinda done
-- settings
-- help screen -> add tutorials/keybinds
+- settings -> todo
+- help screen -> kinda done
