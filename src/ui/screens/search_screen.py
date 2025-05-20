@@ -103,15 +103,25 @@ class SearchScreen:
 
     def backspace(self):
         """Remove the last character from the search query"""
-        self.search_query = self.search_query[:-1]
+        if self.search_query:
+            self.search_query = self.search_query[:-1]
+            self.pending_search = True
+            current_time = time.time()
+            if current_time - self.last_search_time >= self.search_delay:
+                self.search()
+                self.last_search_time = current_time
+                self.pending_search = False
 
     def clear_query(self):
         """Clear the search query"""
         self.search_query = ""
+        self.search_results = []
+        self.selected_index = 0
+        self.scroll_offset = 0
 
     def search(self):
         """Perform the search using Reddit's API"""
-        if not self.search_query or not self.reddit_instance or not self.pending_search:
+        if not self.search_query or not self.reddit_instance:
             return
         
         try:

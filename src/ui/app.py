@@ -6,6 +6,7 @@ from ui.widgets.header import Header
 from ui.screens.login_screen import LoginScreen
 from ui.screens.search_screen import SearchScreen
 from ui.screens.help_screen import HelpScreen
+from ui.screens.settings_screen import SettingsScreen
 import praw
 
 class RedditTUI:
@@ -19,6 +20,7 @@ class RedditTUI:
         self.login_screen = LoginScreen(self.reddit_instance)
         self.search_screen = SearchScreen(self.term, self.reddit_instance)
         self.help_screen = HelpScreen(self.term)
+        self.settings_screen = SettingsScreen(self.term)
         self.reddit_instance = self.login_screen.reddit_instance
         self.search_screen.reddit_instance = self.reddit_instance
         self.last_loaded_post = None
@@ -57,6 +59,8 @@ class RedditTUI:
             self.show_login_screen()
         elif option == "Help":
             self.current_screen = 'help'
+        elif option == "Settings":
+            self.current_screen = 'settings'
         elif option == "Exit":
             return True
         return False
@@ -147,6 +151,12 @@ class RedditTUI:
             for i, line in enumerate(help_lines):
                 if i < available_lines:
                     print(self.term.move(i + 3, 22) + line)
+        elif self.current_screen == 'settings':
+            settings_lines = self.settings_screen.display().split('\n')
+            available_lines = content_height
+            for i, line in enumerate(settings_lines):
+                if i < available_lines:
+                    print(self.term.move(i + 3, 22) + line)
 
     def run(self):
         print(self.term.enter_fullscreen())
@@ -175,6 +185,9 @@ class RedditTUI:
                         elif self.current_screen == 'help':
                             self.current_screen = 'home'
                             self.active_component = 'sidebar'
+                        elif self.current_screen == 'settings':
+                            self.current_screen = 'home'
+                            self.active_component = 'sidebar'
                         elif self.current_screen == 'home' and self.active_component == 'post_list':
                             self.active_component = 'sidebar'
                         continue
@@ -189,6 +202,8 @@ class RedditTUI:
                             self.search_screen.scroll_up()
                         elif self.current_screen == 'help':
                             self.help_screen.previous_section()
+                        elif self.current_screen == 'settings':
+                            self.settings_screen.previous_option()
                     elif key == '\x1b[B':  # Down Arrow
                         if self.active_component == 'sidebar':
                             self.sidebar.navigate("down")
@@ -203,6 +218,8 @@ class RedditTUI:
                             self.search_screen.scroll_down()
                         elif self.current_screen == 'help':
                             self.help_screen.next_section()
+                        elif self.current_screen == 'settings':
+                            self.settings_screen.next_option()
                     elif key == '\x1b[C':  # Right Arrow
                         if self.current_screen == 'home' and self.active_component == 'sidebar':
                             self.active_component = 'post_list'
@@ -220,6 +237,10 @@ class RedditTUI:
                                 self.post_view.display_post(selected_post, comments)
                                 self.post_view.from_search = True
                                 self.current_screen = 'post'
+                        elif self.current_screen == 'settings':
+                            if self.settings_screen.next_value():
+                                self.current_screen = 'home'
+                                self.active_component = 'sidebar'
                     elif key == '\x1b[D':  # Left Arrow
                         if self.current_screen == 'post':
                             self.current_screen = 'home'
@@ -228,11 +249,17 @@ class RedditTUI:
                             self.post_view.comments = []
                         elif self.current_screen == 'home' and self.active_component == 'post_list':
                             self.active_component = 'sidebar'
+                        elif self.current_screen == 'settings':
+                            self.settings_screen.next_value()
                     elif key == '\t':  # Tab
                         if self.current_screen == 'search':
                             self.search_screen.next_search_type()
                         elif self.current_screen == 'help':
                             self.help_screen.next_section()
+                        elif self.current_screen == 'settings':
+                            a = self.settings_screen.next_value()
+                            if a == True:
+                                self.active_component = 'sidebar'
                     elif key == '\x7f':  # Backspace
                         if self.current_screen == 'search':
                             self.search_screen.backspace()
@@ -257,10 +284,13 @@ class RedditTUI:
                                 self.post_view.display_post(selected_post, comments)
                                 self.post_view.from_search = True
                                 self.current_screen = 'post'
-                    elif len(key) == 1 and key.isprintable():  # Regular characters
+                        elif self.current_screen == 'settings':
+                            if self.settings_screen.handle_enter():
+                                self.current_screen = 'settings'
+                                self.active_component = 'sidebar'
+                    elif len(key) == 1 and key.isprintable():  # Regular character input
                         if self.current_screen == 'search':
                             self.search_screen.add_char(key)
-                            self.search_screen.search()
         finally:
             print(self.term.exit_fullscreen())
 

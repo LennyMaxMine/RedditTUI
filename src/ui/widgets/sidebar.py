@@ -9,6 +9,7 @@ class Sidebar:
             "Search",
             "Login",
             "Help",
+            "Settings",
             "Exit"
         ]
         self.selected_index = 0
