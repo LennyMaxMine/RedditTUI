@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedditTUI by LennyMaxMine</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --text-color: #33ff33;
+            --cursor-color: #33ff33;
+            --accent-color: #ff4500;
+            --link-color: #6495ed;
+            --creator-color: #ffbd2e;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier New', monospace;
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        .terminal {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid var(--text-color);
+            box-shadow: 0 0 10px rgba(51, 255, 51, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--text-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+        
+        .terminal-buttons {
+            display: flex;
+            margin-right: 20px;
+        }
+        
+        .terminal-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .terminal-button.red {
+            background-color: #ff5f56;
+        }
+        
+        .terminal-button.yellow {
+            background-color: #ffbd2e;
+        }
+        
+        .terminal-button.green {
+            background-color: #27c93f;
+        }
+        
+        .terminal-title {
+            flex-grow: 1;
+            text-align: center;
+            font-size: 16px;
+        }
+        
+        .terminal-content {
+            padding: 10px 0;
+        }
+        
+        .prompt {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .prompt-symbol {
+            color: var(--accent-color);
+            margin-right: 10px;
+        }
+        
+        .typing {
+            position: relative;
+        }
+        
+        .typing::after {
+            content: "";
+            position: absolute;
+            height: 18px;
+            width: 8px;
+            background-color: var(--cursor-color);
+            margin-left: 5px;
+            animation: blink 1s infinite;
+        }
+        
+        .ascii-art {
+            color: var(--accent-color);
+            white-space: pre;
+            line-height: 1.2;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        
+        .features-list {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+        
+        .features-list li::before {
+            content: ">";
+            color: var(--accent-color);
+            margin-right: 10px;
+        }
+        
+        a {
+            color: var(--link-color);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        a:hover {
+            color: var(--text-color);
+            text-decoration: underline;
+        }
+        
+        .command {
+            background-color: #333;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .creator-info {
+            color: var(--creator-color);
+            font-style: italic;
+            margin: 15px 0;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        footer {
+            border-top: 1px solid var(--text-color);
+            margin-top: 20px;
+            padding-top: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        @keyframes blink {
+            0%, 49% {
+                opacity: 1;
+            }
+            50%, 100% {
+                opacity: 0;
+            }
+        }
+        
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+        
+        @media (max-width: 600px) {
+            .terminal {
+                margin: 10px;
+                padding: 10px;
+            }
+            
+            .ascii-art {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <div class="terminal-button red"></div>
+                <div class="terminal-button yellow"></div>
+                <div class="terminal-button green"></div>
+            </div>
+            <div class="terminal-title">reddit@tui: ~/projects/RedditTUI</div>
+        </div>
+        
+        <div class="terminal-content">
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>nano README.md</span>
+            </div>
+            
+            <div class="ascii-art">
+ ____           _     _ _ _   _____ _   _  _
+|  _ \ ___  ___| | __| (_) |_|_   _| | | || | 
+| |_) / _ \/ __| |/ _` | | __| | | | | | || |  
+|  _ <  __/ (__| | (_| | | |_  | | | |_| || |  
+|_| \_\___|\___|_|\__,_|_|\__| |_|  \___/ |_|  
+                                                
+</div>
+            
+            <div class="creator-info">A project by LennyMaxMine</div>
+            
+            <h1>RedditTUI</h1>
+            <p>A simple, lightweight, and efficient Terminal User Interface for browsing Reddit. Developed by LennyMaxMine with a focus on performance and usability created for the 2025 Hack Club Neighborhood with ♥ out of Frankfurt, Germany.</p>
+            
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>./reddittui --features</span>
+            </div>
+            
+            <h2>Features</h2>
+            <ul class="features-list">
+                <li>Browse Reddit from your terminal</li>
+                <li>View posts, comments, and media</li>
+                <li>Fast and resource-efficient</li>
+                <li>Keyboard shortcuts for quick navigation</li>
+                <li>Works on most UNIX systems</li>
+            </ul>
+            
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>./reddittui --installation</span>
+            </div>
+            
+            <h2>Installation</h2>
+            <p>Get started with RedditTUI in a few simple steps:</p>
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>git clone https://github.com/LennyMaxMine/RedditTUI</span>
+            </div>
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>cd RedditTUI</span>
+            </div>
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>pip -r install requirements.py</span>
+            </div>
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>python src/main.py</span>
+            </div>
+
+            <h2>Links</h2>
+            <p>
+                <a href="https://github.com/LennyMaxMine/RedditTUI" target="_blank">GitHub Repository</a> |
+                <a href="https://github.com/LennyMaxMine/RedditTUI/issues" target="_blank">Report Issues</a> |
+                <a href="https://github.com/LennyMaxMine" target="_blank">LennyMaxMine's GitHub</a>
+            </p>
+            
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <i class="typing"> more coming soon!</i>
+            </div>
+            
+            <footer>
+                RedditTUI © 2025 | Created with ♥ by LennyMaxMine
+            </footer>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const terminalContent = document.querySelector('.terminal-content');
+            
+            // Add a simple click event to simulate typing new commands
+            terminalContent.addEventListener('click', () => {
+                const randomCommands = [
+                    'echo "RedditTUI is a simple, lightweight, and efficient Terminal User Interface for browsing Reddit."',
+                    'echo "Hope you have a wonderful day!"',
+                    'echo "More features coming soon!"',
+                    'echo "Created for the 2025 Hack Club Neighborhood!"',
+                    'echo "Made with ♥ by LennyMaxMine"',
+                    'echo "Check out my other projects!"',
+                    'echo "Thanks for using RedditTUI!"',
+                    'echo "Created by LennyMaxMine"'
+                ];
+                
+                // Get all typing elements and change the last one
+                const typingElements = document.querySelectorAll('.typing');
+                const lastTypingElement = typingElements[typingElements.length - 1];
+                
+                if (lastTypingElement) {
+                    const randomCommand = randomCommands[Math.floor(Math.random() * randomCommands.length)];
+                    lastTypingElement.textContent = randomCommand;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
