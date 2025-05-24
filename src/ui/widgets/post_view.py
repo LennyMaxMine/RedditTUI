@@ -140,6 +140,14 @@ class PostView:
         output.append(f"├{'─' * (width-2)}┤")
         
         metadata = []
+        if hasattr(self.current_post, 'origin'):
+            origin_exists = True
+            #metadata.append(self.terminal.bright_blue(f"From: {self.current_post.origin}"))
+            #metadata.append("")
+            pass
+        else:
+            origin_exists = False
+            
         metadata.append(self.terminal.bright_cyan(f"Subreddit: r/{self.current_post.subreddit.display_name}"))
         metadata.append(self.terminal.bright_yellow(f"Author: u/{self.current_post.author}"))
         
@@ -163,7 +171,7 @@ class PostView:
             metadata.append(f"{age_color}Posted: {age_str.replace("-", "")}{self.terminal.normal}")
         
         if hasattr(self.current_post, 'url'):
-            if additionalchar >= 1: addchar = " "
+            if additionalchar >= 1 and origin_exists == True: addchar = " "
             else: addchar = ""
             metadata.append(self.terminal.bright_cyan(f"{addchar}URL: {self.current_post.url}"))
             
@@ -211,7 +219,21 @@ class PostView:
             line = metadata[i]
             if i + 1 < len(metadata):
                 line = line.ljust(width // 2) + metadata[i + 1]
-            metadata_lines.append(f"│ {line.ljust(width+18)} │")
+            if "URL" in line and origin_exists == True:
+                metadata_lines.append(f"│ {line.ljust(width+19)} │")
+            if "points" in line and origin_exists == True:
+                splitline = line.split("|")
+                getnum = self.remove_all_letters(splitline[1])
+                numcount = 0
+                for num in getnum:
+                    numcount += int(num)
+                if numcount <= 100: 
+                    metadata_lines.append(f"│ {line.ljust(width+19)} │")
+                else:
+                    metadata_lines.append(f"│ {line.ljust(width+18)} │")
+
+            else:
+                metadata_lines.append(f"│ {line.ljust(width+18)} │")
         
         output.extend(metadata_lines)
         output.append(f"├{'─' * (width-2)}┤")

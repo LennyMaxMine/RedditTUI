@@ -5,8 +5,9 @@ from rich.text import Text
 from rich import box
 
 class PostScreen:
-    def __init__(self, post):
+    def __init__(self, post, origin=None):
         self.post = post
+        self.origin = origin
         self.console = Console()
         self.layout = Layout()
 
@@ -30,9 +31,9 @@ class PostScreen:
         return sidebar_content
 
     def create_post_view(self):
-        # Create a formatted post content with proper spacing and alignment
+        origin_text = f"From: {self.origin}\n\n" if self.origin else ""
         post_content = f"""
-Title: {self.post['title']}
+{origin_text}Title: {self.post['title']}
 Subreddit: r/{self.post['subreddit']}
 Author: u/{self.post['author']}
 Score: {self.post['score']}

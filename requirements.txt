@@ -6,3 +6,4 @@ rich
 urwid
 cryptography
 blessed
+emoji

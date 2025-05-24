@@ -1,0 +1,2 @@
+- Title to long for post View
+- Points larger or smaller than 99 breaking the ui (depends how they want to annoy me)

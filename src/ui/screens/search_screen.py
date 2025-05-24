@@ -176,5 +176,7 @@ class SearchScreen:
     def get_selected_post(self):
         """Get the currently selected post"""
         if 0 <= self.selected_index < len(self.search_results):
-            return self.search_results[self.selected_index]
+            post = self.search_results[self.selected_index]
+            post.origin = f"Search: {self.search_query}"
+            return post
         return None 
