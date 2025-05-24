@@ -69,6 +69,8 @@ class PostList:
             
             metadata = []
             metadata.append(self.terminal.bright_cyan(f"r/{post.subreddit.display_name}"))
+            if post.subreddit.display_name == "explore":
+                metadata_additional_width += 2
             metadata.append(self.terminal.bright_yellow(f"u/{post.author}"))
             if hasattr(post, 'url') and any(post.url.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
                 metadata.append(self.terminal.bright_blue("🖼️"))
@@ -88,12 +90,17 @@ class PostList:
                 else:
                     age_str = f"{int(age/86400)}d"
                 metadata.append(f"{age_color}{age_str.replace("-", "")}{self.terminal.normal}")
+                
+                #Coded all this just to be useless 10min debugging haha (im a dumb shit bruv)
                 age_int = ''.join(filter(str.isdigit, age_str))
                 if abs(int(age_int)) > 9:
                     metadata_additional_width += 0
                 if "-" in age_str:
-                    metadata_additional_width -=1
+                    metadata_additional_width -= 0
+                #all this above
+
             
+                
             if hasattr(post, 'over_18') and post.over_18:
                 metadata.append(self.terminal.bright_red("NSFW"))
                 metadata_additional_width += 11

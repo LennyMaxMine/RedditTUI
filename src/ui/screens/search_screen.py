@@ -1,6 +1,7 @@
 from blessed import Terminal
 import textwrap
 import time
+import emoji
 
 class SearchScreen:
     def __init__(self, terminal, reddit_instance):
@@ -18,15 +19,19 @@ class SearchScreen:
         self.search_delay = 0.5  # 500ms delay between searches
         self.pending_search = False
 
+    def contains_emoji(self, text):
+            emojis = emoji.emoji_list(text)
+            return int(len(emojis))
+
     def display(self):
         width = self.terminal.width - 22
         output = []
         
-        output.append(self.terminal.blue("=" * width))
-        output.append(self.terminal.bold_white("Reddit Search".center(width)))
-        output.append(self.terminal.blue("=" * width))
+        output.append(self.terminal.blue("┬" + "─" * (width-2) + "┤"))
+        output.append(self.terminal.blue("│") + self.terminal.bold_white("Reddit Search".center(width-2)) + self.terminal.blue("│"))
+        output.append(self.terminal.blue("├" + "─" * (width-2) + "┤"))
         
-        output.append(self.terminal.cyan("Search Query: ") + self.terminal.white(self.search_query))
+        output.append(self.terminal.blue("│") + self.terminal.cyan("Search Query: ") + self.terminal.white(self.search_query) + " " * (width - len(self.search_query) - 16) + self.terminal.blue("│"))
         
         type_line = self.terminal.cyan("Search Type: ")
         for i, stype in enumerate(self.search_types):
@@ -34,21 +39,22 @@ class SearchScreen:
                 type_line += self.terminal.green(f"[{stype}] ")
             else:
                 type_line += self.terminal.white(f"{stype} ")
-        output.append(type_line)
+        output.append(self.terminal.blue("│") + type_line + " " * (width - len(type_line) + 42) + self.terminal.blue("│"))
         
-        output.append(self.terminal.blue("-" * width))
+        output.append(self.terminal.blue("├" + "─" * (width-2) + "┤"))
         
-        # Search results
         if self.search_results:
             start_idx = self.scroll_offset
             end_idx = min(start_idx + self.visible_results, len(self.search_results))
             
             for idx, post in enumerate(self.search_results[start_idx:end_idx], start=start_idx + 1):
+                metadata_additional_width = 0
                 if idx - 1 == self.selected_index:
-                    prefix = self.terminal.green("> ")
+                    prefix = self.terminal.green("► ")
+                    metadata_additional_width += 11
                 else:
                     prefix = "  "
-                
+
                 post_num = f"{idx}."
                 title = post.title
                 if len(title) > width - 40:
@@ -64,30 +70,32 @@ class SearchScreen:
                 
                 if hasattr(post, 'over_18') and post.over_18:
                     metadata += f" | {self.terminal.red('NSFW')}"
+                    metadata_additional_width += 7
                 
                 if hasattr(post, 'stickied') and post.stickied:
                     metadata += f" | {self.terminal.yellow('📌')}"
+                    metadata_additional_width += 7
                 
                 full_line = post_line + metadata
-                if len(full_line) > width - 2:
-                    available_space = width - 2 - len(metadata)
+                if len(full_line) > width - 4:
+                    available_space = width - 4 - len(metadata)
                     post_line = f"{prefix}{self.terminal.bold_white(post_num)} {self.terminal.white(title[:available_space-3])}..."
                     full_line = post_line + metadata
                 
-                output.append(full_line)
-                output.append("  " + self.terminal.blue("-" * (width - 2)))
+                output.append(self.terminal.blue("│") + " " + full_line + " " * (width - len(full_line) + 67 - self.contains_emoji(full_line) + metadata_additional_width) + self.terminal.blue("│"))
+                if idx < end_idx:
+                    output.append(self.terminal.blue("├" + "─" * (width-2) + "┤"))
         else:
-            output.append(self.terminal.yellow("No search results. Enter a query to search."))
+            output.append(self.terminal.blue("│") + " " + self.terminal.yellow("No search results. Enter a query to search.") + " " * (width - 46) + self.terminal.blue("│"))
         
-        # Instructions
-        output.append(self.terminal.blue("=" * width))
-        output.append(self.terminal.cyan("Instructions:"))
-        output.append(self.terminal.white("• Type to enter search query"))
-        output.append(self.terminal.white("• Tab to switch search type"))
-        output.append(self.terminal.white("• Up/Down to navigate results"))
-        output.append(self.terminal.white("• Enter to select result"))
-        output.append(self.terminal.white("• Esc to return to main screen"))
-        output.append(self.terminal.blue("=" * width))
+        output.append(self.terminal.blue("├" + "─" * (width-2) + "┤"))
+        output.append(self.terminal.blue("│") + " " + self.terminal.cyan("Instructions:") + " " * (width - 16) + self.terminal.blue("│"))
+        output.append(self.terminal.blue("│") + " " + self.terminal.white("• Type to enter search query") + " " * (width - 31) + self.terminal.blue("│"))
+        output.append(self.terminal.blue("│") + " " + self.terminal.white("• Tab to switch search type") + " " * (width - 30) + self.terminal.blue("│"))
+        output.append(self.terminal.blue("│") + " " + self.terminal.white("• Up/Down to navigate results") + " " * (width - 32) + self.terminal.blue("│"))
+        output.append(self.terminal.blue("│") + " " + self.terminal.white("• Enter to select result") + " " * (width - 27) + self.terminal.blue("│"))
+        output.append(self.terminal.blue("│") + " " + self.terminal.white("• Esc to return to main screen") + " " * (width - 33) + self.terminal.blue("│"))
+        output.append(self.terminal.blue("╰" + "─" * (width-2) + "╯"))
         
         return "\n".join(output)
 

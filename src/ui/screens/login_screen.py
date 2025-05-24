@@ -7,6 +7,7 @@ import termios
 import json
 import os
 from pathlib import Path
+import time
 
 class LoginScreen:
     def __init__(self, reddit_instance=None):
@@ -57,8 +58,7 @@ class LoginScreen:
                 print(self.term.clear())
                 print(self.term.move(0, 0))
                 print(self.term.green(f"Auto-login successful! Welcome back, u/{saved_creds['username']}"))
-                print(self.term.green("Press Enter to continue..."))
-                input()
+                time.sleep(0.15)
                 return True
             except Exception as e:
                 print(self.term.clear())

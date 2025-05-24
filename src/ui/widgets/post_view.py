@@ -65,6 +65,10 @@ class PostView:
     def remove_ansi_escape_sequences(self, text):
         ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
         return ansi_escape.sub('', text)
+    
+    def remove_all_letters(self, text):
+        only_numbers_int = re.findall(r'\d+', text)
+        return only_numbers_int
 
     def display_comment(self, comment, depth=0, width=0):
         output = []
@@ -85,7 +89,7 @@ class PostView:
                 else:
                     age_str = f"{int(age/86400)}d"
                 age_color = self.get_age_color(created)
-                created_str = f" | {age_color}{age_str}{self.terminal.normal}"
+                created_str = f" | {age_color}{age_str.replace("-", "")}{self.terminal.normal}"
             
             score_color = self.get_score_color(score)
             comment_header = f"{indent}{self.terminal.bright_yellow(f'u/{author}')} | {score_color}{score} points{self.terminal.normal}{created_str}:"
@@ -152,10 +156,16 @@ class PostView:
                 age_str = f"{int(age/3600)}h ago"
             else:
                 age_str = f"{int(age/86400)}d ago"
-            metadata.append(f"{age_color}Posted: {age_str}{self.terminal.normal}")
+            if "-"in age_str: additionalchar = 1
+            else: additionalchar = 0
+            for i in range(0, len(self.remove_all_letters(age_str))):
+                additionalchar += 1
+            metadata.append(f"{age_color}Posted: {age_str.replace("-", "")}{self.terminal.normal}")
         
         if hasattr(self.current_post, 'url'):
-            metadata.append(self.terminal.bright_cyan(f"URL: {self.current_post.url}"))
+            if additionalchar >= 1: addchar = " "
+            else: addchar = ""
+            metadata.append(self.terminal.bright_cyan(f"{addchar}URL: {self.current_post.url}"))
             
         if hasattr(self.current_post, 'is_self'):
             metadata.append(self.terminal.bright_yellow(f"Type: {'Self Post' if self.current_post.is_self else 'Link Post'}"))

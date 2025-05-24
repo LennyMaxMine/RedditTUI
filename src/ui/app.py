@@ -10,6 +10,7 @@ from ui.screens.settings_screen import SettingsScreen
 from ui.screens.subreddits_screen import SubredditsScreen
 from ui.screens.user_profile_screen import UserProfileScreen
 import praw
+import time
 
 class RedditTUI:
     def __init__(self):
@@ -59,7 +60,12 @@ class RedditTUI:
         self.active_component = 'sidebar'
 
     def handle_sidebar_option(self, option):
-        if option == "Search":
+        if option in ['Home', 'Popular', 'All', 'Explore']:
+            self.current_screen = 'home'
+            self.active_component = 'post_list'
+            self.current_feed = option.lower()
+            self.update_posts_from_reddit()
+        elif option == "Search":
             self.current_screen = 'search'
             self.search_screen.reddit_instance = self.reddit_instance
             self.header.update_title("RedditTUI")
@@ -95,8 +101,9 @@ class RedditTUI:
             self.header.update_title(f"Reddit TUI - Logged in as {self.reddit_instance.user.me().name}")
             self.update_posts_from_reddit()
             self.settings_screen.reddit_instance = self.reddit_instance
-            print(self.term.move(self.term.height - 2, 0) + self.term.green("Login successful! Press Enter to continue..."))
-            input()
+            print(self.term.move(self.term.height - 2, 0) + self.term.green("Login successful!"))
+            time.sleep(0.5)
+            #input()
         else:
             self.header.update_title("Reddit TUI - Not logged in")
             print(self.term.move(self.term.height - 2, 0) + self.term.red("Login failed. Press Enter to continue..."))
@@ -251,9 +258,12 @@ class RedditTUI:
                                 self.post_view.current_post = None
                                 self.post_view.comments = []
                         elif self.current_screen in ['search', 'help', 'settings', 'subreddits', 'profile']:
+                            if self.current_screen == 'search':
+                                self.search_screen.clear_query()
                             self.current_screen = 'home'
                             self.active_component = 'sidebar'
                             self.header.update_title(f"RedditTUI - {self.current_feed.capitalize()} Feed")
+                            self.update_posts_from_reddit()
                         elif self.current_screen == 'home' and self.active_component == 'post_list':
                             self.active_component = 'sidebar'
                         continue
@@ -263,6 +273,8 @@ class RedditTUI:
                             selected_option = self.sidebar.get_selected_option()
                             if selected_option in ['Home', 'Popular', 'All', 'Explore']:
                                 self.current_feed = selected_option.lower()
+                                self.current_screen = 'home'
+                                #self.active_component = 'post_list'
                                 self.update_posts_from_reddit()
                             else:
                                 self.handle_sidebar_option(selected_option)
@@ -284,6 +296,8 @@ class RedditTUI:
                             selected_option = self.sidebar.get_selected_option()
                             if selected_option in ['Home', 'Popular', 'All', 'Explore']:
                                 self.current_feed = selected_option.lower()
+                                self.current_screen = 'home'
+                                #self.active_component = 'post_list'
                                 self.update_posts_from_reddit()
                             else:
                                 self.handle_sidebar_option(selected_option)
@@ -318,7 +332,7 @@ class RedditTUI:
                                 self.current_screen = 'post'
                         elif self.current_screen == 'settings':
                             if self.settings_screen.next_value():
-                                self.current_screen = 'home'
+                                self.current_screen = 'settings'
                                 self.active_component = 'sidebar'
                         elif self.current_screen == 'subreddits':
                             self.subreddits_screen.next_category()
@@ -382,6 +396,7 @@ class RedditTUI:
                     elif len(key) == 1 and key.isprintable():  # Regular character input
                         if self.current_screen == 'search':
                             self.search_screen.add_char(key)
+                            self.active_component = 'post_list'
         finally:
             print(self.term.exit_fullscreen())
 
