@@ -2,6 +2,7 @@ from blessed import Terminal
 import json
 import os
 import time
+from ui.screens.login_screen import LoginScreen
 
 class SettingsScreen:
     def __init__(self, terminal):
@@ -10,6 +11,7 @@ class SettingsScreen:
         self.settings_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'settings.json')
         self.settings = self.load_settings()
         self.options = [
+            "Login",
             "Theme",
             "Posts Per Page",
             "Comment Depth",
@@ -23,6 +25,8 @@ class SettingsScreen:
         self.boolean_options = ["Yes", "No"]
         self.message = None
         self.message_time = 0
+        self.login_screen = LoginScreen(None)
+        self.reddit_instance = None
 
     def show_message(self, message, is_error=False):
         self.message = message
@@ -81,7 +85,14 @@ class SettingsScreen:
             
             output.append(f"{prefix}{self.terminal.white(option)}:")
             
-            if option == "Theme":
+            if option == "Login":
+                if self.reddit_instance:
+                    output.append(f"    {self.terminal.green('Logged in as: ' + self.reddit_instance.user.me().name)}")
+                else:
+                    output.append(f"    {self.terminal.red('Not logged in')}")
+                output.append(f"    {self.terminal.cyan('Press Enter to login/logout')}")
+            
+            elif option == "Theme":
                 options_line = "    "
                 for theme in self.themes:
                     if theme == self.settings["theme"]:
@@ -135,7 +146,7 @@ class SettingsScreen:
         output.append(self.terminal.cyan("Instructions:"))
         output.append(self.terminal.white("• Up/Down Arrow: Navigate options"))
         output.append(self.terminal.white("• Left/Right Arrow: Change values"))
-        output.append(self.terminal.white("• Enter: Save settings"))
+        output.append(self.terminal.white("• Enter: Save settings / Login"))
         output.append(self.terminal.white("• Escape: Return without saving"))
         output.append(self.terminal.blue("=" * width))
 
@@ -152,28 +163,40 @@ class SettingsScreen:
         self.selected_option = (self.selected_option - 1) % len(self.options)
 
     def next_value(self):
-        if self.selected_option == 0:  # Theme
+        if self.selected_option == 0:  # Login
+            return False
+        elif self.selected_option == 1:  # Theme
             current_idx = self.themes.index(self.settings["theme"])
             self.settings["theme"] = self.themes[(current_idx + 1) % len(self.themes)]
-        elif self.selected_option == 1:  # Posts Per Page
+        elif self.selected_option == 2:  # Posts Per Page
             current_idx = self.posts_per_page_options.index(self.settings["posts_per_page"])
             self.settings["posts_per_page"] = self.posts_per_page_options[(current_idx + 1) % len(self.posts_per_page_options)]
-        elif self.selected_option == 2:  # Comment Depth
+        elif self.selected_option == 3:  # Comment Depth
             current_idx = self.comment_depth_options.index(self.settings["comment_depth"])
             self.settings["comment_depth"] = self.comment_depth_options[(current_idx + 1) % len(self.comment_depth_options)]
-        elif self.selected_option == 3:  # Auto Load Comments
+        elif self.selected_option == 4:  # Auto Load Comments
             current_idx = self.boolean_options.index(self.settings["auto_load_comments"])
             self.settings["auto_load_comments"] = self.boolean_options[(current_idx + 1) % len(self.boolean_options)]
-        elif self.selected_option == 4:  # Show NSFW Content
+        elif self.selected_option == 5:  # Show NSFW Content
             current_idx = self.boolean_options.index(self.settings["show_nsfw"])
             self.settings["show_nsfw"] = self.boolean_options[(current_idx + 1) % len(self.boolean_options)]
-        elif self.selected_option == 5:  # Save Settings
+        elif self.selected_option == 6:  # Save Settings
             if self.save_settings():
                 return True
         return False
 
     def handle_enter(self):
-        if self.selected_option == 5:  # Save Settings
+        if self.selected_option == 0:  # Login
+            print(self.terminal.clear())
+            self.login_screen.display()
+            if self.login_screen.reddit_instance:
+                self.reddit_instance = self.login_screen.reddit_instance
+                self.show_message(f"Successfully logged in as {self.reddit_instance.user.me().name}")
+            else:
+                self.reddit_instance = None
+                self.show_message("Login failed", True)
+            return False
+        elif self.selected_option == 6:  # Save Settings
             if self.save_settings():
                 return True
         return False 

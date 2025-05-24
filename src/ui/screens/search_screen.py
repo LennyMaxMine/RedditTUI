@@ -163,6 +163,7 @@ class SearchScreen:
         """Switch to the next search type"""
         self.type_index = (self.type_index + 1) % len(self.search_types)
         self.search_type = self.search_types[self.type_index]
+        self.search()
 
     def get_selected_post(self):
         """Get the currently selected post"""
