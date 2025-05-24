@@ -10,6 +10,7 @@ class Sidebar:
             "Explore",
             "Search",
             "Subreddits",
+            #"Profile",
             "Help",
             "Settings",
             "Exit"
@@ -19,17 +20,18 @@ class Sidebar:
     def display(self):
         width = 20
         output = []
-        output.append("=" * width)
-        output.append("Navigation".center(width))
-        output.append("=" * width)
+        output.append(f"├{'─' * (width-1)}┬")
+        output.append(f"│{'Navigation'.center(width-1)}│")
+        output.append(f"├{'─' * (width-1)}┤")
         
         for idx, option in enumerate(self.options):
             if idx == self.selected_index:
-                prefix = "> "
+                prefix = "│ ► "
             else:
-                prefix = "  "
-            output.append(f"{prefix}{option}")
+                prefix = "│   "
+            output.append(f"{prefix}{option.ljust(width-4)}│")
         
+        output.append(f"╰{'─' * (width-1)}╯")
         return "\n".join(output)
 
     def navigate(self, direction):

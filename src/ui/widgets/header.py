@@ -7,9 +7,11 @@ class Header:
 
     def display(self):
         width = self.terminal.width
-        border = "=" * width
-        title_line = self.title.center(width)
-        return f"{border}\n{title_line}\n{border}"
+        output = []
+        output.append(f"╭{'─' * (width-2)}╮")
+        output.append(f"│{self.title.center(width-2)}│")
+        output.append(f"╰{'─' * (width-2)}╯")
+        return "\n".join(output)
 
     def update_title(self, new_title):
         self.title = new_title

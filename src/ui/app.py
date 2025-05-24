@@ -8,6 +8,7 @@ from ui.screens.search_screen import SearchScreen
 from ui.screens.help_screen import HelpScreen
 from ui.screens.settings_screen import SettingsScreen
 from ui.screens.subreddits_screen import SubredditsScreen
+from ui.screens.user_profile_screen import UserProfileScreen
 import praw
 
 class RedditTUI:
@@ -25,8 +26,10 @@ class RedditTUI:
         self.settings_screen = SettingsScreen(self.term)
         self.settings_screen.reddit_instance = self.reddit_instance
         self.subreddits_screen = SubredditsScreen(self.term, self.reddit_instance)
+        self.user_profile_screen = UserProfileScreen(self.term, self.reddit_instance)
         self.search_screen.reddit_instance = self.reddit_instance
         self.subreddits_screen.reddit_instance = self.reddit_instance
+        self.user_profile_screen.reddit_instance = self.reddit_instance
         self.last_loaded_post = None
         self.current_feed = 'home'
 
@@ -73,6 +76,13 @@ class RedditTUI:
             self.subreddits_screen.reddit_instance = self.reddit_instance
             self.subreddits_screen.load_subreddits()
             self.header.update_title("RedditTUI")
+        elif option == "Profile":
+            if self.reddit_instance:
+                self.current_screen = 'profile'
+                self.user_profile_screen.load_user(self.reddit_instance.user.me().name)
+                self.header.update_title(f"RedditTUI - Profile: {self.reddit_instance.user.me().name}")
+            else:
+                print(self.term.move(self.term.height - 3, 0) + self.term.red("Please login first"))
         elif option == "Exit":
             return True
         return False
@@ -189,6 +199,12 @@ class RedditTUI:
             for i, line in enumerate(subreddits_lines):
                 if i < available_lines:
                     print(self.term.move(i + 3, 22) + line)
+        elif self.current_screen == 'profile':
+            profile_lines = self.user_profile_screen.display().split('\n')
+            available_lines = content_height
+            for i, line in enumerate(profile_lines):
+                if i < available_lines:
+                    print(self.term.move(i + 3, 22) + line)
 
     def update_posts_from_subreddit(self, subreddit, category="hot"):
         if self.reddit_instance:
@@ -234,7 +250,7 @@ class RedditTUI:
                                 self.active_component = 'post_list'
                                 self.post_view.current_post = None
                                 self.post_view.comments = []
-                        elif self.current_screen in ['search', 'help', 'settings', 'subreddits']:
+                        elif self.current_screen in ['search', 'help', 'settings', 'subreddits', 'profile']:
                             self.current_screen = 'home'
                             self.active_component = 'sidebar'
                             self.header.update_title(f"RedditTUI - {self.current_feed.capitalize()} Feed")
@@ -256,8 +272,12 @@ class RedditTUI:
                             self.post_view.scroll_comments_up()
                         elif self.current_screen == 'search':
                             self.search_screen.scroll_up()
+                        elif self.current_screen == 'subreddits':
+                            self.subreddits_screen.scroll_up()
                         elif self.current_screen == 'settings':
                             self.settings_screen.previous_option()
+                        elif self.current_screen == 'profile':
+                            self.user_profile_screen.scroll_up()
                     elif key == '\x1b[B':  # Down Arrow
                         if self.active_component == 'sidebar':
                             self.sidebar.navigate("down")
@@ -273,8 +293,12 @@ class RedditTUI:
                             self.post_view.scroll_comments_down()
                         elif self.current_screen == 'search':
                             self.search_screen.scroll_down()
+                        elif self.current_screen == 'subreddits':
+                            self.subreddits_screen.scroll_down()
                         elif self.current_screen == 'settings':
                             self.settings_screen.next_option()
+                        elif self.current_screen == 'profile':
+                            self.user_profile_screen.scroll_down()
                     elif key == '\x1b[C':  # Right Arrow
                         if self.current_screen == 'home' and self.active_component == 'sidebar':
                             self.active_component = 'post_list'
