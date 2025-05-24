@@ -9,8 +9,11 @@ from ui.screens.help_screen import HelpScreen
 from ui.screens.settings_screen import SettingsScreen
 from ui.screens.subreddits_screen import SubredditsScreen
 from ui.screens.user_profile_screen import UserProfileScreen
+from services.settings_service import Settings
 import praw
 import time
+import json
+import os
 
 class RedditTUI:
     def __init__(self):
@@ -31,8 +34,12 @@ class RedditTUI:
         self.search_screen.reddit_instance = self.reddit_instance
         self.subreddits_screen.reddit_instance = self.reddit_instance
         self.user_profile_screen.reddit_instance = self.reddit_instance
+        self.settings = Settings()
         self.last_loaded_post = None
         self.current_feed = 'home'
+        
+        #Initialize Settings
+        self.settings.load_settings_from_file()
 
         if self.reddit_instance:
             self.header.update_title(f"Reddit TUI - Logged in as {self.reddit_instance.user.me().name}")
@@ -51,7 +58,7 @@ class RedditTUI:
 
             test_posts = [
                 MockPost("Welcome to Reddit TUI", "reddit", 100, 50),
-                MockPost("This is a test post", "test", 50, 25),
+                MockPost("This is a test post", "test", 50, self.settings.posts_per_page),
                 MockPost("Another test post", "test", 75, 30)
             ]
             self.post_list.update_posts(test_posts)
@@ -60,7 +67,7 @@ class RedditTUI:
         self.active_component = 'sidebar'
 
     def handle_sidebar_option(self, option):
-        if option in ['Home', 'Popular', 'All', 'Explore']:
+        if option in ['Home', 'New', 'Top']:
             self.current_screen = 'home'
             self.active_component = 'post_list'
             self.current_feed = option.lower()
@@ -110,26 +117,26 @@ class RedditTUI:
             input()
 
     def update_posts_from_reddit(self, load_more=False):
+        self.post_list.current_page = self.current_feed
         if self.reddit_instance:
             try:
                 if load_more and self.last_loaded_post:
                     if self.current_feed == 'home':
-                        posts = list(self.reddit_instance.front.hot(limit=25, after=self.last_loaded_post))
-                    elif self.current_feed == 'popular':
-                        posts = list(self.reddit_instance.subreddit('popular').hot(limit=25, after=self.last_loaded_post))
-                    elif self.current_feed == 'all':
-                        posts = list(self.reddit_instance.subreddit('all').hot(limit=25, after=self.last_loaded_post))
-                    elif self.current_feed == 'explore':
-                        posts = list(self.reddit_instance.subreddit('explore').hot(limit=25, after=self.last_loaded_post))
+                        posts = list(self.reddit_instance.front.hot(limit=self.settings.posts_per_page, after=self.last_loaded_post))
+                    elif self.current_feed == 'new':
+                        posts = list(self.reddit_instance.front.new(limit=self.settings.posts_per_page, after=self.last_loaded_post))
+                    elif self.current_feed == 'top':
+                        posts = list(self.reddit_instance.front.top(limit=self.settings.posts_per_page, after=self.last_loaded_post))
                 else:
                     if self.current_feed == 'home':
-                        posts = list(self.reddit_instance.front.hot(limit=25))
-                    elif self.current_feed == 'popular':
-                        posts = list(self.reddit_instance.subreddit('popular').hot(limit=25))
-                    elif self.current_feed == 'all':
-                        posts = list(self.reddit_instance.subreddit('all').hot(limit=25))
-                    elif self.current_feed == 'explore':
-                        posts = list(self.reddit_instance.subreddit('explore').hot(limit=25))
+                        posts = list(self.reddit_instance.front.hot(limit=self.settings.posts_per_page))
+                    elif self.current_feed == 'new':
+                        posts = list(self.reddit_instance.front.new(limit=self.settings.posts_per_page))
+                    elif self.current_feed == 'top':
+                        posts = list(self.reddit_instance.front.top(limit=self.settings.posts_per_page))
+                
+                if self.settings.show_nsfw == False:
+                    posts = [post for post in posts if post.over_18 == False]
                 
                 if posts:
                     if load_more:
@@ -144,6 +151,9 @@ class RedditTUI:
                     print(self.term.move(self.term.height - 3, 0) + self.term.yellow("No more posts found"))
             except Exception as e:
                 print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error fetching posts: {e}"))
+                with open("temp.txt", "w") as f:
+                    f.write(e)
+
                 self.post_list.loading_more = False
 
     def load_post_comments(self, post):
@@ -217,15 +227,18 @@ class RedditTUI:
         if self.reddit_instance:
             try:
                 if category == "hot":
-                    posts = list(subreddit.hot(limit=25))
+                    posts = list(subreddit.hot(limit=self.settings.posts_per_page))
                 elif category == "new":
-                    posts = list(subreddit.new(limit=25))
+                    posts = list(subreddit.new(limit=self.settings.posts_per_page))
                 elif category == "top":
-                    posts = list(subreddit.top(limit=25))
+                    posts = list(subreddit.top(limit=self.settings.posts_per_page))
                 elif category == "rising":
-                    posts = list(subreddit.rising(limit=25))
+                    posts = list(subreddit.rising(limit=self.settings.posts_per_page))
                 else:
-                    posts = list(subreddit.hot(limit=25))
+                    posts = list(subreddit.hot(limit=self.settings.posts_per_page))
+
+                if not self.settings.show_nsfw:
+                    posts = [post for post in posts if not post.over_18]
 
                 if posts:
                     self.post_list.update_posts(posts)
@@ -271,7 +284,7 @@ class RedditTUI:
                         if self.active_component == 'sidebar':
                             self.sidebar.navigate("up")
                             selected_option = self.sidebar.get_selected_option()
-                            if selected_option in ['Home', 'Popular', 'All', 'Explore']:
+                            if selected_option in ['Home', 'New', 'Top']:
                                 self.current_feed = selected_option.lower()
                                 self.current_screen = 'home'
                                 #self.active_component = 'post_list'
@@ -294,7 +307,7 @@ class RedditTUI:
                         if self.active_component == 'sidebar':
                             self.sidebar.navigate("down")
                             selected_option = self.sidebar.get_selected_option()
-                            if selected_option in ['Home', 'Popular', 'All', 'Explore']:
+                            if selected_option in ['Home', 'New', 'Top']:
                                 self.current_feed = selected_option.lower()
                                 self.current_screen = 'home'
                                 #self.active_component = 'post_list'

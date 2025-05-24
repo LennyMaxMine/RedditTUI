@@ -20,9 +20,9 @@ class SettingsScreen:
             "Save Settings"
         ]
         self.themes = ["Default", "Dark", "Light"]
-        self.posts_per_page_options = ["10", "25", "50"]
+        self.posts_per_page_options = ["10", "25", "50", "100", "250", "500"]
         self.comment_depth_options = ["1", "2", "3", "4", "5"]
-        self.boolean_options = ["Yes", "No"]
+        self.boolean_options = ["True", "False"]
         self.message = None
         self.message_time = 0
         self.login_screen = LoginScreen(None)
@@ -38,8 +38,8 @@ class SettingsScreen:
             "theme": "Default",
             "posts_per_page": "25",
             "comment_depth": "3",
-            "auto_load_comments": "Yes",
-            "show_nsfw": "No"
+            "auto_load_comments": "True",
+            "show_nsfw": "False"
         }
         
         try:
@@ -92,7 +92,7 @@ class SettingsScreen:
                     output.append(f"    {self.terminal.red('Not logged in')}")
                 output.append(f"    {self.terminal.cyan('Press Enter to login/logout')}")
             
-            elif option == "Theme":
+            elif option == "Theme (doesnt change anything rn lol)":
                 options_line = "    "
                 for theme in self.themes:
                     if theme == self.settings["theme"]:

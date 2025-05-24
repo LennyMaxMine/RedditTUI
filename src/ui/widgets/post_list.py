@@ -4,13 +4,14 @@ from datetime import datetime
 import emoji
 
 class PostList:
-    def __init__(self, terminal, visible_posts=10):
+    def __init__(self, terminal, visible_posts=10, current_page='home'):
         self.terminal = terminal
         self.posts = []
         self.selected_index = 0
         self.scroll_offset = 0
         self.visible_posts = visible_posts
         self.loading_more = False
+        self.current_page = 'home'
 
     def get_score_color(self, score):
         if score > 1000:
@@ -56,6 +57,9 @@ class PostList:
         
         for idx, post in enumerate(self.posts[start_idx:end_idx], start=start_idx + 1):
             metadata_additional_width = 53
+            if self.current_page in ['top', 'new']:
+                metadata_additional_width += 1
+            
 
             if idx - 1 == self.selected_index:
                 prefix = self.terminal.bright_green("│ ► ")
