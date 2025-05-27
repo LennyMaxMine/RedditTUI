@@ -7,3 +7,4 @@ urwid
 cryptography
 blessed
 emoji
+pyshorteners

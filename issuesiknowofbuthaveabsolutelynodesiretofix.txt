@@ -1,2 +1,4 @@
 - Title to long for post View
-- Points larger or smaller than 99 breaking the ui (depends how they want to annoy me)
+- Points or posting time larger or smaller than 2 digits breaking the ui (depends how they want to annoy me)
+- Up/Downvoting breaks ui
+- Profile Gold Status breaks ui

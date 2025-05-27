@@ -9,11 +9,14 @@ class Sidebar:
             "Top",
             "Search",
             "Subreddits",
-            #"Profile",
+            "Profile",
             "Help",
             "Settings",
             "Exit"
         ]
+        self.selected_index = 0
+
+    def escape_to_home(self):
         self.selected_index = 0
 
     def display(self):

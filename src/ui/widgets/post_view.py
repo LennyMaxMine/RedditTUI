@@ -14,6 +14,7 @@ import tempfile
 import datetime
 import emoji
 import re
+from pyshorteners import Shortener
 
 class PostView:
     def __init__(self, terminal):
@@ -25,6 +26,7 @@ class PostView:
         self.comment_lines = []
         self.need_more_comments = False
         self.from_search = False
+        self.vote_status = 0  # 0: no vote, 1: upvoted, -1: downvoted
 
     def get_score_color(self, score):
         if score > 1000:
@@ -129,6 +131,48 @@ class PostView:
                 self.comment_lines.extend(self.display_comment(comment, 0, self.content_width))
         self.need_more_comments = False
 
+    def upvote_post(self):
+        if not self.current_post:
+            return
+        try:
+            if self.vote_status == 1:
+                self.current_post.clear_vote()
+                self.vote_status = 0
+            else:
+                self.current_post.upvote()
+                self.vote_status = 1
+        except Exception as e:
+            print(self.terminal.move(self.terminal.height - 3, 0) + 
+                  self.terminal.red(f"Error voting: {e}"))
+
+    def downvote_post(self):
+        if not self.current_post:
+            return
+        try:
+            if self.vote_status == -1:
+                self.current_post.clear_vote()
+                self.vote_status = 0
+            else:
+                self.current_post.downvote()
+                self.vote_status = -1
+        except Exception as e:
+            print(self.terminal.move(self.terminal.height - 3, 0) + 
+                  self.terminal.red(f"Error voting: {e}"))
+
+    def display_post(self, post, comments=None):
+        self.current_post = post
+        self.comments = comments or []
+        self.comment_lines = []
+        self.comment_scroll_offset = 0
+        self.need_more_comments = False
+        try:
+            self.vote_status = post.likes
+        except:
+            self.vote_status = 0
+        for comment in self.comments:
+            if hasattr(comment, 'body'):
+                self.comment_lines.extend(self.display_comment(comment, 0, self.content_width))
+
     def display(self):
         if not self.current_post:
             return ""
@@ -152,7 +196,17 @@ class PostView:
         metadata.append(self.terminal.bright_yellow(f"Author: u/{self.current_post.author}"))
         
         score_color = self.get_score_color(self.current_post.score)
-        metadata.append(f"{score_color}Score: {self.current_post.score}{self.terminal.normal}")
+        vote_indicator = ""  # Two spaces for consistent width
+        vote_indicator_afterwards = ""
+        if self.vote_status == 1:
+            vote_indicator = self.terminal.bright_green("↑ ")
+            vote_indicator_afterwards = "          "
+        elif self.vote_status == -1:
+            vote_indicator = self.terminal.bright_red("↓ ")
+            vote_indicator_afterwards = "          "
+        else:
+            vote_indicator_afterwards = "  "
+        metadata.append(f"{score_color}{vote_indicator}Score: {self.current_post.score}{vote_indicator_afterwards}{self.terminal.normal}")
         metadata.append(self.terminal.bright_magenta(f"Comments: {self.current_post.num_comments}"))
         
         if hasattr(self.current_post, 'created_utc'):
@@ -173,7 +227,12 @@ class PostView:
         if hasattr(self.current_post, 'url'):
             if additionalchar >= 1 and origin_exists == True: addchar = " "
             else: addchar = ""
-            metadata.append(self.terminal.bright_cyan(f"{addchar}URL: {self.current_post.url}"))
+            try:
+                s = Shortener()
+                short_url = s.tinyurl.short(self.current_post.url)
+            except:
+                short_url = self.current_post.url
+            metadata.append(self.terminal.bright_cyan(f"{addchar}URL: {short_url}"))
             
         if hasattr(self.current_post, 'is_self'):
             metadata.append(self.terminal.bright_yellow(f"Type: {'Self Post' if self.current_post.is_self else 'Link Post'}"))
@@ -274,7 +333,3 @@ class PostView:
         
         output.append(f"╰{'─' * (width-2)}╯")
         return "\n".join(output)
-
-    def display_post(self, post, comments=None):
-        self.current_post = post
-        self.comments = comments or []
