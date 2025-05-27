@@ -2,7 +2,6 @@ from blessed import Terminal
 from datetime import datetime
 
 class UserProfileScreen:
-    # Rework required
     def __init__(self, term, reddit_instance):
         self.term = term
         self.reddit_instance = reddit_instance
@@ -12,6 +11,7 @@ class UserProfileScreen:
         self.max_lines = self.term.height - 5
         self.loading = False
         self.error = None
+        self.width = self.term.width - 22
 
     def load_user(self, username):
         self.loading = True
@@ -25,35 +25,39 @@ class UserProfileScreen:
             total_karma = self.current_user.link_karma + self.current_user.comment_karma
             
             header = [
-                f"╭{'─' * (self.term.width - 2)}╮",
-                f"│ {self.current_user.name} {' ' * (self.term.width - len(self.current_user.name) - 4)}│",
-                f"├{'─' * (self.term.width - 2)}┤",
-                f"│ Karma: {total_karma:,} │ Link: {self.current_user.link_karma:,} │ Comment: {self.current_user.comment_karma:,} │",
-                f"│ Created: {created_date} │ Gold: {'✓' if self.current_user.is_gold else '✗'} │ Mod: {'✓' if self.current_user.is_mod else '✗'} │",
-                f"╰{'─' * (self.term.width - 2)}╯",
-                ""
+                f"┬{'─' * (self.width-2)}┤",
+                f"│{self.term.bright_blue(f'User Profile: {self.current_user.name}').center(self.width+9)}│",
+                f"├{'─' * (self.width-2)}┤",
+                f"│{self.term.bright_cyan(f'Karma: {total_karma:,}').ljust(self.width//2)}│{self.term.bright_yellow(f'Link: {self.current_user.link_karma:,}').ljust(self.width//2+19)}│",
+                f"│{self.term.bright_cyan(f'Comment: {self.current_user.comment_karma:,}').ljust(self.width//2)}│{self.term.bright_yellow(f'Created: {created_date}').ljust(self.width//2+19)}│",
+                f"│{self.term.bright_cyan(f'Gold: {self.term.bright_yellow("✓") if self.current_user.is_gold else self.term.red("✗")}').ljust(self.width//2)}│{self.term.bright_yellow(f'Mod: {self.term.bright_green("✓") if self.current_user.is_mod else self.term.red("✗")}').ljust(self.width//2-2)}│",
+                f"├{'─' * (self.width-2)}┤"
             ]
             
             self.content.extend(header)
-            self.content.append("📝 Recent Posts")
-            self.content.append("─" * (self.term.width - 2))
+            self.content.append(f"│{self.term.bright_blue('📝 Recent Posts').center(self.width+8)}│")
+            self.content.append(f"├{'─' * (self.width-2)}┤")
             
             for submission in self.current_user.submissions.new(limit=5):
-                title = submission.title[:self.term.width - 10]
+                title = submission.title[:self.width - 10]
                 subreddit = submission.subreddit.display_name
-                self.content.append(f"• {title}")
-                self.content.append(f"  r/{subreddit}")
-                self.content.append("")
+                score = submission.score
+                self.content.append(f"│ {self.term.bold_white(f'• {title}')}".ljust(self.width+14) + "│")
+                self.content.append(f"│ {self.term.bright_cyan(f'r/{subreddit}')} | {self.term.bright_yellow(f'Score: {score:,}')}".ljust(self.width+21) + "│")
+                self.content.append(f"├{'─' * (self.width-2)}┤")
             
-            self.content.append("💬 Recent Comments")
-            self.content.append("─" * (self.term.width - 2))
+            self.content.append(f"│{self.term.bright_blue('💬 Recent Comments').center(self.width+8)}│")
+            self.content.append(f"├{'─' * (self.width-2)}┤")
             
             for comment in self.current_user.comments.new(limit=5):
-                body = comment.body[:self.term.width - 10].replace('\n', ' ')
+                body = comment.body[:self.width - 10].replace('\n', ' ')
                 subreddit = comment.subreddit.display_name
-                self.content.append(f"• {body}")
-                self.content.append(f"  r/{subreddit}")
-                self.content.append("")
+                score = comment.score
+                self.content.append(f"│ {self.term.bold_white(f'• {body}')}".ljust(self.width+14) + "│")
+                self.content.append(f"│ {self.term.bright_cyan(f'r/{subreddit}')} | {self.term.bright_yellow(f'Score: {score:,}')}".ljust(self.width+21) + "│")
+                self.content.append(f"├{'─' * (self.width-2)}┤")
+            
+            self.content.append(f"╰{'─' * (self.width-2)}╯")
                 
         except Exception as e:
             self.error = str(e)
@@ -71,13 +75,13 @@ class UserProfileScreen:
 
     def display(self):
         if self.loading:
-            return "Loading profile..."
+            return f"╭{'─' * (self.width-2)}╮\n│{self.term.bright_blue('Loading profile...').center(self.width+9)}│\n╰{'─' * (self.width-2)}╯"
             
         if self.error:
-            return f"Error: {self.error}"
+            return f"╭{'─' * (self.width-2)}╮\n│{self.term.red(f'Error: {self.error}').center(self.width+9)}│\n╰{'─' * (self.width-2)}╯"
             
         if not self.current_user:
-            return "No user profile loaded"
+            return f"╭{'─' * (self.width-2)}╮\n│{self.term.yellow('No user profile loaded').center(self.width+9)}│\n╰{'─' * (self.width-2)}╯"
             
         output = []
         visible_content = self.content[self.scroll_position:self.scroll_position + self.max_lines]
@@ -87,7 +91,8 @@ class UserProfileScreen:
             
         if len(self.content) > self.max_lines:
             scroll_info = f"Scroll: {self.scroll_position + 1}-{min(self.scroll_position + self.max_lines, len(self.content))}/{len(self.content)}"
-            output.append("─" * (self.term.width - 2))
-            output.append(scroll_info.center(self.term.width - 2))
+            output.append(f"╭{'─' * (self.width-2)}╮")
+            output.append(f"│{self.term.bright_blue(scroll_info).center(self.width+9)}│")
+            output.append(f"╰{'─' * (self.width-2)}╯")
             
         return "\n".join(output) 

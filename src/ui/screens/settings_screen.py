@@ -73,86 +73,96 @@ class SettingsScreen:
         width = self.terminal.width - 22
         output = []
         
-        output.append(self.terminal.blue("=" * width))
-        output.append(self.terminal.bold_white("Settings".center(width)))
-        output.append(self.terminal.blue("=" * width))
+        output.append(f"┬{'─' * (width-2)}┤")
+        output.append(f"│{self.terminal.bright_blue('Settings').center(width+9)}│")
+        #output.append(f"├{'─' * (width-2)}┤")
         
         for idx, option in enumerate(self.options):
             if idx == self.selected_option:
-                prefix = self.terminal.green("> ")
+                prefix = self.terminal.bright_green("│ ► ")
             else:
-                prefix = "  "
-            
-            output.append(f"{prefix}{self.terminal.white(option)}:")
+                prefix = "│   "
+
+            output.append(f"├{'─' * (width-2)}┤")
+
+
+            if prefix != "│   ":
+                output.append(f"{prefix}{self.terminal.bold_white(option)}".ljust(width+25) + "│")
+            else:
+                output.append(f"{prefix}{self.terminal.bold_white(option)}".ljust(width+14) + "│")
             
             if option == "Login":
                 if self.reddit_instance:
-                    output.append(f"    {self.terminal.green('Logged in as: ' + self.reddit_instance.user.me().name)}")
+                    output.append(f"│    {self.terminal.green('Logged in as: ' + self.reddit_instance.user.me().name)}".ljust(width+10) + "│")
                 else:
-                    output.append(f"    {self.terminal.red('Not logged in')}")
-                output.append(f"    {self.terminal.cyan('Press Enter to login/logout')}")
+                    output.append(f"│    {self.terminal.red('Not logged in')}".ljust(width+10) + "│")
+                output.append(f"│    {self.terminal.cyan('Press Enter to login/logout')}".ljust(width+10) + "│")
             
-            elif option == "Theme (doesnt change anything rn lol)":
-                options_line = "    "
+            elif option == "Theme":
+                options_line = "│    "
                 for theme in self.themes:
                     if theme == self.settings["theme"]:
-                        options_line += self.terminal.green(f"[{theme}] ")
+                        options_line += self.terminal.bright_green(f"[{theme}] ")
                     else:
                         options_line += self.terminal.white(f"{theme} ")
-                output.append(options_line)
+                output.append(f"{options_line}".ljust(width+32) + "│")
             
             elif option == "Posts Per Page":
-                options_line = "    "
+                options_line = "│    "
                 for count in self.posts_per_page_options:
                     if count == self.settings["posts_per_page"]:
-                        options_line += self.terminal.green(f"[{count}] ")
+                        options_line += self.terminal.bright_green(f"[{count}] ")
                     else:
                         options_line += self.terminal.white(f"{count} ")
-                output.append(options_line)
+                output.append(f"{options_line}".ljust(width+65) + "│")
             
             elif option == "Comment Depth":
-                options_line = "    "
+                options_line = "│    "
                 for depth in self.comment_depth_options:
                     if depth == self.settings["comment_depth"]:
-                        options_line += self.terminal.green(f"[{depth}] ")
+                        options_line += self.terminal.bright_green(f"[{depth}] ")
                     else:
                         options_line += self.terminal.white(f"{depth} ")
-                output.append(options_line)
+                output.append(f"{options_line}".ljust(width+54) + "│")
             
             elif option == "Auto Load Comments":
-                options_line = "    "
+                options_line = "│    "
                 for value in self.boolean_options:
                     if value == self.settings["auto_load_comments"]:
-                        options_line += self.terminal.green(f"[{value}] ")
+                        options_line += self.terminal.bright_green(f"[{value}] ")
                     else:
                         options_line += self.terminal.white(f"{value} ")
-                output.append(options_line)
+                output.append(f"{options_line}".ljust(width+21) + "│")
             
             elif option == "Show NSFW Content":
-                options_line = "    "
+                options_line = "│    "
                 for value in self.boolean_options:
                     if value == self.settings["show_nsfw"]:
-                        options_line += self.terminal.green(f"[{value}] ")
+                        options_line += self.terminal.bright_green(f"[{value}] ")
                     else:
                         options_line += self.terminal.white(f"{value} ")
-                output.append(options_line)
+                output.append(f"{options_line}".ljust(width+21) + "│")
             
             elif option == "Save Settings":
-                output.append("    " + self.terminal.cyan("Press Enter to save current settings"))
+                output.append(f"│    {self.terminal.cyan('Press Enter to save current settings')}".ljust(width+10) + "│")
+                output.append(f"╰{'─' * (width-2)}╯")
             
-            output.append("")  # Add empty line between options
+            #output.append(f"├{'─' * (width-2)}┤")
         
-        output.append(self.terminal.blue("-" * width))
-        output.append(self.terminal.cyan("Instructions:"))
-        output.append(self.terminal.white("• Up/Down Arrow: Navigate options"))
-        output.append(self.terminal.white("• Left/Right Arrow: Change values"))
-        output.append(self.terminal.white("• Enter: Save settings / Login"))
-        output.append(self.terminal.white("• Escape: Return without saving"))
-        output.append(self.terminal.blue("=" * width))
+        output.append(f"")
+        output.append(f"╭{'─' * (width-2)}╮")
+        output.append(f"│{self.terminal.bright_cyan('Instructions:').center(width+9)}│")
+        output.append(f"│    {self.terminal.white('• Up/Down Arrow: Navigate options')}".ljust(width+10) + "│")
+        output.append(f"│    {self.terminal.white('• Left/Right Arrow: Change values')}".ljust(width+10) + "│")
+        output.append(f"│    {self.terminal.white('• Enter: Save settings / Login')}".ljust(width+10) + "│")
+        output.append(f"│    {self.terminal.white('• Escape: Return without saving')}".ljust(width+10) + "│")
+        output.append(f"╰{'─' * (width-2)}╯")
 
         if self.message and time.time() - self.message_time < 3:
             message_color = self.terminal.red if self.is_error else self.terminal.green
-            output.append(message_color(self.message.center(width)))
+            output.append(f"╭{'─' * (width-2)}╮")
+            output.append(f"│{message_color(self.message).center(width+9)}│")
+            output.append(f"╰{'─' * (width-2)}╯")
         
         return "\n".join(output)
 

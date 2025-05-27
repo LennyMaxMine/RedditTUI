@@ -53,7 +53,7 @@ class RedditTUI:
                     self.score = score
                     self.num_comments = num_comments
                     self.author = "test_user"
-                    self.over_18 = False
+                    self.over18 = False
                     self.stickied = False
 
             test_posts = [
@@ -136,7 +136,7 @@ class RedditTUI:
                         posts = list(self.reddit_instance.front.top(limit=self.settings.posts_per_page))
                 
                 if self.settings.show_nsfw == False:
-                    posts = [post for post in posts if post.over_18 == False]
+                    posts = [post for post in posts if post.over18 == False]
                 
                 if posts:
                     if load_more:
@@ -238,7 +238,7 @@ class RedditTUI:
                     posts = list(subreddit.hot(limit=self.settings.posts_per_page))
 
                 if not self.settings.show_nsfw:
-                    posts = [post for post in posts if not post.over_18]
+                    posts = [post for post in posts if not post.over18]
 
                 if posts:
                     self.post_list.update_posts(posts)
@@ -361,6 +361,12 @@ class RedditTUI:
                             self.settings_screen.next_value()
                         elif self.current_screen == 'subreddits':
                             self.subreddits_screen.previous_category()
+                    elif key == 'k':  # Upvote
+                        if self.current_screen == 'post':
+                            self.post_view.upvote_post()
+                    elif key == 'j':  # Downvote
+                        if self.current_screen == 'post':
+                            self.post_view.downvote_post()
                     elif key == '\t':  # Tab
                         if self.current_screen == 'search':
                             self.search_screen.next_search_type()

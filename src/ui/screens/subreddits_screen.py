@@ -30,7 +30,7 @@ class SubredditsScreen:
         width = self.terminal.width - 22
         output = []
         
-        output.append(f"┬{'─' * (width-2)}┬")
+        output.append(f"┬{'─' * (width-2)}┤")
         output.append(f"│{self.terminal.bright_blue('Subscribed Subreddits').center(width+9)}│")
         output.append(f"├{'─' * (width-2)}┤")
         
@@ -68,7 +68,9 @@ class SubredditsScreen:
             else:
                 output.append(f"╰{'─' * (width-2)}╯")
         
-        output.append(f"┬{'─' * (width-2)}┬")
+        output.append(f"")
+        
+        output.append(f"╭{'─' * (width-2)}╮")
         output.append(f"│{self.terminal.bright_cyan('Post Category:').center(width+9)}│")
         category_line = "│    "
         for i, category in enumerate(self.post_categories):
@@ -76,15 +78,17 @@ class SubredditsScreen:
                 category_line += self.terminal.bright_green(f"[{category}] ")
             else:
                 category_line += self.terminal.white(f"{category} ")
-        output.append(f"{category_line.ljust(width+9)}│")
+        output.append(f"{category_line.ljust(width+43)}│")
         output.append(f"╰{'─' * (width-2)}╯")
+
+        output.append(f"")
         
-        output.append(f"┬{'─' * (width-2)}┬")
+        output.append(f"╭{'─' * (width-2)}╮")
         output.append(f"│{self.terminal.bright_cyan('Instructions:').center(width+9)}│")
-        output.append(f"│    {self.terminal.white('• Up/Down Arrow: Navigate subreddits')}")
-        output.append(f"│    {self.terminal.white('• Left/Right Arrow: Change post category')}")
-        output.append(f"│    {self.terminal.white('• Enter: Open subreddit')}")
-        output.append(f"│    {self.terminal.white('• Escape: Return to main screen')}")
+        output.append(f"│    {self.terminal.white('• Up/Down Arrow: Navigate subreddits')}".ljust(width+10) + "│")
+        output.append(f"│    {self.terminal.white('• Left/Right Arrow: Change post category')}".ljust(width+10) + "│")
+        output.append(f"│    {self.terminal.white('• Enter: Open subreddit')}".ljust(width+10) + "│")
+        output.append(f"│    {self.terminal.white('• Escape: Return to main screen')}".ljust(width+10) + "│")
         output.append(f"╰{'─' * (width-2)}╯")
         
         return "\n".join(output)

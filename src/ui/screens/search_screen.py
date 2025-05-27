@@ -68,7 +68,7 @@ class SearchScreen:
                 post_line = f"{prefix}{self.terminal.bold_white(post_num)} {self.terminal.white(title)}"
                 metadata = f" | {subreddit} | {author} | {score} | {comments}"
                 
-                if hasattr(post, 'over_18') and post.over_18:
+                if hasattr(post, 'over18') and post.over18:
                     metadata += f" | {self.terminal.red('NSFW')}"
                     metadata_additional_width += 7
                 
@@ -82,7 +82,7 @@ class SearchScreen:
                     post_line = f"{prefix}{self.terminal.bold_white(post_num)} {self.terminal.white(title[:available_space-3])}..."
                     full_line = post_line + metadata
                 
-                output.append(self.terminal.blue("│") + " " + full_line + " " * (width - len(full_line) + 67 - self.contains_emoji(full_line) + metadata_additional_width) + self.terminal.blue("│"))
+                output.append(self.terminal.blue("│") + " " + full_line + " " * (width - len(full_line) + 67 - self.contains_emoji(full_line) + metadata_additional_width) + self.terminal.white("│"))
                 if idx < end_idx:
                     output.append(self.terminal.blue("├" + "─" * (width-2) + "┤"))
         else:
