@@ -4,6 +4,8 @@ from rich.layout import Layout
 from rich.text import Text
 from rich import box
 from rich.prompt import Prompt
+from rich.style import Style
+from services.theme_service import ThemeService
 
 class PostScreen:
     def __init__(self, post, origin=None, reddit_instance=None):
@@ -12,6 +14,7 @@ class PostScreen:
         self.console = Console()
         self.layout = Layout()
         self.reddit_instance = reddit_instance
+        self.theme_service = ThemeService()
         self.report_reasons = [
             "Spam",
             "Vote Manipulation",
@@ -20,7 +23,6 @@ class PostScreen:
             "Breaking Reddit",
             "Other"
         ]
-
         self.create_layout()
 
     def create_layout(self):
@@ -33,13 +35,13 @@ class PostScreen:
         self.layout["main"].update(self.create_post_view())
 
     def create_sidebar(self):
-        sidebar_content = Text("Navigation\n\n", style="cyan")
-        sidebar_content.append("1. Home\n", style="white")
-        sidebar_content.append("2. Login\n", style="white")
-        sidebar_content.append("3. Report\n", style="white")
-        sidebar_content.append("4. Exit\n", style="white")
+        sidebar_content = Text("Navigation\n\n", style=self.theme_service.get_style("sidebar"))
+        sidebar_content.append("1. Home\n", style=self.theme_service.get_style("sidebar_item"))
+        sidebar_content.append("2. Login\n", style=self.theme_service.get_style("sidebar_item"))
+        sidebar_content.append("3. Report\n", style=self.theme_service.get_style("sidebar_item"))
+        sidebar_content.append("4. Exit\n", style=self.theme_service.get_style("sidebar_item"))
         
-        return Panel(sidebar_content, title="Navigation", box=box.SIMPLE)
+        return Panel(sidebar_content, title="Navigation", box=box.SIMPLE, style=self.theme_service.get_style("panel_title"))
 
     def report_post(self):
         if not self.reddit_instance:
@@ -48,14 +50,14 @@ class PostScreen:
 
         self.console.print("\n[cyan]Select reason for reporting:[/cyan]")
         for idx, reason in enumerate(self.report_reasons, 1):
-            self.console.print(f"{idx}. {reason}")
+            self.console.print(f"[yellow]{idx}[/yellow]. [white]{reason}[/white]")
 
         try:
             choice = int(Prompt.ask("\nEnter number", default="6"))
             if 1 <= choice <= len(self.report_reasons):
                 reason = self.report_reasons[choice - 1]
                 if reason == "Other":
-                    reason = Prompt.ask("Please specify reason")
+                    reason = Prompt.ask("[cyan]Please specify reason[/cyan]")
                 
                 self.reddit_instance.submission(self.post['id']).report(reason)
                 self.console.print("[green]Post reported successfully[/green]")
@@ -73,24 +75,24 @@ class PostScreen:
         return False
 
     def create_post_view(self):
-        origin_text = f"From: {self.origin}\n\n" if self.origin else ""
-        post_content = f"""
-{origin_text}Title: {self.post['title']}
-Subreddit: r/{self.post['subreddit']}
-Author: u/{self.post['author']}
-Score: {self.post['score']}
-Comments: {self.post['num_comments']}
+        origin_text = f"[cyan]From: {self.origin}[/cyan]\n\n" if self.origin else ""
+        post_content = Text()
+        post_content.append(origin_text)
+        post_content.append(f"Title: {self.post['title']}\n", style=self.theme_service.get_style("title"))
+        post_content.append(f"Subreddit: r/{self.post['subreddit']}\n", style=self.theme_service.get_style("subreddit"))
+        post_content.append(f"Author: u/{self.post['author']}\n", style=self.theme_service.get_style("author"))
+        post_content.append(f"Score: {self.post['score']}\n", style=self.theme_service.get_style("score"))
+        post_content.append(f"Comments: {self.post['num_comments']}\n\n", style=self.theme_service.get_style("comments"))
+        post_content.append(f"{self.post['content']}", style=self.theme_service.get_style("content"))
 
-{self.post['content']}
-"""
-        post_content = Panel(
-            Text(post_content, style="white"),
+        return Panel(
+            post_content,
             title="Post Details",
             box=box.SIMPLE,
             expand=True,
-            padding=(1, 2)  # Add some padding inside the panel
+            padding=(1, 2),
+            style=self.theme_service.get_style("panel_title")
         )
-        return post_content
 
     def display(self):
         self.console.clear()

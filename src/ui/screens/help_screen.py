@@ -1,8 +1,10 @@
 from blessed import Terminal
+from services.theme_service import ThemeService
 
 class HelpScreen:
     def __init__(self, terminal):
         self.terminal = terminal
+        self.theme_service = ThemeService()
         self.selected_section = 0
         self.sections = ["Navigation", "Post View", "Search", "Account"]
         self.scroll_offset = 0
@@ -86,9 +88,6 @@ class HelpScreen:
         
         output.append(f"╰{'─' * (width-2)}╯")
         output.append(f"")
-        #output.append(f"╭{'─' * (width-2)}╮")
-        #output.append(f"│{self.terminal.bright_cyan('Press Escape to return to main screen').center(width+9)}│")
-        #output.append(f"╰{'─' * (width-2)}╯")
         
         return "\n".join(output)
 

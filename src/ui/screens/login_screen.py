@@ -8,11 +8,13 @@ import json
 import os
 from pathlib import Path
 import time
+from services.theme_service import ThemeService
 
 class LoginScreen:
     def __init__(self, reddit_instance=None):
         self.reddit_instance = reddit_instance
         self.term = Terminal()
+        self.theme_service = ThemeService()
         self.config_dir = Path.home() / '.reddittui'
         self.config_file = self.config_dir / 'cookies.jhna'
         self.ensure_config_dir()
@@ -103,34 +105,34 @@ class LoginScreen:
 
         print(self.term.clear())
         print(self.term.move(0, 0))
-        print(self.term.bold("Login to Reddit"))
+        print(self.term.bold(self.term.cyan("Login to Reddit")))
         print("\nPlease enter your credentials:\n")
         
         saved_creds = self.load_credentials()
         if saved_creds:
             print(self.term.cyan("Found saved credentials. Press Enter to use them or type new ones."))
-            print(f"Saved username: {saved_creds['username']}")
+            print(self.term.cyan(f"Saved username: {saved_creds['username']}"))
             print()
         
-        client_id = self.get_input("Client ID: ")
+        client_id = self.get_input(self.term.cyan("Client ID: "))
         print()
         if not client_id and saved_creds:
             client_id = saved_creds['client_id']
-            print(f"Using saved Client ID: {client_id}")
+            print(self.term.cyan(f"Using saved Client ID: {client_id}"))
         
-        client_secret = self.get_input("Client Secret: ")
+        client_secret = self.get_input(self.term.cyan("Client Secret: "))
         print()
         if not client_secret and saved_creds:
             client_secret = saved_creds['client_secret']
-            print(f"Using saved Client Secret: {client_secret}")
+            print(self.term.cyan(f"Using saved Client Secret: {client_secret}"))
         
-        username = self.get_input("Username: ")
+        username = self.get_input(self.term.cyan("Username: "))
         print()
         if not username and saved_creds:
             username = saved_creds['username']
-            print(f"Using saved Username: {username}")
+            print(self.term.cyan(f"Using saved Username: {username}"))
         
-        password = self.get_input("Password: ")
+        password = self.get_input(self.term.cyan("Password: "))
         print()
 
         if not all([client_id, client_secret, username, password]):

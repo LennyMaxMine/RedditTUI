@@ -1,0 +1,20 @@
+{
+    "name": "Monokai",
+    "description": "A dark theme inspired by Monokai",
+    "colors": {
+        "title": "#f8f8f2",
+        "subreddit": "#a6e22e",
+        "author": "#fd971f",
+        "score": "#ae81ff",
+        "comments": "#66d9ef",
+        "content": "#f8f8f2",
+        "sidebar": "#f8f8f2",
+        "sidebar_item": "#f8f8f2",
+        "panel_title": "#f8f8f2",
+        "error": "#f92672",
+        "success": "#a6e22e",
+        "warning": "#fd971f",
+        "info": "#66d9ef",
+        "highlight": "#ae81ff"
+    }
+} 

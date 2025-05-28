@@ -2,11 +2,13 @@ from blessed import Terminal
 import textwrap
 import time
 import emoji
+from services.theme_service import ThemeService
 
 class SearchScreen:
     def __init__(self, terminal, reddit_instance):
         self.terminal = terminal
         self.reddit_instance = reddit_instance
+        self.theme_service = ThemeService()
         self.search_query = ""
         self.search_results = []
         self.selected_index = 0
@@ -27,11 +29,11 @@ class SearchScreen:
         width = self.terminal.width - 22
         output = []
         
-        output.append(self.terminal.blue("┬" + "─" * (width-2) + "┤"))
-        output.append(self.terminal.blue("│") + self.terminal.bold_white("Reddit Search".center(width-2)) + self.terminal.blue("│"))
-        output.append(self.terminal.blue("├" + "─" * (width-2) + "┤"))
+        output.append(f"┬{'─' * (width-2)}┤")
+        output.append(f"│{self.terminal.bold_white('Reddit Search').center(width-2)}│")
+        output.append(f"├{'─' * (width-2)}┤")
         
-        output.append(self.terminal.blue("│") + self.terminal.cyan("Search Query: ") + self.terminal.white(self.search_query) + " " * (width - len(self.search_query) - 16) + self.terminal.blue("│"))
+        output.append(f"│{self.terminal.cyan('Search Query: ')}{self.terminal.white(self.search_query)}{' ' * (width - len(self.search_query) - 16)}│")
         
         type_line = self.terminal.cyan("Search Type: ")
         for i, stype in enumerate(self.search_types):
@@ -39,9 +41,9 @@ class SearchScreen:
                 type_line += self.terminal.green(f"[{stype}] ")
             else:
                 type_line += self.terminal.white(f"{stype} ")
-        output.append(self.terminal.blue("│") + type_line + " " * (width - len(type_line) + 42) + self.terminal.blue("│"))
+        output.append(f"│{type_line}{' ' * (width - len(type_line) + 42)}│")
         
-        output.append(self.terminal.blue("├" + "─" * (width-2) + "┤"))
+        output.append(f"├{'─' * (width-2)}┤")
         
         if self.search_results:
             start_idx = self.scroll_offset
@@ -82,25 +84,24 @@ class SearchScreen:
                     post_line = f"{prefix}{self.terminal.bold_white(post_num)} {self.terminal.white(title[:available_space-3])}..."
                     full_line = post_line + metadata
                 
-                output.append(self.terminal.blue("│") + " " + full_line + " " * (width - len(full_line) + 67 - self.contains_emoji(full_line) + metadata_additional_width) + self.terminal.white("│"))
+                output.append(f"│ {full_line}{' ' * (width - len(full_line) + 67 - self.contains_emoji(full_line) + metadata_additional_width)}│")
                 if idx < end_idx:
-                    output.append(self.terminal.blue("├" + "─" * (width-2) + "┤"))
+                    output.append(f"├{'─' * (width-2)}┤")
         else:
-            output.append(self.terminal.blue("│") + " " + self.terminal.yellow("No search results. Enter a query to search.") + " " * (width - 46) + self.terminal.blue("│"))
+            output.append(f"│ {self.terminal.yellow('No search results. Enter a query to search.')}{' ' * (width - 46)}│")
         
-        output.append(self.terminal.blue("├" + "─" * (width-2) + "┤"))
-        output.append(self.terminal.blue("│") + " " + self.terminal.cyan("Instructions:") + " " * (width - 16) + self.terminal.blue("│"))
-        output.append(self.terminal.blue("│") + " " + self.terminal.white("• Type to enter search query") + " " * (width - 31) + self.terminal.blue("│"))
-        output.append(self.terminal.blue("│") + " " + self.terminal.white("• Tab to switch search type") + " " * (width - 30) + self.terminal.blue("│"))
-        output.append(self.terminal.blue("│") + " " + self.terminal.white("• Up/Down to navigate results") + " " * (width - 32) + self.terminal.blue("│"))
-        output.append(self.terminal.blue("│") + " " + self.terminal.white("• Enter to select result") + " " * (width - 27) + self.terminal.blue("│"))
-        output.append(self.terminal.blue("│") + " " + self.terminal.white("• Esc to return to main screen") + " " * (width - 33) + self.terminal.blue("│"))
-        output.append(self.terminal.blue("╰" + "─" * (width-2) + "╯"))
+        output.append(f"├{'─' * (width-2)}┤")
+        output.append(f"│ {self.terminal.cyan('Instructions:')}{' ' * (width - 16)}│")
+        output.append(f"│ {self.terminal.white('• Type to enter search query')}{' ' * (width - 31)}│")
+        output.append(f"│ {self.terminal.white('• Tab to switch search type')}{' ' * (width - 30)}│")
+        output.append(f"│ {self.terminal.white('• Up/Down to navigate results')}{' ' * (width - 32)}│")
+        output.append(f"│ {self.terminal.white('• Enter to select result')}{' ' * (width - 27)}│")
+        output.append(f"│ {self.terminal.white('• Esc to return to main screen')}{' ' * (width - 33)}│")
+        output.append(f"╰{'─' * (width-2)}╯")
         
         return "\n".join(output)
 
     def add_char(self, char):
-        """Add a character to the search query"""
         if not isinstance(char, str) or len(char) != 1:
             return
             
@@ -118,7 +119,6 @@ class SearchScreen:
                 self.terminal.move(0, 0)
 
     def backspace(self):
-        """Remove the last character from the search query"""
         if not self.search_query:
             return
             
@@ -136,14 +136,12 @@ class SearchScreen:
                 self.terminal.move(0, 0)
 
     def clear_query(self):
-        """Clear the search query"""
         self.search_query = ""
         self.search_results = []
         self.selected_index = 0
         self.scroll_offset = 0
 
     def search(self):
-        """Perform the search using Reddit's API"""
         if not self.search_query or not self.reddit_instance:
             return
         
@@ -170,27 +168,23 @@ class SearchScreen:
             self.terminal.move(0, 0)
 
     def scroll_up(self):
-        """Scroll the results up"""
         if self.selected_index > 0:
             self.selected_index -= 1
             if self.selected_index < self.scroll_offset:
                 self.scroll_offset = self.selected_index
 
     def scroll_down(self):
-        """Scroll the results down"""
         if self.selected_index < len(self.search_results) - 1:
             self.selected_index += 1
             if self.selected_index >= self.scroll_offset + self.visible_results:
                 self.scroll_offset = self.selected_index - self.visible_results + 1
 
     def next_search_type(self):
-        """Switch to the next search type"""
         self.type_index = (self.type_index + 1) % len(self.search_types)
         self.search_type = self.search_types[self.type_index]
         self.search()
 
     def get_selected_post(self):
-        """Get the currently selected post"""
         if 0 <= self.selected_index < len(self.search_results):
             post = self.search_results[self.selected_index]
             post.origin = f"Search: {self.search_query}"

@@ -315,9 +315,14 @@ class RedditTUI:
                         elif self.current_screen == 'subreddits':
                             self.subreddits_screen.scroll_up()
                         elif self.current_screen == 'settings':
-                            self.settings_screen.previous_option()
+                            if self.settings_screen.theme_screen_activated != True:
+                                self.settings_screen.previous_option()
+                            else:
+                                self.settings_screen.theme_scroll_up()
                         elif self.current_screen == 'profile':
                             self.user_profile_screen.scroll_up()
+                        elif self.settings_screen.theme_screen_activated == True:
+                            self.settings_screen.theme_scroll_up()
                     elif key == '\x1b[B':  # Down Arrow
                         if self.active_component == 'sidebar':
                             self.sidebar.navigate("down")
@@ -338,7 +343,10 @@ class RedditTUI:
                         elif self.current_screen == 'subreddits':
                             self.subreddits_screen.scroll_down()
                         elif self.current_screen == 'settings':
-                            self.settings_screen.next_option()
+                            if self.settings_screen.theme_screen_activated != True:
+                                self.settings_screen.next_option()
+                            else:
+                                self.settings_screen.theme_scroll_down()
                         elif self.current_screen == 'profile':
                             self.user_profile_screen.scroll_down()
                     elif key == '\x1b[C':  # Right Arrow

@@ -1,10 +1,12 @@
 from blessed import Terminal
 import textwrap
+from services.theme_service import ThemeService
 
 class SubredditsScreen:
     def __init__(self, terminal, reddit_instance):
         self.terminal = terminal
         self.reddit_instance = reddit_instance
+        self.theme_service = ThemeService()
         self.selected_index = 0
         self.scroll_offset = 0
         self.visible_subreddits = 10
