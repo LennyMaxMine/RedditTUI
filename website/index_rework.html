@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedditTUI Issues - LennyMaxMine</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        :root {
+            --bg-color: #0a0a0a;
+            --text-color: #00ff41;
+            --cursor-color: #00ff41;
+            --accent-color: #ff6b35;
+            --terminal-bg: rgba(10, 20, 30, 0.95);
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0a;
+            color: var(--text-color);
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        
+        .terminal {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 0;
+            border: 2px solid var(--text-color);
+            border-radius: 15px;
+            overflow: hidden;
+            background: var(--terminal-bg);
+        }
+        
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 255, 65, 0.1);
+            border-bottom: 1px solid var(--text-color);
+            padding: 15px 20px;
+        }
+        
+        .terminal-buttons {
+            display: flex;
+            margin-right: 20px;
+        }
+        
+        .terminal-button {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .terminal-button.red {
+            background: #ff5f56;
+        }
+        
+        .terminal-button.yellow {
+            background: #ffbd2e;
+        }
+        
+        .terminal-button.green {
+            background: #27c93f;
+        }
+        
+        .terminal-title {
+            flex-grow: 1;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .terminal-content {
+            padding: 30px;
+        }
+        
+        .prompt {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .prompt-symbol {
+            color: var(--accent-color);
+            margin-right: 15px;
+            font-weight: bold;
+        }
+        
+        h2 {
+            color: var(--accent-color);
+            font-size: 1.8em;
+            margin: 30px 0 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <div class="terminal-button red"></div>
+                <div class="terminal-button yellow"></div>
+                <div class="terminal-button green"></div>
+            </div>
+            <div class="terminal-title">reddit@tui: ~/projects/RedditTUI/issues</div>
+        </div>
+        
+        <div class="terminal-content">
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>git status --issues</span>
+            </div>
+            
+            <h2>🔍 Current Open Issues</h2>
+            
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>gh issue list --state=open</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
