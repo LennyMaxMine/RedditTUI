@@ -18,6 +18,8 @@ import os
 class RedditTUI:
     def __init__(self):
         self.term = Terminal()
+        self.settings = Settings()
+        self.settings.load_settings_from_file()
         self.sidebar = Sidebar(self.term)
         self.post_list = PostList(self.term)
         self.post_view = PostView(self.term)
@@ -34,13 +36,9 @@ class RedditTUI:
         self.search_screen.reddit_instance = self.reddit_instance
         self.subreddits_screen.reddit_instance = self.reddit_instance
         self.user_profile_screen.reddit_instance = self.reddit_instance
-        self.settings = Settings()
         self.last_loaded_post = None
         self.current_feed = 'home'
         
-        #Initialize Settings
-        self.settings.load_settings_from_file()
-
         if self.reddit_instance:
             self.header.update_title(f"Reddit TUI - Logged in as {self.reddit_instance.user.me().name}")
             self.update_posts_from_reddit()
@@ -135,8 +133,8 @@ class RedditTUI:
                     elif self.current_feed == 'top':
                         posts = list(self.reddit_instance.front.top(limit=self.settings.posts_per_page))
                 
-                if self.settings.show_nsfw == False:
-                    posts = [post for post in posts if post.over18 == False]
+                if not self.settings.show_nsfw:
+                    posts = [post for post in posts if not post.over18]
                 
                 if posts:
                     if load_more:
@@ -152,16 +150,17 @@ class RedditTUI:
             except Exception as e:
                 print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error fetching posts: {e}"))
                 with open("temp.txt", "w") as f:
-                    f.write(e)
-
+                    f.write(str(e))
                 self.post_list.loading_more = False
 
     def load_post_comments(self, post):
-        """Load comments for a post efficiently"""
         if not post or not hasattr(post, 'comments'):
             return []
         try:
-            post.comments.replace_more(limit=0)  # Don't load MoreComments objects initially
+            if self.settings.auto_load_comments:
+                post.comments.replace_more(limit=self.settings.comment_depth)
+            else:
+                post.comments.replace_more(limit=0)
             return list(post.comments.list())
         except Exception as e:
             print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error loading comments: {e}"))
@@ -416,6 +415,8 @@ class RedditTUI:
                         if self.current_screen == 'search':
                             self.search_screen.add_char(key)
                             self.active_component = 'post_list'
+                        if key.lower() == "r" and self.current_feed == 'post_view':
+                            self.post_view.report_post()
         finally:
             print(self.term.exit_fullscreen())
 

@@ -2,6 +2,7 @@ from blessed import Terminal
 import textwrap
 from datetime import datetime
 import emoji
+from services.settings_service import Settings
 
 class PostList:
     def __init__(self, terminal, visible_posts=10, current_page='home'):
@@ -12,6 +13,8 @@ class PostList:
         self.visible_posts = visible_posts
         self.loading_more = False
         self.current_page = 'home'
+        self.settings = Settings()
+        self.settings.load_settings_from_file()
 
     def get_score_color(self, score):
         if score > 1000:
@@ -141,9 +144,13 @@ class PostList:
         return None
 
     def append_posts(self, new_posts):
+        if not self.settings.show_nsfw:
+            new_posts = [post for post in new_posts if not post.over18]
         self.posts.extend(new_posts)
 
     def update_posts(self, new_posts):
+        if not self.settings.show_nsfw:
+            new_posts = [post for post in new_posts if not post.over18]
         self.posts = new_posts
         self.selected_index = 0
         self.scroll_offset = 0

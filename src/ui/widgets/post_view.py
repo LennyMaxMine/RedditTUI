@@ -15,6 +15,13 @@ import datetime
 import emoji
 import re
 from pyshorteners import Shortener
+from rich.console import Console
+from rich.panel import Panel
+from rich.layout import Layout
+from rich.text import Text
+from rich import box
+from rich.prompt import Prompt
+from services.settings_service import Settings
 
 class PostView:
     def __init__(self, terminal):
@@ -27,6 +34,17 @@ class PostView:
         self.need_more_comments = False
         self.from_search = False
         self.vote_status = 0  # 0: no vote, 1: upvoted, -1: downvoted
+        self.scroll_position = 0
+        self.settings = Settings()
+        self.settings.load_settings_from_file()
+        self.report_reasons = [
+            "Spam",
+            "Vote Manipulation",
+            "Personal Information",
+            "Sexualizing Minors",
+            "Breaking Reddit",
+            "Other"
+        ]
 
     def get_score_color(self, score):
         if score > 1000:
@@ -73,6 +91,8 @@ class PostView:
         return only_numbers_int
 
     def display_comment(self, comment, depth=0, width=0):
+        if depth > self.settings.comment_depth:
+            return []
         output = []
         indent = "  " * depth
         
@@ -104,7 +124,7 @@ class PostView:
             separator = "─" * (width-6-(depth*2))
             output.append(f"{indent}  {self.terminal.bright_blue(separator)}")
             
-            if hasattr(comment, 'replies') and comment.replies:
+            if hasattr(comment, 'replies') and comment.replies and self.settings.auto_load_comments:
                 for reply in comment.replies:
                     if hasattr(reply, 'body'):
                         output.extend(self.display_comment(reply, depth + 1, width))
@@ -138,12 +158,17 @@ class PostView:
             if self.vote_status == 1:
                 self.current_post.clear_vote()
                 self.vote_status = 0
+                self.current_post.score -= 1
             else:
+                if self.vote_status == -1:
+                    self.current_post.score += 2
+                else:
+                    self.current_post.score += 1
                 self.current_post.upvote()
                 self.vote_status = 1
+            self.display_post(self.current_post, self.comments)
         except Exception as e:
-            print(self.terminal.move(self.terminal.height - 3, 0) + 
-                  self.terminal.red(f"Error voting: {e}"))
+            pass
 
     def downvote_post(self):
         if not self.current_post:
@@ -152,12 +177,17 @@ class PostView:
             if self.vote_status == -1:
                 self.current_post.clear_vote()
                 self.vote_status = 0
+                self.current_post.score += 1
             else:
+                if self.vote_status == 1:
+                    self.current_post.score -= 2
+                else:
+                    self.current_post.score -= 1
                 self.current_post.downvote()
                 self.vote_status = -1
+            self.display_post(self.current_post, self.comments)
         except Exception as e:
-            print(self.terminal.move(self.terminal.height - 3, 0) + 
-                  self.terminal.red(f"Error voting: {e}"))
+            pass
 
     def display_post(self, post, comments=None):
         self.current_post = post
@@ -333,3 +363,86 @@ class PostView:
         
         output.append(f"╰{'─' * (width-2)}╯")
         return "\n".join(output)
+
+    def update_post(self, post, reddit_instance):
+        self.current_post = post
+        self.reddit_instance = reddit_instance
+        if hasattr(post, 'comments'):
+            post.comments.replace_more(limit=0)
+            self.comments = list(post.comments.list())
+        else:
+            self.comments = []
+
+    def handle_input(self, key):
+        if key == '3':
+            self.report_post()
+            return True
+        return False
+
+    def report_post(self):
+        if not self.reddit_instance:
+            self.terminal.move(self.terminal.height - 3, 0)
+            print(self.terminal.red("You must be logged in to report posts"))
+            return True
+
+        width = self.content_width
+        output = []
+        
+        output.append(f"┬{'─' * (width-2)}┬")
+        output.append(f"│{self.terminal.bold_white('Report Post').center(width+13)}│")
+        output.append(f"├{'─' * (width-2)}┤")
+        
+        for idx, reason in enumerate(self.report_reasons, 1):
+            output.append(f"│ {self.terminal.bright_cyan(f'{idx}.')} {reason.ljust(width+5)} │")
+        
+        output.append(f"├{'─' * (width-2)}┤")
+        output.append(f"│ {self.terminal.bright_yellow('Enter number (1-6) or press ESC to cancel').ljust(width+5)} │")
+        output.append(f"╰{'─' * (width-2)}╯")
+        
+        self.terminal.move(0, 0)
+        print("\n".join(output))
+        
+        try:
+            choice = int(Prompt.ask("\nEnter number", default="6"))
+            if 1 <= choice <= len(self.report_reasons):
+                reason = self.report_reasons[choice - 1]
+                if reason == "Other":
+                    output = []
+                    output.append(f"┬{'─' * (width-2)}┬")
+                    output.append(f"│{self.terminal.bold_white('Specify Reason').center(width+13)}│")
+                    output.append(f"├{'─' * (width-2)}┤")
+                    output.append(f"│ {self.terminal.bright_yellow('Enter your reason:').ljust(width+5)} │")
+                    output.append(f"╰{'─' * (width-2)}╯")
+                    self.terminal.move(0, 0)
+                    print("\n".join(output))
+                    reason = Prompt.ask("Reason")
+                
+                self.reddit_instance.submission(self.current_post.id).report(reason)
+                output = []
+                output.append(f"┬{'─' * (width-2)}┬")
+                output.append(f"│{self.terminal.bold_green('Post reported successfully').center(width+13)}│")
+                output.append(f"╰{'─' * (width-2)}╯")
+                self.terminal.move(0, 0)
+                print("\n".join(output))
+            else:
+                output = []
+                output.append(f"┬{'─' * (width-2)}┬")
+                output.append(f"│{self.terminal.bold_red('Invalid choice').center(width+13)}│")
+                output.append(f"╰{'─' * (width-2)}╯")
+                self.terminal.move(0, 0)
+                print("\n".join(output))
+        except ValueError:
+            output = []
+            output.append(f"┬{'─' * (width-2)}┬")
+            output.append(f"│{self.terminal.bold_red('Invalid input').center(width+13)}│")
+            output.append(f"╰{'─' * (width-2)}╯")
+            self.terminal.move(0, 0)
+            print("\n".join(output))
+        except Exception as e:
+            output = []
+            output.append(f"┬{'─' * (width-2)}┬")
+            output.append(f"│{self.terminal.bold_red(f'Error reporting post: {str(e)}').center(width+13)}│")
+            output.append(f"╰{'─' * (width-2)}╯")
+            self.terminal.move(0, 0)
+            print("\n".join(output))
+        return True
