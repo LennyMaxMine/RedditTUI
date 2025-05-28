@@ -145,12 +145,12 @@ class PostList:
 
     def append_posts(self, new_posts):
         if not self.settings.show_nsfw:
-            new_posts = [post for post in new_posts if not post.over18]
+            new_posts = [post for post in new_posts if not post.over_18]
         self.posts.extend(new_posts)
 
     def update_posts(self, new_posts):
         if not self.settings.show_nsfw:
-            new_posts = [post for post in new_posts if not post.over18]
+            new_posts = [post for post in new_posts if not post.over_18]
         self.posts = new_posts
         self.selected_index = 0
         self.scroll_offset = 0

@@ -340,6 +340,12 @@ class PostView:
             output.append(f"│ {self.terminal.bright_cyan(f'URL: {self.current_post.url}').ljust(width+7)} │")
             if hasattr(self.current_post, 'preview') and self.current_post.preview:
                 output.append(f"│ {self.terminal.bright_yellow('Preview available (not shown)').ljust(width+7)} │")
+            
+            image_links = self.get_image_links(self.current_post)
+            if image_links:
+                output.append(f"│ {self.terminal.bold_white('Image Links:').ljust(width+11)} │")
+                for link in image_links:
+                    output.append(f"│ {self.terminal.bright_cyan(link).ljust(width+7)} │")
         
         if self.comments:
             output.append(f"├{'─' * (width-2)}┤")
@@ -451,3 +457,23 @@ class PostView:
             self.terminal.move(0, 0)
             print("\n".join(output))
         return True
+
+    def get_image_links(self, post):
+        links = []
+        if hasattr(post, 'url'):
+            if post.url.endswith(('.jpg', '.jpeg', '.png', '.gif', '.gifv')):
+                links.append(post.url)
+            elif 'imgur.com' in post.url:
+                links.append(post.url)
+            elif 'reddit.com/gallery' in post.url:
+                if hasattr(post, 'gallery_data'):
+                    for item in post.gallery_data['items']:
+                        media_id = item['media_id']
+                        if media_id in post.media_metadata:
+                            if 'p' in post.media_metadata[media_id]:
+                                links.append(post.media_metadata[media_id]['p'][0]['u'])
+        if hasattr(post, 'media_metadata'):
+            for media_id, metadata in post.media_metadata.items():
+                if 'p' in metadata:
+                    links.append(metadata['p'][0]['u'])
+        return links

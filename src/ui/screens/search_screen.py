@@ -68,7 +68,7 @@ class SearchScreen:
                 post_line = f"{prefix}{self.terminal.bold_white(post_num)} {self.terminal.white(title)}"
                 metadata = f" | {subreddit} | {author} | {score} | {comments}"
                 
-                if hasattr(post, 'over18') and post.over18:
+                if hasattr(post, 'over_18') and post.over_18:
                     metadata += f" | {self.terminal.red('NSFW')}"
                     metadata_additional_width += 7
                 

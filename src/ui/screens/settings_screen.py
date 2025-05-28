@@ -21,7 +21,7 @@ class SettingsScreen:
         ]
         self.themes = ["Default", "Dark", "Light"]
         self.posts_per_page_options = ["10", "25", "50", "100", "250", "500"]
-        self.comment_depth_options = ["1", "2", "3", "4", "5"]
+        self.comment_depth_options = ["1", "2", "3", "4", "5", "25", "50", "100"]
         self.boolean_options = ["True", "False"]
         self.message = None
         self.message_time = 0
@@ -123,7 +123,7 @@ class SettingsScreen:
                         options_line += self.terminal.bright_green(f"[{depth}] ")
                     else:
                         options_line += self.terminal.white(f"{depth} ")
-                output.append(f"{options_line}".ljust(width+54) + "│")
+                output.append(f"{options_line}".ljust(width+87) + "│")
             
             elif option == "Auto Load Comments":
                 options_line = "│    "

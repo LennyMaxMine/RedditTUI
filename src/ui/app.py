@@ -137,7 +137,7 @@ class RedditTUI:
                         posts = list(self.reddit_instance.front.top(limit=self.settings.posts_per_page))
                 
                 if not self.settings.show_nsfw:
-                    posts = [post for post in posts if not post.over18]
+                    posts = [post for post in posts if not post.over_18]
                 
                 if posts:
                     if load_more:
@@ -161,7 +161,8 @@ class RedditTUI:
             return []
         try:
             if self.settings.auto_load_comments:
-                post.comments.replace_more(limit=self.settings.comment_depth)
+                depth = max(0, min(self.settings.comment_depth, 10))
+                post.comments.replace_more(limit=depth)
             else:
                 post.comments.replace_more(limit=0)
             return list(post.comments.list())
@@ -246,7 +247,7 @@ class RedditTUI:
                     posts = list(subreddit.hot(limit=self.settings.posts_per_page))
 
                 if not self.settings.show_nsfw:
-                    posts = [post for post in posts if not post.over18]
+                    posts = [post for post in posts if not post.over_18]
 
                 if posts:
                     self.post_list.update_posts(posts)
@@ -395,8 +396,35 @@ class RedditTUI:
                     elif key == '\x7f':  # Backspace
                         if self.current_screen == 'search':
                             self.search_screen.backspace()
+                    elif len(key) == 1 and key.isprintable():  # Regular character input
+                        if self.current_screen == 'search':
+                            self.search_screen.add_char(key)
+                            self.active_component = 'post_list'
+                        elif key.lower() == "o" and self.current_screen == 'post':
+                            self.post_options_view.current_post = self.post_view.current_post
+                            self.current_screen = 'post_options'
+                        elif self.current_screen == 'post_options':
+                            result = self.post_options_view.handle_input(key)
+                            if result == "reported":
+                                print(self.term.move(self.term.height - 3, 0) + self.term.green("Post reported successfully"))
+                                time.sleep(1)
+                                self.current_screen = 'post'
+                            elif result and result.startswith("error:"):
+                                print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error reporting post: {result[6:]}"))
+                                time.sleep(1)
+                            self.render()
                     elif key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter
-                        if self.active_component == 'sidebar':
+                        if self.current_screen == 'post_options':
+                            result = self.post_options_view.handle_input(key)
+                            if result == "reported":
+                                print(self.term.move(self.term.height - 3, 0) + self.term.green("Post reported successfully"))
+                                time.sleep(1)
+                                self.current_screen = 'post'
+                            elif result and result.startswith("error:"):
+                                print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error reporting post: {result[6:]}"))
+                                time.sleep(1)
+                            self.render()
+                        elif self.active_component == 'sidebar':
                             selected_option = self.sidebar.get_selected_option()
                             if self.handle_sidebar_option(selected_option):
                                 break
@@ -426,23 +454,6 @@ class RedditTUI:
                                 self.current_screen = 'home'
                                 self.active_component = 'post_list'
                                 self.update_posts_from_subreddit(selected_subreddit, category)
-                    elif len(key) == 1 and key.isprintable():  # Regular character input
-                        if self.current_screen == 'search':
-                            self.search_screen.add_char(key)
-                            self.active_component = 'post_list'
-                        elif key.lower() == "o" and self.current_screen == 'post':
-                            self.post_options_view.current_post = self.post_view.current_post
-                            self.current_screen = 'post_options'
-                        elif self.current_screen == 'post_options':
-                            result = self.post_options_view.handle_input(key)
-                            if result == "reported":
-                                print(self.term.move(self.term.height - 3, 0) + self.term.green("Post reported successfully"))
-                                time.sleep(1)
-                                self.current_screen = 'post'
-                            elif result and result.startswith("error:"):
-                                print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error reporting post: {result[6:]}"))
-                                time.sleep(1)
-                            self.render()
         finally:
             print(self.term.exit_fullscreen())
 
