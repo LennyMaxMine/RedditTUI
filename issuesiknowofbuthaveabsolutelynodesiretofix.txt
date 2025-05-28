@@ -3,3 +3,4 @@
 - Up/Downvoting breaks ui
 - Profile Gold Status breaks ui
 - The whole report post function
+- Themes
