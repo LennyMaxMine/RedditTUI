@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedditTUI Issues - LennyMaxMine</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --text-color: #33ff33;
+            --cursor-color: #33ff33;
+            --accent-color: #ff4500;
+            --link-color: #6495ed;
+            --creator-color: #ffbd2e;
+            --bug-color: #ff6b6b;
+            --enhancement-color: #4ecdc4;
+            --question-color: #ffe66d;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier New', monospace;
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        .terminal {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid var(--text-color);
+            box-shadow: 0 0 10px rgba(51, 255, 51, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--text-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+        
+        .terminal-buttons {
+            display: flex;
+            margin-right: 20px;
+        }
+        
+        .terminal-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .terminal-button.red {
+            background-color: #ff5f56;
+        }
+        
+        .terminal-button.yellow {
+            background-color: #ffbd2e;
+        }
+        
+        .terminal-button.green {
+            background-color: #27c93f;
+        }
+        
+        .terminal-title {
+            flex-grow: 1;
+            text-align: center;
+            font-size: 16px;
+        }
+        
+        .terminal-content {
+            padding: 10px 0;
+        }
+        
+        .prompt {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .prompt-symbol {
+            color: var(--accent-color);
+            margin-right: 10px;
+        }
+        
+        .typing {
+            position: relative;
+        }
+        
+        .typing::after {
+            content: "";
+            position: absolute;
+            height: 18px;
+            width: 8px;
+            background-color: var(--cursor-color);
+            margin-left: 5px;
+            animation: blink 1s infinite;
+        }
+        
+        .ascii-art {
+            color: var(--accent-color);
+            white-space: pre;
+            line-height: 1.2;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        
+        .issue-item {
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            background-color: #2a2a2a;
+            transition: border-color 0.3s;
+        }
+        
+        .issue-item:hover {
+            border-color: var(--text-color);
+        }
+        
+        .issue-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .issue-number {
+            color: var(--accent-color);
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .issue-title {
+            flex-grow: 1;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        
+        .issue-label {
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+        
+        .label-bug {
+            background-color: var(--bug-color);
+            color: white;
+        }
+        
+        .label-enhancement {
+            background-color: var(--enhancement-color);
+            color: white;
+        }
+        
+        .label-question {
+            background-color: var(--question-color);
+            color: black;
+        }
+        
+        .issue-meta {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        
+        .issue-description {
+            margin-top: 10px;
+            color: #ccc;
+            font-size: 14px;
+        }
+        
+        a {
+            color: var(--link-color);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        a:hover {
+            color: var(--text-color);
+            text-decoration: underline;
+        }
+        
+        .creator-info {
+            color: var(--creator-color);
+            font-style: italic;
+            margin: 15px 0;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #2a2a2a;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #aaa;
+        }
+        
+        footer {
+            border-top: 1px solid var(--text-color);
+            margin-top: 20px;
+            padding-top: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        @keyframes blink {
+            0%, 49% {
+                opacity: 1;
+            }
+            50%, 100% {
+                opacity: 0;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .terminal {
+                margin: 10px;
+                padding: 10px;
+            }
+            
+            .ascii-art {
+                font-size: 10px;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <div class="terminal-button red"></div>
+                <div class="terminal-button yellow"></div>
+                <div class="terminal-button green"></div>
+            </div>
+            <div class="terminal-title">reddit@tui: ~/projects/RedditTUI/issues</div>
+        </div>
+        
+        <div class="terminal-content">
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>git status --issues</span>
+            </div>
+            
+            <div class="ascii-art">
+ ___                         
+|_ _|___ ___ _   _  ___  ___ 
+ | |/ __/ __| | | |/ _ \/ __|
+ | |\__ \__ \ |_| |  __/\__ \
+|___|___/___/\__,_|\___||___/
+                             
+</div>
+            
+            <div class="creator-info">GitHub Issues Tracker - RedditTUI by LennyMaxMine</div>
+            
+            <div class="stats" id="stats-container">
+                <div class="stat">
+                    <div class="stat-number" id="open-count">...</div>
+                    <div class="stat-label">Open Issues</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="closed-count">...</div>
+                    <div class="stat-label">Closed Issues</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="contributors-count">...</div>
+                    <div class="stat-label">Contributors</div>
+                </div>
+            </div>
+            
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>gh issue list --state=open</span>
+            </div>
+            
+            <h2>Current Open Issues</h2>
+            
+            <div id="loading-indicator" style="text-align: center; color: var(--accent-color); margin: 20px 0;">
+                <div class="typing">Loading issues from GitHub API...</div>
+            </div>
+            
+            <div id="issues-container">
+                <!-- Issues will be loaded here dynamically -->
+            </div>
+            
+            <div id="error-message" style="display: none; color: var(--bug-color); text-align: center; margin: 20px 0;">
+                <p>⚠️ Unable to load issues from GitHub API</p>
+                <p>Please check your internet connection or try again later.</p>
+                <p>You can visit the issues directly at: <a href="https://github.com/LennyMaxMine/RedditTUI/issues" target="_blank">GitHub Issues</a></p>
+            </div>
+            
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>echo "Want to contribute? Visit: <a href="https://github.com/LennyMaxMine/RedditTUI/issues" target="_blank">https://github.com/LennyMaxMine/RedditTUI/issues</a>"</span>
+            </div>
+            
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <i class="typing"> monitoring issues in real-time...</i>
+            </div>
+            
+            <footer>
+                RedditTUI Issues © 2025 | Track progress at <a href="https://github.com/LennyMaxMine/RedditTUI/issues" target="_blank">GitHub</a>
+            </footer>
+        </div>
+    </div>
+    
+    <script>
+        // GitHub API configuration
+        const GITHUB_API_BASE = 'https://api.github.com';
+        const REPO_OWNER = 'LennyMaxMine';
+        const REPO_NAME = 'RedditTUI';
+        
+        // Function to format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return 'today';
+            if (diffDays === 1) return '1 day ago';
+            if (diffDays < 7) return `${diffDays} days ago`;
+            if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`;
+            return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`;
+        }
+        
+        // Function to get label class
+        function getLabelClass(labelName) {
+            const name = labelName.toLowerCase();
+            if (name.includes('bug') || name.includes('error')) return 'label-bug';
+            if (name.includes('enhancement') || name.includes('feature')) return 'label-enhancement';
+            if (name.includes('question') || name.includes('help')) return 'label-question';
+            return 'label-enhancement'; // default
+        }
+        
+        // Function to truncate text
+        function truncateText(text, maxLength = 200) {
+            if (!text) return '';
+            return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+        }
+        
+        // Function to load GitHub issues
+        async function loadGitHubIssues() {
+            try {
+                // Fetch open issues
+                const issuesResponse = await fetch(`${GITHUB_API_BASE}/repos/${REPO_OWNER}/${REPO_NAME}/issues?state=open&per_page=20`);
+                
+                if (!issuesResponse.ok) {
+                    throw new Error(`HTTP error! status: ${issuesResponse.status}`);
+                }
+                
+                const issues = await issuesResponse.json();
+                
+                // Fetch repository stats
+                const repoResponse = await fetch(`${GITHUB_API_BASE}/repos/${REPO_OWNER}/${REPO_NAME}`);
+                const contributorsResponse = await fetch(`${GITHUB_API_BASE}/repos/${REPO_OWNER}/${REPO_NAME}/contributors`);
+                
+                let repoData = {};
+                let contributors = [];
+                
+                if (repoResponse.ok) {
+                    repoData = await repoResponse.json();
+                }
+                
+                if (contributorsResponse.ok) {
+                    contributors = await contributorsResponse.json();
+                }
+                
+                // Update stats
+                document.getElementById('open-count').textContent = repoData.open_issues_count || issues.length;
+                document.getElementById('closed-count').textContent = ':(';
+                document.getElementById('contributors-count').textContent = contributors.length || '...';
+                
+                // Hide loading indicator
+                document.getElementById('loading-indicator').style.display = 'none';
+                
+                // Display issues
+                const issuesContainer = document.getElementById('issues-container');
+                
+                if (issues.length === 0) {
+                    issuesContainer.innerHTML = `
+                        <div style="text-align: center; color: var(--text-color); margin: 20px 0;">
+                            <p>🎉 No open issues found!</p>
+                            <p>Reddittui is in great shape, or maybe it's time to report some bugs?</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                issuesContainer.innerHTML = issues.map(issue => {
+                    const labels = issue.labels.map(label => 
+                        `<span class="issue-label ${getLabelClass(label.name)}">${label.name}</span>`
+                    ).join('');
+                    
+                    return `
+                        <div class="issue-item">
+                            <div class="issue-header">
+                                <span class="issue-number">#${issue.number}</span>
+                                <span class="issue-title">${issue.title}</span>
+                                ${labels}
+                            </div>
+                            <div class="issue-meta">Opened ${formatDate(issue.created_at)} by ${issue.user.login}</div>
+                            <div class="issue-description">
+                                ${truncateText(issue.body)}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('Error loading GitHub issues:', error);
+                
+                // Hide loading indicator and show error
+                document.getElementById('loading-indicator').style.display = 'none';
+                document.getElementById('error-message').style.display = 'block';
+                
+                // Show some fallback stats
+                document.getElementById('open-count').textContent = '?';
+                document.getElementById('closed-count').textContent = '?';
+                document.getElementById('contributors-count').textContent = '?';
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load GitHub issues on page load
+            loadGitHubIssues();
+            
+            const terminalContent = document.querySelector('.terminal-content');
+            
+            // Add click event to cycle through different status messages
+            terminalContent.addEventListener('click', () => {
+                const statusMessages = [
+                    'checking for new issues...',
+                    'syncing with GitHub API...',
+                    'filtering by priority...',
+                    'updating issue tracker...',
+                    'monitoring community feedback...',
+                    'analyzing bug reports...',
+                    'prioritizing feature requests...',
+                    'issues updated successfully!',
+                    'hope you have a great day!'
+                ];
+                
+                const typingElements = document.querySelectorAll('.typing');
+                const lastTypingElement = typingElements[typingElements.length - 1];
+                
+                if (lastTypingElement) {
+                    const randomStatus = statusMessages[Math.floor(Math.random() * statusMessages.length)];
+                    lastTypingElement.textContent = ` ${randomStatus}`;
+                }
+            });
+            
+            // Refresh issues every 5 minutes
+            setInterval(loadGitHubIssues, 5 * 60 * 1000);
+        });
+    </script>
+</body>
+</html>
