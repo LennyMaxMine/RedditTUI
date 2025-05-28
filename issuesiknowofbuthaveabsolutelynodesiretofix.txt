@@ -1,6 +1,0 @@
-- Title to long for post View
-- Points or posting time larger or smaller than 2 digits breaking the ui (depends how they want to annoy me)
-- Up/Downvoting breaks ui
-- Profile Gold Status breaks ui
-- The whole report post function
-- Themes
