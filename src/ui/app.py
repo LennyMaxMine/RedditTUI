@@ -2,6 +2,7 @@ from blessed import Terminal
 from ui.widgets.sidebar import Sidebar
 from ui.widgets.post_list import PostList
 from ui.widgets.post_view import PostView
+from ui.widgets.post_options_view import PostOptionsScreen
 from ui.widgets.header import Header
 from ui.screens.login_screen import LoginScreen
 from ui.screens.search_screen import SearchScreen
@@ -23,6 +24,7 @@ class RedditTUI:
         self.sidebar = Sidebar(self.term)
         self.post_list = PostList(self.term)
         self.post_view = PostView(self.term)
+        self.post_options_view = PostOptionsScreen(self.term)
         self.header = Header(self.term)
         self.reddit_instance = None
         self.login_screen = LoginScreen(self.reddit_instance)
@@ -63,6 +65,7 @@ class RedditTUI:
 
         self.current_screen = 'home'
         self.active_component = 'sidebar'
+        self.post_options_view.reddit_instance = self.reddit_instance
 
     def handle_sidebar_option(self, option):
         if option in ['Home', 'New', 'Top']:
@@ -191,6 +194,12 @@ class RedditTUI:
             for i, line in enumerate(post_view_lines):
                 if i < available_lines:
                     print(self.term.move(i + 3, 22) + line)
+        elif self.current_screen == 'post_options':
+            post_options_lines = self.post_options_view.display().split('\n')
+            available_lines = content_height
+            for i, line in enumerate(post_options_lines):
+                if i < available_lines:
+                    print(self.term.move(i + 3, 22) + line)
         elif self.current_screen == 'search':
             search_lines = self.search_screen.display().split('\n')
             available_lines = content_height
@@ -260,7 +269,13 @@ class RedditTUI:
                     if key.lower() == 'q':  # Quit
                         break
                     elif key == '\x1b':  # Escape
-                        if self.current_screen == 'post':
+                        if self.current_screen == 'post_options':
+                            if self.post_options_view.confirming_report:
+                                self.post_options_view.confirming_report = False
+                                self.post_options_view.selected_reason = None
+                            else:
+                                self.current_screen = 'post'
+                        elif self.current_screen == 'post':
                             if self.post_view.from_search:
                                 self.current_screen = 'search'
                                 self.post_view.from_search = False
@@ -415,8 +430,19 @@ class RedditTUI:
                         if self.current_screen == 'search':
                             self.search_screen.add_char(key)
                             self.active_component = 'post_list'
-                        if key.lower() == "r" and self.current_feed == 'post_view':
-                            self.post_view.report_post()
+                        elif key.lower() == "o" and self.current_screen == 'post':
+                            self.post_options_view.current_post = self.post_view.current_post
+                            self.current_screen = 'post_options'
+                        elif self.current_screen == 'post_options':
+                            result = self.post_options_view.handle_input(key)
+                            if result == "reported":
+                                print(self.term.move(self.term.height - 3, 0) + self.term.green("Post reported successfully"))
+                                time.sleep(1)
+                                self.current_screen = 'post'
+                            elif result and result.startswith("error:"):
+                                print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error reporting post: {result[6:]}"))
+                                time.sleep(1)
+                            self.render()
         finally:
             print(self.term.exit_fullscreen())
 

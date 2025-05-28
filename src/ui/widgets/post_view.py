@@ -46,6 +46,9 @@ class PostView:
             "Other"
         ]
 
+    def return_current_post(self):
+        return self.current_post()
+    
     def get_score_color(self, score):
         if score > 1000:
             return self.terminal.bright_green
@@ -377,6 +380,8 @@ class PostView:
         if key == '3':
             self.report_post()
             return True
+        elif key == 'o':
+            return "post_options"
         return False
 
     def report_post(self):

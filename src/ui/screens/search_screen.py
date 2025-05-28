@@ -101,24 +101,39 @@ class SearchScreen:
 
     def add_char(self, char):
         """Add a character to the search query"""
+        if not isinstance(char, str) or len(char) != 1:
+            return
+            
         self.search_query += char
         self.pending_search = True
         current_time = time.time()
         if current_time - self.last_search_time >= self.search_delay:
-            self.search()
-            self.last_search_time = current_time
-            self.pending_search = False
-
-    def backspace(self):
-        """Remove the last character from the search query"""
-        if self.search_query:
-            self.search_query = self.search_query[:-1]
-            self.pending_search = True
-            current_time = time.time()
-            if current_time - self.last_search_time >= self.search_delay:
+            try:
                 self.search()
                 self.last_search_time = current_time
                 self.pending_search = False
+            except Exception as e:
+                self.terminal.move(self.terminal.height - 3, 0)
+                print(self.terminal.red(f"Error adding character: {str(e)}"))
+                self.terminal.move(0, 0)
+
+    def backspace(self):
+        """Remove the last character from the search query"""
+        if not self.search_query:
+            return
+            
+        self.search_query = self.search_query[:-1]
+        self.pending_search = True
+        current_time = time.time()
+        if current_time - self.last_search_time >= self.search_delay:
+            try:
+                self.search()
+                self.last_search_time = current_time
+                self.pending_search = False
+            except Exception as e:
+                self.terminal.move(self.terminal.height - 3, 0)
+                print(self.terminal.red(f"Error handling backspace: {str(e)}"))
+                self.terminal.move(0, 0)
 
     def clear_query(self):
         """Clear the search query"""
@@ -150,8 +165,9 @@ class SearchScreen:
             self.scroll_offset = 0
         except Exception as e:
             self.search_results = []
-            print(self.terminal.move(self.terminal.height - 3, 0) + 
-                  self.terminal.red(f"Error performing search: {e}"))
+            self.terminal.move(self.terminal.height - 3, 0)
+            print(self.terminal.red(f"Error performing search: {str(e)}"))
+            self.terminal.move(0, 0)
 
     def scroll_up(self):
         """Scroll the results up"""
