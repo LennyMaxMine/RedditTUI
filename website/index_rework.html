@@ -21,7 +21,7 @@
         }
         
         body {
-            background: #0a0a0a;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
             color: var(--text-color);
             font-family: 'JetBrains Mono', 'Courier New', monospace;
             line-height: 1.6;
@@ -38,12 +38,13 @@
             border-radius: 15px;
             overflow: hidden;
             background: var(--terminal-bg);
+            animation: terminalGlow 3s ease-in-out infinite alternate;
         }
         
         .terminal-header {
             display: flex;
             align-items: center;
-            background: rgba(0, 255, 65, 0.1);
+            background: linear-gradient(90deg, rgba(0, 255, 65, 0.1) 0%, rgba(255, 107, 53, 0.1) 100%);
             border-bottom: 1px solid var(--text-color);
             padding: 15px 20px;
         }
@@ -58,25 +59,30 @@
             height: 16px;
             border-radius: 50%;
             margin-right: 10px;
+            transition: all 0.3s ease;
         }
         
         .terminal-button.red {
-            background: #ff5f56;
+            background: radial-gradient(circle, #ff5f56, #ff3333);
+            box-shadow: 0 0 10px rgba(255, 95, 86, 0.5);
         }
         
         .terminal-button.yellow {
-            background: #ffbd2e;
+            background: radial-gradient(circle, #ffbd2e, #ffaa00);
+            box-shadow: 0 0 10px rgba(255, 189, 46, 0.5);
         }
         
         .terminal-button.green {
-            background: #27c93f;
+            background: radial-gradient(circle, #27c93f, #00ff00);
+            box-shadow: 0 0 10px rgba(39, 201, 63, 0.5);
         }
-        
+        type
         .terminal-title {
             flex-grow: 1;
             text-align: center;
             font-size: 18px;
             font-weight: bold;
+            text-shadow: 0 0 10px var(--text-color);
         }
         
         .terminal-content {
@@ -87,12 +93,15 @@
             display: flex;
             margin-bottom: 15px;
             align-items: center;
+            animation: fadeInUp 0.6s ease;
         }
         
         .prompt-symbol {
             color: var(--accent-color);
             margin-right: 15px;
             font-weight: bold;
+            text-shadow: 0 0 5px var(--accent-color);
+            animation: pulse 2s infinite;
         }
         
         .ascii-art {
@@ -102,6 +111,7 @@
             margin: 30px 0;
             font-size: 16px;
             text-align: center;
+            text-shadow: 0 0 15px var(--accent-color);
         }
         
         .creator-info {
@@ -111,12 +121,42 @@
             text-align: center;
             font-weight: bold;
             font-size: 18px;
+            text-shadow: 0 0 10px var(--creator-color);
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            padding: 25px;
+            border: 2px solid rgba(0, 255, 65, 0.3);
+            border-radius: 15px;
+            background: linear-gradient(135deg, rgba(0, 255, 65, 0.1), rgba(255, 107, 53, 0.1));
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--accent-color);
+            text-shadow: 0 0 15px var(--accent-color);
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-color);
+            margin-top: 5px;
+            text-shadow: 0 0 5px var(--text-color);
         }
         
         h2 {
             color: var(--accent-color);
             font-size: 1.8em;
             margin: 30px 0 20px 0;
+            text-shadow: 0 0 10px var(--accent-color);
         }
         
         footer {
@@ -125,6 +165,39 @@
             padding-top: 20px;
             text-align: center;
             font-size: 16px;
+            background: linear-gradient(90deg, rgba(0, 255, 65, 0.05), rgba(255, 107, 53, 0.05));
+            border-radius: 0 0 15px 15px;
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes terminalGlow {
+            0% { 
+                box-shadow: 
+                    0 0 20px rgba(0, 255, 65, 0.5),
+                    0 0 40px rgba(0, 255, 65, 0.3);
+            }
+            100% { 
+                box-shadow: 
+                    0 0 30px rgba(0, 255, 65, 0.7),
+                    0 0 50px rgbaValue(0, 255, 65, 0.4);
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
@@ -155,6 +228,21 @@
 </div>
             
             <div class="creator-info">🐛 GitHub Issues Tracker - RedditTUI by LennyMaxMine 🚀</div>
+            
+            <div class="stats" id="stats-container">
+                <div class="stat">
+                    <div class="stat-number" id="open-count">...</div>
+                    <div class="stat-label">Open Issues</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="closed-count">...</div>
+                    <div class="stat-label">Closed Issues</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="contributors-count">...</div>
+                    <div class="stat-label">Contributors</div>
+                </div>
+            </div>
             
             <div class="prompt">
                 <span class="prompt-symbol">$</span>
