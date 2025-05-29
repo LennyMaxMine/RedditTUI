@@ -76,7 +76,7 @@
             background: radial-gradient(circle, #27c93f, #00ff00);
             box-shadow: 0 0 10px rgba(39, 201, 63, 0.5);
         }
-        type
+        
         .terminal-title {
             flex-grow: 1;
             text-align: center;
@@ -169,133 +169,110 @@
             border-radius: 0 0 15px 15px;
         }
         
-        /* Animations */
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        
-        @keyframes terminalGlow {
-            0% { 
-                box-shadow: 
-                    0 0 20px rgba(0, 255, 65, 0.5),
-                    0 0 40px rgba(0, 255, 65, 0.3),
-                    inset 0 0 20px rgba(0, 255, 65, 0.1);
-            }
-            100% { 
-                box-shadow: 
-                    0 0 30px rgba(0, 255, 65, 0.7),
-                    0 0 50px rgba(0, 255, 65, 0.4),
-                    inset 0 0 25px rgba(0, 255, 65, 0.15);
-            }
-        }
-        
-        @keyframes skeleton-loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        
-        .stat-skeleton {
-            background: linear-gradient(90deg, rgba(68, 68, 68, 0.2) 25%, rgba(68, 68, 68, 0.4) 50%, rgba(68, 68, 68, 0.2) 75%);
-            background-size: 200% 100%;
-            animation: skeleton-loading 1.5s infinite;
-            border-radius: 8px;
-            height: 60px;
-            width: 80px;
-            margin: 0 auto;
-        }
-        
-        .retry-button {
-            background: linear-gradient(135deg, var(--accent-color), var(--bug-color));
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            color: white;
-            font-family: inherit;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 15px;
+        .issue-item {
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            background: linear-gradient(135deg, rgba(0, 255, 65, 0.05), rgba(255, 107, 53, 0.05));
             transition: all 0.3s ease;
+            position: relative;
         }
         
-        .retry-button:hover {
+        .issue-item:hover {
+            border-color: var(--accent-color);
+            box-shadow: 0 5px 20px rgba(255, 107, 53, 0.3);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
         }
         
-        .issue-status {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 8px;
+        .issue-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--text-color);
+            margin-bottom: 10px;
+            text-decoration: none;
+        }
+        
+        .issue-title:hover {
+            color: var(--accent-color);
+            text-shadow: 0 0 5px var(--accent-color);
+        }
+        
+        .issue-number {
+            color: var(--creator-color);
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .issue-meta {
+            font-size: 0.9em;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        
+        .issue-body {
+            margin-top: 10px;
+            color: #ccc;
+            line-height: 1.4;
+        }
+        
+        .issue-labels {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .label {
+            padding: 3px 8px;
             border-radius: 12px;
             font-size: 11px;
             font-weight: bold;
-            margin-right: 10px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
         
-        .status-open {
-            background: linear-gradient(135deg, #28a745, #20c997);
+        .label-bug {
+            background: #ff4757;
             color: white;
-            box-shadow: 0 0 8px rgba(40, 167, 69, 0.4);
         }
         
-        .status-closed {
-            background: linear-gradient(135deg, #6f42c1, #495057);
+        .label-enhancement {
+            background: #5352ed;
             color: white;
-            box-shadow: 0 0 8px rgba(111, 66, 193, 0.4);
         }
         
-        .assignee-info {
+        .label-question {
+            background: #ffa726;
+            color: black;
+        }
+        
+        .label-documentation {
+            background: #26c6da;
+            color: black;
+        }
+        
+        .label-good-first-issue {
+            background: #66bb6a;
+            color: black;
+        }
+        
+        .loading {
             display: flex;
+            justify-content: center;
             align-items: center;
-            margin-top: 8px;
-            font-size: 12px;
-            color: #888;
+            min-height: 200px;
+            color: var(--accent-color);
+            font-size: 1.2em;
         }
         
-        .assignee-avatar {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            margin-right: 8px;
-            border: 2px solid var(--accent-color);
-            transition: all 0.3s ease;
-        }
-        
-        .assignee-avatar:hover {
-            transform: scale(1.2);
-            box-shadow: 0 0 10px var(--accent-color);
-        }
-        
-        .priority-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 8px;
-            animation: priorityPulse 2s infinite;
-        }
-        
-        .priority-high { background: #ff4757; }
-        .priority-medium { background: #ffa726; }  
-        .priority-low { background: #66bb6a; }
-        
-        @keyframes priorityPulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.2); }
-        }
-        
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .error {
+            color: #ff4757;
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid #ff4757;
+            border-radius: 10px;
+            margin: 20px 0;
         }
         
         .controls-panel {
@@ -321,7 +298,7 @@
         }
         
         .search-input:focus {
-            border-bottom-color: var(--glow-primary);
+            border-bottom-color: var(--text-color);
             box-shadow: 0 2px 10px rgba(0, 255, 65, 0.3);
         }
         
@@ -368,6 +345,69 @@
             outline: none;
             box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
         }
+        
+        .issue-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-open {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            box-shadow: 0 0 8px rgba(40, 167, 69, 0.4);
+        }
+        
+        .status-closed {
+            background: linear-gradient(135deg, #6f42c1, #495057);
+            color: white;
+            box-shadow: 0 0 8px rgba(111, 66, 193, 0.4);
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes terminalGlow {
+            0% { 
+                box-shadow: 
+                    0 0 20px rgba(0, 255, 65, 0.5),
+                    0 0 40px rgba(0, 255, 65, 0.3),
+                    inset 0 0 20px rgba(0, 255, 65, 0.1);
+            }
+            100% { 
+                box-shadow: 
+                    0 0 30px rgba(0, 255, 65, 0.7),
+                    0 0 50px rgba(0, 255, 65, 0.4),
+                    inset 0 0 25px rgba(0, 255, 65, 0.15);
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .keyboard-selected {
+            border-color: var(--text-color) !important;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.5) !important;
+            transform: translateY(-3px) scale(1.02) !important;
+        }
     </style>
 </head>
 <body>
@@ -396,7 +436,7 @@
                              
 </div>
             
-            <div class="creator-info">🐛 GitHub Issues Tracker - RedditTUI by LennyMaxMine 🚀</div>
+            <div class="creator-info">GitHub Issues Tracker - RedditTUI by LennyMaxMine</div>
             
             <div class="stats" id="stats-container">
                 <div class="stat">
@@ -408,17 +448,17 @@
                     <div class="stat-label">Closed Issues</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-number" id="contributors-count">...</div>
-                    <div class="stat-label">Contributors</div>
+                    <div class="stat-number" id="total-count">...</div>
+                    <div class="stat-label">Total Issues</div>
                 </div>
             </div>
             
             <div class="prompt">
                 <span class="prompt-symbol">$</span>
-                <span>gh issue list --state=open</span>
+                <span>gh issue list --repo=lennymaxmine/reddittui</span>
             </div>
             
-            <h2>🔍 Current Open Issues</h2>
+            <h2>🔍 Current Issues</h2>
             
             <div class="controls-panel">
                 <div class="search-container">
@@ -432,13 +472,12 @@
                 <div class="filter-controls">
                     <div class="prompt">
                         <span class="prompt-symbol">$</span>
-                        <span>filter --labels=</span>
+                        <span>filter --state=</span>
                     </div>
                     <div class="filter-buttons">
                         <button class="filter-btn active" data-filter="all">all</button>
-                        <button class="filter-btn" data-filter="bug">🐛 bugs</button>
-                        <button class="filter-btn" data-filter="enhancement">✨ features</button>
-                        <button class="filter-btn" data-filter="question">❓ questions</button>
+                        <button class="filter-btn" data-filter="open">open</button>
+                        <button class="filter-btn" data-filter="closed">closed</button>
                     </div>
                 </div>
                 
@@ -456,12 +495,10 @@
                 </div>
             </div>
             
-            <div class="issue">
-                <span class="issue-status status-open">Open</span>
-                <div class="priority-indicator priority-high"></div>
-                <div class="assignee-info">
-                    <img class="assignee-avatar" src="avatar.jpg" alt="Assignee">
-                    <span>Assignee Name</span>
+            <div id="issues-container">
+                <div class="loading">
+                    <span class="prompt-symbol">$</span>
+                    Loading issues from GitHub API...
                 </div>
             </div>
             
@@ -472,6 +509,187 @@
     </div>
     
     <script>
+        class GitHubIssuesTracker {
+            constructor() {
+                this.issues = [];
+                this.filteredIssues = [];
+                this.owner = 'lennymaxmine';
+                this.repo = 'reddittui';
+                this.apiBase = 'https://api.github.com';
+                this.init();
+            }
+            
+            async init() {
+                await this.loadIssues();
+                this.setupEventListeners();
+                this.updateStats();
+                this.renderIssues();
+            }
+            
+            async loadIssues() {
+                try {
+                    const [openIssues, closedIssues] = await Promise.all([
+                        this.fetchIssues('open'),
+                        this.fetchIssues('closed')
+                    ]);
+                    
+                    this.issues = [...openIssues, ...closedIssues];
+                    this.filteredIssues = this.issues;
+                    
+                } catch (error) {
+                    console.error('Error loading issues:', error);
+                    this.showError('Failed to load issues from GitHub API');
+                }
+            }
+            
+            async fetchIssues(state) {
+                const url = `${this.apiBase}/repos/${this.owner}/${this.repo}/issues?state=${state}&per_page=100`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`GitHub API error: ${response.status}`);
+                }
+                
+                return response.json();
+            }
+            
+            updateStats() {
+                const openCount = this.issues.filter(issue => issue.state === 'open').length;
+                const closedCount = this.issues.filter(issue => issue.state === 'closed').length;
+                const totalCount = this.issues.length;
+                
+                document.getElementById('open-count').textContent = openCount;
+                document.getElementById('closed-count').textContent = closedCount;
+                document.getElementById('total-count').textContent = totalCount;
+            }
+            
+            renderIssues() {
+                const container = document.getElementById('issues-container');
+                
+                if (this.filteredIssues.length === 0) {
+                    container.innerHTML = '<div class="error">No issues found matching your criteria.</div>';
+                    return;
+                }
+                
+                const issuesHTML = this.filteredIssues.map(issue => this.renderIssue(issue)).join('');
+                container.innerHTML = issuesHTML;
+            }
+            
+            renderIssue(issue) {
+                const createdDate = new Date(issue.created_at).toLocaleDateString();
+                const updatedDate = new Date(issue.updated_at).toLocaleDateString();
+                
+                const labels = issue.labels.map(label => 
+                    `<span class="label label-${this.getLabelClass(label.name)}">${label.name}</span>`
+                ).join('');
+                
+                const body = issue.body ? 
+                    issue.body.substring(0, 200) + (issue.body.length > 200 ? '...' : '') : 
+                    'No description provided.';
+                
+                return `
+                    <div class="issue-item" data-state="${issue.state}" data-title="${issue.title.toLowerCase()}" data-body="${(issue.body || '').toLowerCase()}">
+                        <div>
+                            <span class="issue-status status-${issue.state}">${issue.state}</span>
+                            <a href="${issue.html_url}" target="_blank" class="issue-title">
+                                <span class="issue-number">#${issue.number}</span>
+                                ${issue.title}
+                            </a>
+                        </div>
+                        <div class="issue-meta">
+                            Created: ${createdDate} | Updated: ${updatedDate} | Comments: ${issue.comments}
+                            ${issue.assignee ? ` | Assigned to: ${issue.assignee.login}` : ''}
+                        </div>
+                        <div class="issue-body">${body}</div>
+                        ${labels ? `<div class="issue-labels">${labels}</div>` : ''}
+                    </div>
+                `;
+            }
+            
+            getLabelClass(labelName) {
+                const name = labelName.toLowerCase();
+                if (name.includes('bug')) return 'bug';
+                if (name.includes('enhancement') || name.includes('feature')) return 'enhancement';
+                if (name.includes('question')) return 'question';
+                if (name.includes('documentation')) return 'documentation';
+                if (name.includes('good first issue')) return 'good-first-issue';
+                return 'bug'; // default
+            }
+            
+            setupEventListeners() {
+                // Search functionality
+                const searchInput = document.getElementById('issue-search');
+                searchInput.addEventListener('input', (e) => {
+                    this.filterIssues();
+                });
+                
+                // Filter buttons
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.filterIssues();
+                    });
+                });
+                
+                // Sort dropdown
+                document.getElementById('sort-select').addEventListener('change', () => {
+                    this.sortIssues();
+                    this.renderIssues();
+                });
+            }
+            
+            filterIssues() {
+                const searchTerm = document.getElementById('issue-search').value.toLowerCase();
+                const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
+                
+                this.filteredIssues = this.issues.filter(issue => {
+                    // State filter
+                    if (activeFilter !== 'all' && issue.state !== activeFilter) {
+                        return false;
+                    }
+                    
+                    // Search filter
+                    if (searchTerm) {
+                        const searchableText = `${issue.title} ${issue.body || ''} ${issue.labels.map(l => l.name).join(' ')}`.toLowerCase();
+                        if (!searchableText.includes(searchTerm)) {
+                            return false;
+                        }
+                    }
+                    
+                    return true;
+                });
+                
+                this.sortIssues();
+                this.renderIssues();
+            }
+            
+            sortIssues() {
+                const sortBy = document.getElementById('sort-select').value;
+                
+                this.filteredIssues.sort((a, b) => {
+                    switch (sortBy) {
+                        case 'created':
+                            return new Date(b.created_at) - new Date(a.created_at);
+                        case 'updated':
+                            return new Date(b.updated_at) - new Date(a.updated_at);
+                        case 'comments':
+                            return b.comments - a.comments;
+                        case 'title':
+                            return a.title.localeCompare(b.title);
+                        default:
+                            return 0;
+                    }
+                });
+            }
+            
+            showError(message) {
+                const container = document.getElementById('issues-container');
+                container.innerHTML = `<div class="error">⚠️ ${message}</div>`;
+            }
+        }
+        
+        // Keyboard navigation
         class KeyboardNavigator {
             constructor() {
                 this.currentIndex = 0;
@@ -481,8 +699,7 @@
                     'k': () => this.navigateUp(), 
                     'o': () => this.openCurrentIssue(),
                     '/': () => this.focusSearch(),
-                    'r': () => this.refreshIssues(),
-                    'f': () => this.toggleFilters()
+                    'r': () => this.refreshIssues()
                 };
                 this.init();
             }
@@ -502,10 +719,17 @@
                         handler();
                     }
                 });
+                
+                // Update issue list when DOM changes
+                const observer = new MutationObserver(() => {
+                    this.updateIssueList();
+                });
+                observer.observe(document.getElementById('issues-container'), { childList: true });
             }
             
             updateIssueList() {
-                this.issues = document.querySelectorAll('.issue-item:not([style*="display: none"])');
+                this.issues = document.querySelectorAll('.issue-item');
+                this.currentIndex = Math.min(this.currentIndex, this.issues.length - 1);
                 this.highlightCurrent();
             }
             
@@ -551,74 +775,47 @@
             }
             
             refreshIssues() {
-                loadGitHubIssues();
-            }
-            
-            toggleFilters() {
-                const filterButtons = document.querySelectorAll('.filter-btn');
-                const activeButton = document.querySelector('.filter-btn.active');
-                const nextIndex = Array.from(filterButtons).indexOf(activeButton) + 1;
-                const nextButton = filterButtons[nextIndex % filterButtons.length];
-                
-                filterButtons.forEach(btn => btn.classList.remove('active'));
-                nextButton.classList.add('active');
-                nextButton.click();
+                location.reload();
             }
         }
-
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
-        class LazyLoader {
-            constructor() {
-                this.observer = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            this.loadIssueContent(entry.target);
-                            this.observer.unobserve(entry.target);
-                        }
-                    });
-                });
-            }
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            const tracker = new GitHubIssuesTracker();
+            const keyboardNav = new KeyboardNavigator();
             
-            observe(element) {
-                this.observer.observe(element);
-            }
-            
-            loadIssueContent(element) {
-                element.classList.add('loaded');
-                setTimeout(() => {
-                    element.style.opacity = '1';
-                }, 100);
-            }
-        }
-
-        const keyboardNav = new KeyboardNavigator();
-        const lazyLoader = new LazyLoader();
-
+            // Add keyboard help
+            document.addEventListener('keydown', (e) => {
+                if (e.key === '?' && !e.target.matches('input, select')) {
+                    e.preventDefault();
+                    showKeyboardHelp();
+                }
+            });
+        });
+        
         function showKeyboardHelp() {
             const helpPanel = document.createElement('div');
-            helpPanel.className = 'help-panel';
+            helpPanel.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0, 0, 0, 0.8); display: flex;
+                align-items: center; justify-content: center; z-index: 1000;
+                backdrop-filter: blur(5px);
+            `;
+            
             helpPanel.innerHTML = `
-                <div class="help-content">
-                    <h3>⌨️ Keyboard Shortcuts</h3>
-                    <div class="shortcut-list">
-                        <div><kbd>j</kbd> / <kbd>k</kbd> - Navigate up/down</div>
-                        <div><kbd>o</kbd> - Open current issue</div>
-                        <div><kbd>/</kbd> - Focus search</div>
-                        <div><kbd>r</kbd> - Refresh issues</div>
-                        <div><kbd>f</kbd> - Cycle filters</div>
-                        <div><kbd>?</kbd> - Show this help</div>
-                        <div><kbd>Esc</kbd> - Close help</div>
+                <div style="background: var(--terminal-bg); border: 2px solid var(--text-color);
+                           border-radius: 15px; padding: 30px; max-width: 400px;
+                           box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);">
+                    <h3 style="color: var(--accent-color); text-align: center; margin-bottom: 20px;">
+                        ⌨️ Keyboard Shortcuts
+                    </h3>
+                    <div style="font-family: inherit;">
+                        <div style="margin: 10px 0;"><kbd style="background: var(--accent-color); color: black; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-right: 10px;">j/k</kbd> Navigate up/down</div>
+                        <div style="margin: 10px 0;"><kbd style="background: var(--accent-color); color: black; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-right: 10px;">o</kbd> Open current issue</div>
+                        <div style="margin: 10px 0;"><kbd style="background: var(--accent-color); color: black; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-right: 10px;">/</kbd> Focus search</div>
+                        <div style="margin: 10px 0;"><kbd style="background: var(--accent-color); color: black; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-right: 10px;">r</kbd> Refresh issues</div>
+                        <div style="margin: 10px 0;"><kbd style="background: var(--accent-color); color: black; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-right: 10px;">?</kbd> Show this help</div>
+                        <div style="margin: 10px 0;"><kbd style="background: var(--accent-color); color: black; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-right: 10px;">Esc</kbd> Close help</div>
                     </div>
                 </div>
             `;
@@ -636,76 +833,6 @@
             document.addEventListener('keydown', closeHelp);
             helpPanel.addEventListener('click', closeHelp);
         }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === '?' && !e.target.matches('input, select')) {
-                e.preventDefault();
-                showKeyboardHelp();
-            }
-        });
     </script>
-    
-    <style>
-        .keyboard-selected {
-            border-color: var(--glow-primary) !important;
-            box-shadow: 0 0 20px rgba(0, 255, 65, 0.5) !important;
-            transform: translateY(-3px) scale(1.02) !important;
-        }
-
-        .help-panel {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            backdrop-filter: blur(5px);
-        }
-
-        .help-content {
-            background: var(--terminal-bg);
-            border: 2px solid var(--glow-primary);
-            border-radius: 15px;
-            padding: 30px;
-            max-width: 400px;
-            box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
-        }
-
-        .help-content h3 {
-            color: var(--accent-color);
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .shortcut-list div {
-            margin: 10px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        kbd {
-            background: var(--accent-color);
-            color: black;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 12px;
-            margin-right: 10px;
-        }
-
-        .issue-item {
-            opacity: 0.7;
-            transition: opacity 0.3s ease;
-        }
-
-        .issue-item.loaded {
-            opacity: 1;
-        }
-    </style>
 </body>
 </html>
