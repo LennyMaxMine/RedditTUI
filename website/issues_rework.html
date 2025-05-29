@@ -180,13 +180,48 @@
             0% { 
                 box-shadow: 
                     0 0 20px rgba(0, 255, 65, 0.5),
-                    0 0 40px rgba(0, 255, 65, 0.3);
+                    0 0 40px rgba(0, 255, 65, 0.3),
+                    inset 0 0 20px rgba(0, 255, 65, 0.1);
             }
             100% { 
                 box-shadow: 
                     0 0 30px rgba(0, 255, 65, 0.7),
-                    0 0 50px rgbaValue(0, 255, 65, 0.4);
+                    0 0 50px rgba(0, 255, 65, 0.4),
+                    inset 0 0 25px rgba(0, 255, 65, 0.15);
             }
+        }
+        
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        .stat-skeleton {
+            background: linear-gradient(90deg, rgba(68, 68, 68, 0.2) 25%, rgba(68, 68, 68, 0.4) 50%, rgba(68, 68, 68, 0.2) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: 8px;
+            height: 60px;
+            width: 80px;
+            margin: 0 auto;
+        }
+        
+        .retry-button {
+            background: linear-gradient(135deg, var(--accent-color), var(--bug-color));
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .retry-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
         }
         
         @keyframes fadeInUp {
