@@ -388,6 +388,21 @@ class PostView:
             return True
         elif key == 'o':
             return "post_options"
+        elif key.lower() == 's':
+            if not self.reddit_instance:
+                print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red("You must be logged in to save posts"))
+                return True
+            try:
+                if hasattr(self.current_post, 'saved') and self.current_post.saved:
+                    self.current_post.unsave()
+                    print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.green("Post unsaved"))
+                else:
+                    self.current_post.save()
+                    print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.green("Post saved"))
+                return True
+            except Exception as e:
+                print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red(f"Error saving post: {e}"))
+                return True
         return False
 
     def report_post(self):

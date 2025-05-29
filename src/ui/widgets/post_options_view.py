@@ -41,6 +41,9 @@ class PostOptionsScreen:
         self.reddit_instance = None
         self.confirming_report = False
         self.selected_reason = None
+        self.confirming_save = False
+        self.status_message = None
+        self.status_color = None
 
     def get_short_url(self, url):
         try:
@@ -50,7 +53,27 @@ class PostOptionsScreen:
             return url
 
     def handle_input(self, key):
-        if self.confirming_report:
+        if self.confirming_save:
+            if key.lower() == 'y':
+                try:
+                    if hasattr(self.current_post, 'saved') and self.current_post.saved:
+                        self.current_post.unsave()
+                        self.status_message = "Post unsaved successfully"
+                        self.status_color = "green"
+                        return "unsaved"
+                    else:
+                        self.current_post.save()
+                        self.status_message = "Post saved successfully"
+                        self.status_color = "green"
+                        return "saved"
+                except Exception as e:
+                    self.status_message = f"Error: {str(e)}"
+                    self.status_color = "red"
+                    return f"error:{str(e)}"
+            elif key.lower() == 'n':
+                self.confirming_save = False
+            return None
+        elif self.confirming_report:
             if key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter
                 if self.selected_reason:
                     try:
@@ -61,10 +84,14 @@ class PostOptionsScreen:
                         self.reddit_instance.submission(self.current_post.id).report(reason)
                         self.confirming_report = False
                         self.selected_reason = None
+                        self.status_message = "Post reported successfully"
+                        self.status_color = "green"
                         return "reported"
                     except Exception as e:
                         self.confirming_report = False
                         self.selected_reason = None
+                        self.status_message = f"Error: {str(e)}"
+                        self.status_color = "red"
                         return f"error:{str(e)}"
             elif key == '\x1b':  # Escape
                 self.confirming_report = False
@@ -73,6 +100,9 @@ class PostOptionsScreen:
         elif key.isdigit() and 1 <= int(key) <= len(self.report_reasons):
             self.selected_reason = self.report_reasons[int(key) - 1]
             self.confirming_report = True
+            return None
+        elif key.lower() == 's':
+            self.confirming_save = True
             return None
         return None
 
@@ -104,7 +134,28 @@ class PostOptionsScreen:
             else:
                 output.append(f"│ {self.terminal.bright_cyan(f'{i}.')} {self.terminal.white(reason).ljust(width+4)} │")
         
-        if self.confirming_report:
+        output.append(f"│{'─' * (width-2)}│")
+        output.append(f"│ {self.terminal.bold_white('Other Options: ').ljust(width+11)} │")
+        if hasattr(self.current_post, 'saved') and self.current_post.saved:
+            output.append(f"│ {self.terminal.bright_cyan('S.')} {self.terminal.white('Unsave Post').ljust(width+4)} │")
+        else:
+            output.append(f"│ {self.terminal.bright_cyan('S.')} {self.terminal.white('Save Post').ljust(width+4)} │")
+        
+        if self.status_message:
+            output.append(f"│{'─' * (width-2)}│")
+            if self.status_color == "green":
+                output.append(f"│ {self.terminal.bright_green(self.status_message.center(width+7))} │")
+            else:
+                output.append(f"│ {self.terminal.bright_red(self.status_message.center(width+7))} │")
+            self.status_message = None
+            self.status_color = None
+        elif self.confirming_save:
+            output.append(f"│{'─' * (width-2)}│")
+            if hasattr(self.current_post, 'saved') and self.current_post.saved:
+                output.append(f"│ {self.terminal.bright_yellow('Are you sure you want to unsave this post? (Y/N)').center(width+7)} │")
+            else:
+                output.append(f"│ {self.terminal.bright_yellow('Are you sure you want to save this post? (Y/N)').center(width+7)} │")
+        elif self.confirming_report:
             output.append(f"│{'─' * (width-2)}│")
             output.append(f"│ {self.terminal.bright_yellow('Press Enter to confirm report or ESC to cancel').center(width+7)} │")
         else:

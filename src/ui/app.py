@@ -38,6 +38,7 @@ class RedditTUI:
         self.search_screen.reddit_instance = self.reddit_instance
         self.subreddits_screen.reddit_instance = self.reddit_instance
         self.user_profile_screen.reddit_instance = self.reddit_instance
+        self.post_view.reddit_instance = self.reddit_instance
         self.last_loaded_post = None
         self.current_feed = 'home'
         
@@ -454,31 +455,19 @@ class RedditTUI:
                             self.current_screen = 'post_options'
                         elif self.current_screen == 'post_options':
                             result = self.post_options_view.handle_input(key)
-                            if result == "reported":
-                                print(self.term.move(self.term.height - 3, 0) + self.term.green("Post reported successfully"))
+                            if result in ["reported", "saved", "unsaved"]:
                                 time.sleep(1)
                                 self.current_screen = 'post'
-                            elif result == "view_post":
-                                comments = self.load_post_comments(self.post_options_view.current_post)
-                                self.post_view.display_post(self.post_options_view.current_post, comments)
-                                self.current_screen = 'post'
                             elif result and result.startswith("error:"):
-                                print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error reporting post: {result[6:]}"))
                                 time.sleep(1)
                             self.render()
                     elif key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter
                         if self.current_screen == 'post_options':
                             result = self.post_options_view.handle_input(key)
-                            if result == "reported":
-                                print(self.term.move(self.term.height - 3, 0) + self.term.green("Post reported successfully"))
+                            if result in ["reported", "saved", "unsaved"]:
                                 time.sleep(1)
                                 self.current_screen = 'post'
-                            elif result == "view_post":
-                                comments = self.load_post_comments(self.post_options_view.current_post)
-                                self.post_view.display_post(self.post_options_view.current_post, comments)
-                                self.current_screen = 'post'
                             elif result and result.startswith("error:"):
-                                print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error reporting post: {result[6:]}"))
                                 time.sleep(1)
                             self.render()
                         elif self.active_component == 'sidebar':
