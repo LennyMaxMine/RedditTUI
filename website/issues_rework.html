@@ -470,5 +470,242 @@
             </footer>
         </div>
     </div>
+    
+    <script>
+        class KeyboardNavigator {
+            constructor() {
+                this.currentIndex = 0;
+                this.issues = [];
+                this.shortcuts = {
+                    'j': () => this.navigateDown(),
+                    'k': () => this.navigateUp(), 
+                    'o': () => this.openCurrentIssue(),
+                    '/': () => this.focusSearch(),
+                    'r': () => this.refreshIssues(),
+                    'f': () => this.toggleFilters()
+                };
+                this.init();
+            }
+            
+            init() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+                        if (e.key === 'Escape') {
+                            e.target.blur();
+                        }
+                        return;
+                    }
+                    
+                    const handler = this.shortcuts[e.key.toLowerCase()];
+                    if (handler) {
+                        e.preventDefault();
+                        handler();
+                    }
+                });
+            }
+            
+            updateIssueList() {
+                this.issues = document.querySelectorAll('.issue-item:not([style*="display: none"])');
+                this.highlightCurrent();
+            }
+            
+            navigateDown() {
+                if (this.currentIndex < this.issues.length - 1) {
+                    this.currentIndex++;
+                    this.highlightCurrent();
+                }
+            }
+            
+            navigateUp() {
+                if (this.currentIndex > 0) {
+                    this.currentIndex--;
+                    this.highlightCurrent();
+                }
+            }
+            
+            highlightCurrent() {
+                this.issues.forEach((issue, index) => {
+                    issue.classList.toggle('keyboard-selected', index === this.currentIndex);
+                });
+                
+                if (this.issues[this.currentIndex]) {
+                    this.issues[this.currentIndex].scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                }
+            }
+            
+            openCurrentIssue() {
+                const current = this.issues[this.currentIndex];
+                if (current) {
+                    const link = current.querySelector('a[href*="github.com"]');
+                    if (link) {
+                        window.open(link.href, '_blank');
+                    }
+                }
+            }
+            
+            focusSearch() {
+                document.getElementById('issue-search')?.focus();
+            }
+            
+            refreshIssues() {
+                loadGitHubIssues();
+            }
+            
+            toggleFilters() {
+                const filterButtons = document.querySelectorAll('.filter-btn');
+                const activeButton = document.querySelector('.filter-btn.active');
+                const nextIndex = Array.from(filterButtons).indexOf(activeButton) + 1;
+                const nextButton = filterButtons[nextIndex % filterButtons.length];
+                
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                nextButton.classList.add('active');
+                nextButton.click();
+            }
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        class LazyLoader {
+            constructor() {
+                this.observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            this.loadIssueContent(entry.target);
+                            this.observer.unobserve(entry.target);
+                        }
+                    });
+                });
+            }
+            
+            observe(element) {
+                this.observer.observe(element);
+            }
+            
+            loadIssueContent(element) {
+                element.classList.add('loaded');
+                setTimeout(() => {
+                    element.style.opacity = '1';
+                }, 100);
+            }
+        }
+
+        const keyboardNav = new KeyboardNavigator();
+        const lazyLoader = new LazyLoader();
+
+        function showKeyboardHelp() {
+            const helpPanel = document.createElement('div');
+            helpPanel.className = 'help-panel';
+            helpPanel.innerHTML = `
+                <div class="help-content">
+                    <h3>⌨️ Keyboard Shortcuts</h3>
+                    <div class="shortcut-list">
+                        <div><kbd>j</kbd> / <kbd>k</kbd> - Navigate up/down</div>
+                        <div><kbd>o</kbd> - Open current issue</div>
+                        <div><kbd>/</kbd> - Focus search</div>
+                        <div><kbd>r</kbd> - Refresh issues</div>
+                        <div><kbd>f</kbd> - Cycle filters</div>
+                        <div><kbd>?</kbd> - Show this help</div>
+                        <div><kbd>Esc</kbd> - Close help</div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(helpPanel);
+            
+            const closeHelp = (e) => {
+                if (e.key === 'Escape' || e.target === helpPanel) {
+                    helpPanel.remove();
+                    document.removeEventListener('keydown', closeHelp);
+                    helpPanel.removeEventListener('click', closeHelp);
+                }
+            };
+            
+            document.addEventListener('keydown', closeHelp);
+            helpPanel.addEventListener('click', closeHelp);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '?' && !e.target.matches('input, select')) {
+                e.preventDefault();
+                showKeyboardHelp();
+            }
+        });
+    </script>
+    
+    <style>
+        .keyboard-selected {
+            border-color: var(--glow-primary) !important;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.5) !important;
+            transform: translateY(-3px) scale(1.02) !important;
+        }
+
+        .help-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .help-content {
+            background: var(--terminal-bg);
+            border: 2px solid var(--glow-primary);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 400px;
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+        }
+
+        .help-content h3 {
+            color: var(--accent-color);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .shortcut-list div {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        kbd {
+            background: var(--accent-color);
+            color: black;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+
+        .issue-item {
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .issue-item.loaded {
+            opacity: 1;
+        }
+    </style>
 </body>
 </html>
