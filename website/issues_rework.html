@@ -297,6 +297,77 @@
                 transform: translateY(0);
             }
         }
+        
+        .controls-panel {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(0, 255, 65, 0.05), rgba(255, 107, 53, 0.05));
+        }
+        
+        .search-input {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            font-family: inherit;
+            font-size: inherit;
+            outline: none;
+            border-bottom: 2px solid var(--accent-color);
+            padding: 5px;
+            margin-left: 10px;
+            width: 200px;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            border-bottom-color: var(--glow-primary);
+            box-shadow: 0 2px 10px rgba(0, 255, 65, 0.3);
+        }
+        
+        .filter-controls, .sort-controls {
+            margin-top: 15px;
+        }
+        
+        .filter-buttons {
+            display: inline-flex;
+            gap: 10px;
+            margin-left: 10px;
+        }
+        
+        .filter-btn {
+            background: rgba(68, 68, 68, 0.3);
+            border: 1px solid var(--accent-color);
+            color: var(--text-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--accent-color);
+            color: black;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
+        }
+        
+        .sort-dropdown {
+            background: rgba(68, 68, 68, 0.8);
+            border: 1px solid var(--accent-color);
+            color: var(--text-color);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: inherit;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+        
+        .sort-dropdown:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -348,6 +419,42 @@
             </div>
             
             <h2>🔍 Current Open Issues</h2>
+            
+            <div class="controls-panel">
+                <div class="search-container">
+                    <div class="prompt">
+                        <span class="prompt-symbol">$</span>
+                        <span>search --query=</span>
+                        <input type="text" id="issue-search" placeholder="filter issues..." class="search-input">
+                    </div>
+                </div>
+                
+                <div class="filter-controls">
+                    <div class="prompt">
+                        <span class="prompt-symbol">$</span>
+                        <span>filter --labels=</span>
+                    </div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">all</button>
+                        <button class="filter-btn" data-filter="bug">🐛 bugs</button>
+                        <button class="filter-btn" data-filter="enhancement">✨ features</button>
+                        <button class="filter-btn" data-filter="question">❓ questions</button>
+                    </div>
+                </div>
+                
+                <div class="sort-controls">
+                    <div class="prompt">
+                        <span class="prompt-symbol">$</span>
+                        <span>sort --by=</span>
+                        <select id="sort-select" class="sort-dropdown">
+                            <option value="created">newest</option>
+                            <option value="updated">recently updated</option>
+                            <option value="comments">most commented</option>
+                            <option value="title">alphabetical</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
             
             <div class="issue">
                 <span class="issue-status status-open">Open</span>
