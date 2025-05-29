@@ -45,7 +45,9 @@ class PostList:
         output = []
         
         output.append(f"┬{'─' * (width-2)}┬")
-        output.append(f"│{self.terminal.bright_blue('Reddit Posts').center(width+9)}│")
+        scroll_indicator = f"[{self.selected_index + 1}/{len(self.posts)}]"
+        title = f"{self.terminal.bright_blue('Reddit Posts')} {self.terminal.bright_cyan(scroll_indicator)}"
+        output.append(f"│{title.center(width+20)}│")
         output.append(f"├{'─' * (width-2)}┤")
         
         posts_per_screen = (self.terminal.height - 6) // 4

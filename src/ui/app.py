@@ -73,6 +73,14 @@ class RedditTUI:
             self.active_component = 'post_list'
             self.current_feed = option.lower()
             self.update_posts_from_reddit()
+        elif option == "Saved":
+            if self.reddit_instance:
+                self.current_screen = 'home'
+                #self.active_component = 'post_list'
+                self.current_feed = 'saved'
+                self.update_saved_posts()
+            else:
+                print(self.term.move(self.term.height - 3, 0) + self.term.red("Please login first"))
         elif option == "Search":
             self.current_screen = 'search'
             self.search_screen.reddit_instance = self.reddit_instance
@@ -258,6 +266,39 @@ class RedditTUI:
                       self.term.red(f"Error fetching {category} posts: {e}"))
                 self.post_list.loading_more = False
 
+    def update_saved_posts(self, load_more=False):
+        if self.reddit_instance:
+            try:
+                if load_more and self.last_loaded_post:
+                    saved_items = list(self.reddit_instance.user.me().saved(limit=self.settings.posts_per_page, after=self.last_loaded_post))
+                else:
+                    saved_items = list(self.reddit_instance.user.me().saved(limit=self.settings.posts_per_page))
+                
+                posts = []
+                for item in saved_items:
+                    if hasattr(item, 'title'):  # It's a post
+                        posts.append(item)
+                    else:  # It's a comment
+                        posts.append(item.submission)
+                
+                if not self.settings.show_nsfw:
+                    posts = [post for post in posts if not post.over_18]
+                
+                if posts:
+                    if load_more:
+                        self.post_list.append_posts(posts)
+                    else:
+                        self.post_list.update_posts(posts)
+                    self.last_loaded_post = posts[-1].fullname
+                    self.post_list.loading_more = False
+                    self.header.update_title("RedditTUI - Saved Items")
+                    print(self.term.move(self.term.height - 3, 0) + self.term.green(f"Successfully loaded {len(posts)} saved items"))
+                else:
+                    print(self.term.move(self.term.height - 3, 0) + self.term.yellow("No more saved items found"))
+            except Exception as e:
+                print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error fetching saved items: {e}"))
+                self.post_list.loading_more = False
+
     def run(self):
         print(self.term.enter_fullscreen())
         
@@ -417,6 +458,10 @@ class RedditTUI:
                                 print(self.term.move(self.term.height - 3, 0) + self.term.green("Post reported successfully"))
                                 time.sleep(1)
                                 self.current_screen = 'post'
+                            elif result == "view_post":
+                                comments = self.load_post_comments(self.post_options_view.current_post)
+                                self.post_view.display_post(self.post_options_view.current_post, comments)
+                                self.current_screen = 'post'
                             elif result and result.startswith("error:"):
                                 print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error reporting post: {result[6:]}"))
                                 time.sleep(1)
@@ -427,6 +472,10 @@ class RedditTUI:
                             if result == "reported":
                                 print(self.term.move(self.term.height - 3, 0) + self.term.green("Post reported successfully"))
                                 time.sleep(1)
+                                self.current_screen = 'post'
+                            elif result == "view_post":
+                                comments = self.load_post_comments(self.post_options_view.current_post)
+                                self.post_view.display_post(self.post_options_view.current_post, comments)
                                 self.current_screen = 'post'
                             elif result and result.startswith("error:"):
                                 print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error reporting post: {result[6:]}"))

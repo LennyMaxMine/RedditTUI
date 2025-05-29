@@ -1,5 +1,6 @@
 from blessed import Terminal
 from services.theme_service import ThemeService
+import math
 
 class ThemeScreen:
     def __init__(self, terminal):
@@ -16,8 +17,8 @@ class ThemeScreen:
         width = self.terminal.width - 22
         output = []
         
-        output.append(f"┬{'─' * (width-2)}┤")
-        output.append(f"│{self.terminal.bright_blue('Theme Selection').center(width+9)}│")
+        output.append(f"┌{'─' * (width-2)}┐")
+        output.append(f"│{self.terminal.bright_blue('Theme Selection').center(width)}│")
         
         start_idx = self.scroll_offset
         end_idx = min(start_idx + self.visible_themes, len(self.themes))
@@ -34,48 +35,57 @@ class ThemeScreen:
             theme_line = f"{prefix}{self.terminal.bold_white(theme_name)}"
             if is_current:
                 theme_line += f" {self.terminal.green('(Current)')}"
-            output.append(f"├{'─' * (width-2)}┤")
-            output.append(f"{theme_line}".ljust(width+24) + "│")
+            output.append(f"│{'─' * (width-2)}│")
+            output.append(f"{theme_line.ljust(width)}│")
             
             title_color = theme.get('title', '#ffffff')
-            output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(title_color))('Title Text')}".ljust(width+22) + "│")
+            hexrgb = self._hex_to_rgb(title_color)
+            output.append(f"│    {self.terminal.color_rgb(*hexrgb[0])('Title Text').ljust(width - 4)}│{hexrgb[1]}")
             
             subreddit_color = theme.get('subreddit', '#ffffff')
             author_color = theme.get('author', '#ffffff')
-            output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(subreddit_color))('r/subreddit')} | {self.terminal.color_rgb(*self._hex_to_rgb(author_color))('u/author')}".ljust(width+43) + "│")
+            subreddit_hexrgb = self._hex_to_rgb(subreddit_color)
+            author_hexrgb = self._hex_to_rgb(author_color)
+            output.append(f"│    {self.terminal.color_rgb(*subreddit_hexrgb[0])('r/subreddit')} | {self.terminal.color_rgb(*author_hexrgb[0])('u/author')}".ljust(width - 4) + f"│{hexrgb[1]}")
             
             score_color = theme.get('score', '#ffffff')
             comments_color = theme.get('comments', '#ffffff')
-            output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(score_color))('↑123')} | {self.terminal.color_rgb(*self._hex_to_rgb(comments_color))('💬45')}".ljust(width+42) + "│")
+            score_hexrgb = self._hex_to_rgb(score_color)
+            comments_hexrgb = self._hex_to_rgb(comments_color)
+            output.append(f"│    {self.terminal.color_rgb(*score_hexrgb[0])('↑123')} | {self.terminal.color_rgb(*comments_hexrgb[0])('💬45')}".ljust(width - 4) + f"│{hexrgb[1]}")
             
             content_color = theme.get('content', '#ffffff')
-            output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(content_color))('This is a sample post content...')}".ljust(width+24) + "│")
+            content_hexrgb = self._hex_to_rgb(content_color)
+            output.append(f"│    {self.terminal.color_rgb(*content_hexrgb[0])('This is a sample post content...').ljust(width - 4)}│{hexrgb[1]}")
             
             if idx == end_idx - 1:
-                output.append(f"╰{'─' * (width-2)}╯")
+                output.append(f"└{'─' * (width-2)}┘")
         
         output.append(f"")
         output.append(f"╭{'─' * (width-2)}╮")
-        output.append(f"│{self.terminal.bright_cyan('Instructions:').center(width+9)}│")
-        output.append(f"│    {self.terminal.white('• Up/Down Arrow: Navigate themes')}".ljust(width+10) + "│")
-        output.append(f"│    {self.terminal.white('• Enter: Select theme')}".ljust(width+10) + "│")
-        output.append(f"│    {self.terminal.white('• Escape: Return to settings')}".ljust(width+10) + "│")
+        output.append(f"│{self.terminal.bright_cyan('Instructions:').center(width)}│")
+        output.append(f"│    {self.terminal.white('• Up/Down Arrow: Navigate themes').ljust(width - 4)}│")
+        output.append(f"│    {self.terminal.white('• Enter: Select theme').ljust(width - 4)}│")
+        output.append(f"│    {self.terminal.white('• Escape: Return to settings').ljust(width - 4)}│")
         output.append(f"╰{'─' * (width-2)}╯")
         
         return "\n".join(output)
 
     def _hex_to_rgb(self, hex_color):
         if not hex_color or not isinstance(hex_color, str):
-            return (255, 255, 255)
+            rgb = (255, 255, 255)
+            return rgb, sum(len(str(num)) for num in rgb)
         
         hex_color = hex_color.lstrip('#')
         if len(hex_color) == 3:
             hex_color = ''.join(c*2 for c in hex_color)
         
         try:
-            return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+            rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+            return rgb, sum(len(str(num)) for num in rgb)
         except ValueError:
-            return (255, 255, 255)
+            rgb = (255, 255, 255)
+            return rgb, sum(len(str(num)) for num in rgb)
 
     def scroll_up(self):
         if self.selected_index > 0:

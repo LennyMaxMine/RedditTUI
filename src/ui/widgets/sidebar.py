@@ -7,6 +7,7 @@ class Sidebar:
             "Home",
             "New",
             "Top",
+            "Saved",
             "Search",
             "Subreddits",
             "Profile",
