@@ -224,6 +224,69 @@
             box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
         }
         
+        .issue-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-open {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            box-shadow: 0 0 8px rgba(40, 167, 69, 0.4);
+        }
+        
+        .status-closed {
+            background: linear-gradient(135deg, #6f42c1, #495057);
+            color: white;
+            box-shadow: 0 0 8px rgba(111, 66, 193, 0.4);
+        }
+        
+        .assignee-info {
+            display: flex;
+            align-items: center;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .assignee-avatar {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid var(--accent-color);
+            transition: all 0.3s ease;
+        }
+        
+        .assignee-avatar:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+        
+        .priority-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: priorityPulse 2s infinite;
+        }
+        
+        .priority-high { background: #ff4757; }
+        .priority-medium { background: #ffa726; }  
+        .priority-low { background: #66bb6a; }
+        
+        @keyframes priorityPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+        }
+        
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -285,6 +348,15 @@
             </div>
             
             <h2>🔍 Current Open Issues</h2>
+            
+            <div class="issue">
+                <span class="issue-status status-open">Open</span>
+                <div class="priority-indicator priority-high"></div>
+                <div class="assignee-info">
+                    <img class="assignee-avatar" src="avatar.jpg" alt="Assignee">
+                    <span>Assignee Name</span>
+                </div>
+            </div>
             
             <footer>
                 RedditTUI Issues © 2025 | Created with ♥ by LennyMaxMine | Frankfurt, Germany 🇩🇪
