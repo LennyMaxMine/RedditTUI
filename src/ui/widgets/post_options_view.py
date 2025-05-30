@@ -104,6 +104,8 @@ class PostOptionsScreen:
         elif key.lower() == 's':
             self.confirming_save = True
             return None
+        elif key.lower() == 'c':
+            return "comment"
         return None
 
     def display(self):
@@ -140,6 +142,7 @@ class PostOptionsScreen:
             output.append(f"│ {self.terminal.bright_cyan('S.')} {self.terminal.white('Unsave Post').ljust(width+4)} │")
         else:
             output.append(f"│ {self.terminal.bright_cyan('S.')} {self.terminal.white('Save Post').ljust(width+4)} │")
+        output.append(f"│ {self.terminal.bright_cyan('C.')} {self.terminal.white('Add Comment').ljust(width+4)} │")
         
         if self.status_message:
             output.append(f"│{'─' * (width-2)}│")

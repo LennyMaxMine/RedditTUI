@@ -22,6 +22,7 @@ from rich.text import Text
 from rich import box
 from rich.prompt import Prompt
 from services.settings_service import Settings
+from services.theme_service import ThemeService
 
 class PostView:
     def __init__(self, terminal):
@@ -37,6 +38,11 @@ class PostView:
         self.scroll_position = 0
         self.settings = Settings()
         self.settings.load_settings_from_file()
+        self.theme_service = ThemeService()
+        self.theme_service.set_theme(self.settings.theme)
+        self.comment_mode = False
+        self.comment_text = ""
+        self.comment_cursor_pos = 0
         self.report_reasons = [
             "Spam",
             "Vote Manipulation",
@@ -192,6 +198,22 @@ class PostView:
         except Exception as e:
             pass
 
+    def _hex_to_rgb(self, hex_color):
+        if not hex_color or not isinstance(hex_color, str):
+            rgb = (255, 255, 255)
+            return rgb
+        
+        hex_color = hex_color.lstrip('#')
+        if len(hex_color) == 3:
+            hex_color = ''.join(c*2 for c in hex_color)
+        
+        try:
+            rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+            return rgb
+        except ValueError:
+            rgb = (255, 255, 255)
+            return rgb
+
     def display_post(self, post, comments=None):
         self.current_post = post
         self.comments = comments or []
@@ -209,6 +231,23 @@ class PostView:
     def display(self):
         if not self.current_post:
             return ""
+        
+        if self.comment_mode:
+            width = self.content_width
+            output = []
+            
+            output.append(f"┬{'─' * (width-2)}┤")
+            output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('Add Comment').center(width+21)}│")
+            output.append(f"├{'─' * (width-2)}┤")
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.comment_text[:self.comment_cursor_pos])}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))('|')}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.comment_text[self.comment_cursor_pos:])}{' ' * (width - len(self.comment_text) - 2)}│")
+            output.append(f"├{'─' * (width-2)}┤")
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))('Instructions:')}{' ' * (width - 16)}│")
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Type your comment')}{' ' * (width - 20)}│")
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Enter to submit')}{' ' * (width - 20)}│")
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Esc to cancel')}{' ' * (width - 18)}│")
+            output.append(f"╰{'─' * (width-2)}╯")
+            return "\n".join(output)
+        
         width = self.content_width
         output = []
         
@@ -383,7 +422,30 @@ class PostView:
             self.comments = []
 
     def handle_input(self, key):
-        if key == '3':
+        if self.comment_mode:
+            if key == 'KEY_ENTER':
+                self.submit_comment()
+                return True
+            elif key == 'KEY_ESCAPE':
+                self.comment_mode = False
+                self.comment_text = ""
+                self.comment_cursor_pos = 0
+                return True
+            elif key == 'KEY_BACKSPACE':
+                if self.comment_cursor_pos > 0:
+                    self.comment_text = self.comment_text[:self.comment_cursor_pos-1] + self.comment_text[self.comment_cursor_pos:]
+                    self.comment_cursor_pos -= 1
+            elif key == 'KEY_LEFT':
+                if self.comment_cursor_pos > 0:
+                    self.comment_cursor_pos -= 1
+            elif key == 'KEY_RIGHT':
+                if self.comment_cursor_pos < len(self.comment_text):
+                    self.comment_cursor_pos += 1
+            elif len(key) == 1 and ord(key) >= 32:
+                self.comment_text = self.comment_text[:self.comment_cursor_pos] + key + self.comment_text[self.comment_cursor_pos:]
+                self.comment_cursor_pos += 1
+            return True
+        elif key == '3':
             self.report_post()
             return True
         elif key == 'o':
@@ -492,3 +554,23 @@ class PostView:
                 if 'p' in metadata:
                     links.append(metadata['p'][0]['u'])
         return links
+
+    def submit_comment(self):
+        if not self.comment_text.strip():
+            return
+
+        try:
+            self.current_post.reply(self.comment_text)
+            self.comment_mode = False
+            self.comment_text = ""
+            self.comment_cursor_pos = 0
+            # Refresh comments to show the new one
+            if hasattr(self.current_post, 'comments'):
+                self.current_post.comments.replace_more(limit=0)
+                self.comments = list(self.current_post.comments.list())
+                self.comment_lines = []
+                for comment in self.comments:
+                    if hasattr(comment, 'body'):
+                        self.comment_lines.extend(self.display_comment(comment, 0, self.content_width))
+        except Exception as e:
+            print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red(f"Error submitting comment: {e}"))

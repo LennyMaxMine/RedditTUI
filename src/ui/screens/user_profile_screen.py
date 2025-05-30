@@ -21,10 +21,26 @@ class UserProfileScreen:
         self.loading_index = 0
         self.last_loading_update = 0
         self.width = self.terminal.width - 22
+        self.comment_mode = False
+        self.comment_text = ""
+        self.comment_cursor_pos = 0
 
     def display(self):
         width = self.terminal.width - 22
         output = []
+        
+        if self.comment_mode:
+            output.append(f"┬{'─' * (width-2)}┤")
+            output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('Add Comment').center(width+21)}│")
+            output.append(f"├{'─' * (width-2)}┤")
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.comment_text[:self.comment_cursor_pos])}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))('|')}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.comment_text[self.comment_cursor_pos:])}{' ' * (width - len(self.comment_text) - 2)}│")
+            output.append(f"├{'─' * (width-2)}┤")
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))('Instructions:')}{' ' * (width - 16)}│")
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Type your comment')}{' ' * (width - 20)}│")
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Enter to submit')}{' ' * (width - 20)}│")
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Esc to cancel')}{' ' * (width - 18)}│")
+            output.append(f"╰{'─' * (width-2)}╯")
+            return "\n".join(output)
         
         output.append(f"┬{'─' * (width-2)}┤")
         output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('User Profile').center(width+21)}│")
@@ -223,6 +239,30 @@ class UserProfileScreen:
             return selected_item.submission  # Return the parent submission for comments
 
     def handle_input(self, key):
+        if self.comment_mode:
+            if key == 'KEY_ENTER':
+                self.submit_comment()
+                return True
+            elif key == 'KEY_ESCAPE':
+                self.comment_mode = False
+                self.comment_text = ""
+                self.comment_cursor_pos = 0
+                return True
+            elif key == 'KEY_BACKSPACE':
+                if self.comment_cursor_pos > 0:
+                    self.comment_text = self.comment_text[:self.comment_cursor_pos-1] + self.comment_text[self.comment_cursor_pos:]
+                    self.comment_cursor_pos -= 1
+            elif key == 'KEY_LEFT':
+                if self.comment_cursor_pos > 0:
+                    self.comment_cursor_pos -= 1
+            elif key == 'KEY_RIGHT':
+                if self.comment_cursor_pos < len(self.comment_text):
+                    self.comment_cursor_pos += 1
+            elif len(key) == 1 and ord(key) >= 32:
+                self.comment_text = self.comment_text[:self.comment_cursor_pos] + key + self.comment_text[self.comment_cursor_pos:]
+                self.comment_cursor_pos += 1
+            return True
+
         if key == 'KEY_UP':
             if self.selected_index > 0:
                 self.selected_index -= 1
@@ -241,5 +281,22 @@ class UserProfileScreen:
             self.switch_content_type()
             self.load_content()
         elif key == 'KEY_ENTER':
-            self.select_item()
-        return key != 'KEY_ESCAPE' 
+            if self.content_index == 0 and self.posts:  # Only allow comments on posts
+                self.comment_mode = True
+                return True
+        return key != 'KEY_ESCAPE'
+
+    def submit_comment(self):
+        if not self.comment_text.strip():
+            return
+
+        try:
+            selected_item = self.select_item()
+            if selected_item:
+                selected_item.reply(self.comment_text)
+                self.comment_mode = False
+                self.comment_text = ""
+                self.comment_cursor_pos = 0
+                self.load_content()  # Refresh content to show new comment
+        except Exception as e:
+            print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red(f"Error submitting comment: {e}")) 

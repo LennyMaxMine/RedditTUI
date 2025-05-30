@@ -465,7 +465,7 @@ class RedditTUI:
                     elif key == 'j':  # Downvote
                         if self.current_screen == 'post':
                             self.post_view.downvote_post()
-                    elif key == '\t':  # Tab
+                    elif key == '\t':  # Tabtype
                         if self.current_screen == 'search':
                             self.search_screen.next_search_type()
                         elif self.current_screen == 'help':
@@ -485,7 +485,7 @@ class RedditTUI:
                         if self.current_screen == 'search':
                             self.search_screen.add_char(key)
                             self.active_component = 'post_list'
-                        elif key.lower() == "o" and self.current_screen == 'post':
+                        elif key.lower() == "o" and self.current_screen == 'post' and not self.post_view.comment_mode:
                             self.post_options_view.current_post = self.post_view.current_post
                             self.current_screen = 'post_options'
                         elif self.current_screen == 'post_options':
@@ -493,15 +493,47 @@ class RedditTUI:
                             if result in ["reported", "saved", "unsaved"]:
                                 time.sleep(1)
                                 self.current_screen = 'post'
+                                self.post_options_view.confirming_save = False
+                                self.post_options_view.confirming_report = False
+                                self.post_options_view.selected_reason = None
+                                # Refresh the post to update its state
+                                if self.post_view.current_post:
+                                    comments = self.load_post_comments(self.post_view.current_post)
+                                    self.post_view.display_post(self.post_view.current_post, comments)
+                            elif result == "comment":
+                                self.current_screen = 'post'
+                                self.post_view.comment_mode = True
+                                self.post_options_view.confirming_save = False
+                                self.post_options_view.confirming_report = False
+                                self.post_options_view.selected_reason = None
                             elif result and result.startswith("error:"):
                                 time.sleep(1)
                             self.render()
+                        elif self.current_screen == 'post' and self.post_view.comment_mode:
+                            self.post_view.handle_input(key)
+                            self.render()
                     elif key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter
-                        if self.current_screen == 'post_options':
+                        if self.current_screen == 'post' and self.post_view.comment_mode:
+                            self.post_view.handle_input('KEY_ENTER')
+                            self.render()
+                        elif self.current_screen == 'post_options':
                             result = self.post_options_view.handle_input(key)
                             if result in ["reported", "saved", "unsaved"]:
                                 time.sleep(1)
                                 self.current_screen = 'post'
+                                self.post_options_view.confirming_save = False
+                                self.post_options_view.confirming_report = False
+                                self.post_options_view.selected_reason = None
+                                # Refresh the post to update its state
+                                if self.post_view.current_post:
+                                    comments = self.load_post_comments(self.post_view.current_post)
+                                    self.post_view.display_post(self.post_view.current_post, comments)
+                            elif result == "comment":
+                                self.current_screen = 'post'
+                                self.post_view.comment_mode = True
+                                self.post_options_view.confirming_save = False
+                                self.post_options_view.confirming_report = False
+                                self.post_options_view.selected_reason = None
                             elif result and result.startswith("error:"):
                                 time.sleep(1)
                             self.render()
