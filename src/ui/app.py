@@ -330,6 +330,8 @@ class RedditTUI:
         try:
             with self.term.cbreak(), self.term.hidden_cursor():
                 while True:
+                    self.sidebar.active = self.active_component == 'sidebar'
+                    self.post_list.active = self.active_component == 'post_list'
                     self.render()
                     key = self.term.inkey()
                     
@@ -343,7 +345,11 @@ class RedditTUI:
                             else:
                                 self.current_screen = 'post'
                         elif self.current_screen == 'post':
-                            if self.post_view.from_search:
+                            if self.post_view.comment_mode:
+                                self.post_view.comment_mode = False
+                                self.post_view.comment_text = ""
+                                self.post_view.comment_cursor_pos = 0
+                            elif self.post_view.from_search:
                                 self.current_screen = 'search'
                                 self.post_view.from_search = False
                             else:
@@ -465,7 +471,7 @@ class RedditTUI:
                     elif key == 'j':  # Downvote
                         if self.current_screen == 'post':
                             self.post_view.downvote_post()
-                    elif key == '\t':  # Tabtype
+                    elif key == '\t':  # Tab
                         if self.current_screen == 'search':
                             self.search_screen.next_search_type()
                         elif self.current_screen == 'help':
@@ -478,9 +484,32 @@ class RedditTUI:
                             self.subreddits_screen.next_category()
                         elif self.current_screen == "profile":
                             self.user_profile_screen.switch_content_type()
+                        elif self.current_screen == 'post':
+                            self.post_view.comment_sort_index = (self.post_view.comment_sort_index + 1) % len(self.post_view.comment_sort_options)
+                            self.post_view.comment_sort_mode = self.post_view.comment_sort_options[self.post_view.comment_sort_index]
+                            if self.post_view.current_post:
+                                comments = self.load_post_comments(self.post_view.current_post)
+                                if self.post_view.comment_sort_mode == "best":
+                                    comments.sort(key=lambda x: x.score, reverse=True)
+                                elif self.post_view.comment_sort_mode == "top":
+                                    comments.sort(key=lambda x: x.score, reverse=True)
+                                elif self.post_view.comment_sort_mode == "new":
+                                    comments.sort(key=lambda x: x.created_utc, reverse=True)
+                                elif self.post_view.comment_sort_mode == "controversial":
+                                    comments.sort(key=lambda x: x.controversiality, reverse=True)
+                                self.post_view.comments = comments
+                                self.post_view.comment_lines = []
+                                for comment in self.post_view.comments:
+                                    if hasattr(comment, 'body'):
+                                        self.post_view.comment_lines.extend(self.post_view.display_comment(comment, 0, self.post_view.content_width))
+                                self.post_view.comment_scroll_offset = 0
                     elif key == '\x7f':  # Backspace
                         if self.current_screen == 'search':
                             self.search_screen.backspace()
+                        elif self.current_screen == 'post' and self.post_view.comment_mode:
+                            if self.post_view.comment_cursor_pos > 0:
+                                self.post_view.comment_text = self.post_view.comment_text[:self.post_view.comment_cursor_pos-1] + self.post_view.comment_text[self.post_view.comment_cursor_pos:]
+                                self.post_view.comment_cursor_pos -= 1
                     elif len(key) == 1 and key.isprintable():  # Regular character input
                         if self.current_screen == 'search':
                             self.search_screen.add_char(key)
@@ -510,11 +539,28 @@ class RedditTUI:
                                 time.sleep(1)
                             self.render()
                         elif self.current_screen == 'post' and self.post_view.comment_mode:
-                            self.post_view.handle_input(key)
-                            self.render()
+                            self.post_view.comment_text = self.post_view.comment_text[:self.post_view.comment_cursor_pos] + key + self.post_view.comment_text[self.post_view.comment_cursor_pos:]
+                            self.post_view.comment_cursor_pos += 1
+                        elif key == '3' and self.current_screen == 'post':
+                            self.post_view.report_post()
                     elif key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter
                         if self.current_screen == 'post' and self.post_view.comment_mode:
-                            self.post_view.handle_input('KEY_ENTER')
+                            if self.post_view.comment_text.strip():
+                                try:
+                                    self.post_view.current_post.reply(self.post_view.comment_text)
+                                    self.post_view.comment_mode = False
+                                    self.post_view.comment_text = ""
+                                    self.post_view.comment_cursor_pos = 0
+                                    # Refresh comments to show the new one
+                                    if hasattr(self.post_view.current_post, 'comments'):
+                                        self.post_view.current_post.comments.replace_more(limit=0)
+                                        self.post_view.comments = list(self.post_view.current_post.comments.list())
+                                        self.post_view.comment_lines = []
+                                        for comment in self.post_view.comments:
+                                            if hasattr(comment, 'body'):
+                                                self.post_view.comment_lines.extend(self.post_view.display_comment(comment, 0, self.post_view.content_width))
+                                except Exception as e:
+                                    print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error submitting comment: {e}"))
                             self.render()
                         elif self.current_screen == 'post_options':
                             result = self.post_options_view.handle_input(key)

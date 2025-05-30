@@ -16,6 +16,7 @@ class Sidebar:
             "Exit"
         ]
         self.selected_index = 0
+        self.active = False
 
     def escape_to_home(self):
         self.selected_index = 0
@@ -28,7 +29,7 @@ class Sidebar:
         output.append(f"├{'─' * (width-1)}┤")
         
         for idx, option in enumerate(self.options):
-            if idx == self.selected_index:
+            if idx == self.selected_index and self.active:
                 prefix = "│ ► "
             else:
                 prefix = "│   "

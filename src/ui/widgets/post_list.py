@@ -15,6 +15,7 @@ class PostList:
         self.current_page = 'home'
         self.settings = Settings()
         self.settings.load_settings_from_file()
+        self.active = False
 
     def get_score_color(self, score):
         if score > 1000:
@@ -66,7 +67,7 @@ class PostList:
                 metadata_additional_width += 1
             
 
-            if idx - 1 == self.selected_index:
+            if idx - 1 == self.selected_index and self.active:
                 prefix = self.terminal.bright_green("│ ► ")
             else:
                 prefix = "│   "

@@ -43,6 +43,9 @@ class PostView:
         self.comment_mode = False
         self.comment_text = ""
         self.comment_cursor_pos = 0
+        self.comment_sort_mode = "best"
+        self.comment_sort_index = 0
+        self.comment_sort_options = ["best", "top", "new", "controversial"]
         self.report_reasons = [
             "Spam",
             "Vote Manipulation",
@@ -391,6 +394,16 @@ class PostView:
             output.append(f"│ {self.terminal.bold_white('Comments:').ljust(width+11)} │")
             output.append(f"├{'─' * (width-2)}┤")
             
+            sort_options_line = "│ Sort: "
+            for i, option in enumerate(self.comment_sort_options):
+                if i == self.comment_sort_index:
+                    sort_options_line += self.terminal.bright_green(f"[{option}] ")
+                else:
+                    sort_options_line += self.terminal.white(f"{option} ")
+            sort_options_line = sort_options_line.ljust(width + 43) + "│"
+            output.append(sort_options_line)
+            output.append(f"├{'─' * (width-2)}┤")
+            
             self.comment_lines = []
             for comment in self.comments:
                 if hasattr(comment, 'body'):
@@ -420,52 +433,6 @@ class PostView:
             self.comments = list(post.comments.list())
         else:
             self.comments = []
-
-    def handle_input(self, key):
-        if self.comment_mode:
-            if key == 'KEY_ENTER':
-                self.submit_comment()
-                return True
-            elif key == 'KEY_ESCAPE':
-                self.comment_mode = False
-                self.comment_text = ""
-                self.comment_cursor_pos = 0
-                return True
-            elif key == 'KEY_BACKSPACE':
-                if self.comment_cursor_pos > 0:
-                    self.comment_text = self.comment_text[:self.comment_cursor_pos-1] + self.comment_text[self.comment_cursor_pos:]
-                    self.comment_cursor_pos -= 1
-            elif key == 'KEY_LEFT':
-                if self.comment_cursor_pos > 0:
-                    self.comment_cursor_pos -= 1
-            elif key == 'KEY_RIGHT':
-                if self.comment_cursor_pos < len(self.comment_text):
-                    self.comment_cursor_pos += 1
-            elif len(key) == 1 and ord(key) >= 32:
-                self.comment_text = self.comment_text[:self.comment_cursor_pos] + key + self.comment_text[self.comment_cursor_pos:]
-                self.comment_cursor_pos += 1
-            return True
-        elif key == '3':
-            self.report_post()
-            return True
-        elif key == 'o':
-            return "post_options"
-        elif key.lower() == 's':
-            if not self.reddit_instance:
-                print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red("You must be logged in to save posts"))
-                return True
-            try:
-                if hasattr(self.current_post, 'saved') and self.current_post.saved:
-                    self.current_post.unsave()
-                    print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.green("Post unsaved"))
-                else:
-                    self.current_post.save()
-                    print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.green("Post saved"))
-                return True
-            except Exception as e:
-                print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red(f"Error saving post: {e}"))
-                return True
-        return False
 
     def report_post(self):
         if not self.reddit_instance:
