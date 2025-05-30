@@ -59,15 +59,15 @@ class LoginScreen:
                 self.reddit_instance.user.me()
                 print(self.term.clear())
                 print(self.term.move(0, 0))
-                print(self.term.green(f"Auto-login successful! Welcome back, u/{saved_creds['username']}"))
+                print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))(f"Auto-login successful! Welcome back, u/{saved_creds['username']}"))
                 time.sleep(0.15)
                 return True
             except Exception as e:
                 print(self.term.clear())
                 print(self.term.move(0, 0))
-                print(self.term.yellow(f"Auto-login failed: {str(e)}"))
-                print(self.term.yellow("Please log in manually."))
-                print(self.term.yellow("Press Enter to continue..."))
+                print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))(f"Auto-login failed: {str(e)}"))
+                print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))("Please log in manually."))
+                print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))("Press Enter to continue..."))
                 input()
                 return False
         return False
@@ -105,38 +105,38 @@ class LoginScreen:
 
         print(self.term.clear())
         print(self.term.move(0, 0))
-        print(self.term.bold(self.term.cyan("Login to Reddit")))
+        print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))("Login to Reddit"))
         print("\nPlease enter your credentials:\n")
         
         saved_creds = self.load_credentials()
         if saved_creds:
-            print(self.term.cyan("Found saved credentials. Press Enter to use them or type new ones."))
-            print(self.term.cyan(f"Saved username: {saved_creds['username']}"))
+            print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))("Found saved credentials. Press Enter to use them or type new ones."))
+            print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))(f"Saved username: {saved_creds['username']}"))
             print()
         
-        client_id = self.get_input(self.term.cyan("Client ID: "))
+        client_id = self.get_input(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))("Client ID: "))
         print()
         if not client_id and saved_creds:
             client_id = saved_creds['client_id']
-            print(self.term.cyan(f"Using saved Client ID: {client_id}"))
+            print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))(f"Using saved Client ID: {client_id}"))
         
-        client_secret = self.get_input(self.term.cyan("Client Secret: "))
+        client_secret = self.get_input(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))("Client Secret: "))
         print()
         if not client_secret and saved_creds:
             client_secret = saved_creds['client_secret']
-            print(self.term.cyan(f"Using saved Client Secret: {client_secret}"))
+            print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))(f"Using saved Client Secret: {client_secret}"))
         
-        username = self.get_input(self.term.cyan("Username: "))
+        username = self.get_input(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))("Username: "))
         print()
         if not username and saved_creds:
             username = saved_creds['username']
-            print(self.term.cyan(f"Using saved Username: {username}"))
+            print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))(f"Using saved Username: {username}"))
         
-        password = self.get_input(self.term.cyan("Password: "))
+        password = self.get_input(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))("Password: "))
         print()
 
         if not all([client_id, client_secret, username, password]):
-            print(self.term.red("All fields are required!"))
+            print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))("All fields are required!"))
             return
 
         self.authenticate(client_id, client_secret, username, password)
@@ -151,9 +151,13 @@ class LoginScreen:
                 user_agent='RedditTUI/0.1'
             )
             self.reddit_instance.user.me()
-            print(self.term.green("Login successful!"))
-            print(self.term.green(f"Welcome, u/{username}!"))
+            print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))("Login successful!"))
+            print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))(f"Welcome, u/{username}!"))
             self.save_credentials(client_id, client_secret, username, password)
         except Exception as e:
-            print(self.term.red(f"Login failed: {str(e)}"))
+            print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))(f"Login failed: {str(e)}"))
             self.reddit_instance = None
+
+    def _hex_to_rgb(self, hex_color):
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))

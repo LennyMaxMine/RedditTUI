@@ -20,11 +20,14 @@ class Settings:
                     self.comment_depth = int(settings.get("comment_depth", self.comment_depth))
                     self.auto_load_comments = str(settings.get("auto_load_comments", str(self.auto_load_comments))).lower() == "true"
                     self.show_nsfw = str(settings.get("show_nsfw", str(self.show_nsfw))).lower() == "true"
+                    return True
             else:
                 self.save_settings_to_file()
+                return True
         except Exception as e:
             print(f"Error loading settings: {e}")
             self.save_settings_to_file()
+            return False
 
     def save_settings_to_file(self):
         settings_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "settings.json")
@@ -36,7 +39,20 @@ class Settings:
                 "auto_load_comments": str(self.auto_load_comments),
                 "show_nsfw": str(self.show_nsfw)
             }
+            os.makedirs(os.path.dirname(settings_path), exist_ok=True)
             with open(settings_path, "w") as settingsfile:
                 json.dump(settings, settingsfile, indent=4)
+            return True
         except Exception as e:
             print(f"Error saving settings: {e}")
+            return False
+
+    def apply_settings(self):
+        try:
+            from services.theme_service import ThemeService
+            theme_service = ThemeService()
+            theme_service.set_theme(self.theme.lower())
+            return True
+        except Exception as e:
+            print(f"Error applying settings: {e}")
+            return False

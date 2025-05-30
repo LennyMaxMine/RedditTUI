@@ -3,6 +3,7 @@ import textwrap
 from datetime import datetime
 import emoji
 from services.settings_service import Settings
+from services.theme_service import ThemeService
 
 class PostList:
     def __init__(self, terminal, visible_posts=10, current_page='home'):
@@ -15,28 +16,29 @@ class PostList:
         self.current_page = 'home'
         self.settings = Settings()
         self.settings.load_settings_from_file()
+        self.theme_service = ThemeService()
         self.active = False
 
     def get_score_color(self, score):
         if score > 1000:
-            return self.terminal.bright_green
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('score')))
         elif score > 500:
-            return self.terminal.green
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('score')))
         elif score > 100:
-            return self.terminal.yellow
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('score')))
         else:
-            return self.terminal.normal
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))
 
     def get_age_color(self, created_utc):
         age = datetime.utcnow().timestamp() - created_utc
         if age < 3600:  # Less than 1 hour
-            return self.terminal.bright_red
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))
         elif age < 86400:  # Less than 1 day
-            return self.terminal.red
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))
         elif age < 604800:  # Less than 1 week
-            return self.terminal.yellow
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))
         else:
-            return self.terminal.normal
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))
 
     def display(self):
         if not self.posts:
@@ -47,8 +49,8 @@ class PostList:
         
         output.append(f"┬{'─' * (width-2)}┬")
         scroll_indicator = f"[{self.selected_index + 1}/{len(self.posts)}]"
-        title = f"{self.terminal.bright_blue('Reddit Posts')} {self.terminal.bright_cyan(scroll_indicator)}"
-        output.append(f"│{title.center(width+20)}│")
+        title = f"{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('Reddit Posts')} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))(scroll_indicator)}"
+        output.append(f"│{title.center(width+44)}│")
         output.append(f"├{'─' * (width-2)}┤")
         
         posts_per_screen = (self.terminal.height - 6) // 4
@@ -62,33 +64,33 @@ class PostList:
             return int(len(emojis))
         
         for idx, post in enumerate(self.posts[start_idx:end_idx], start=start_idx + 1):
-            metadata_additional_width = 53
-            if self.current_page in ['top', 'new']:
-                metadata_additional_width += 1
+            metadata_additional_width = 110
+            if self.current_page.lower() == 'home':
+                metadata_additional_width -= 1
             
 
             if idx - 1 == self.selected_index and self.active:
-                prefix = self.terminal.bright_green("│ ► ")
+                prefix = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))("│ ► ")
             else:
                 prefix = "│   "
             
             title = post.title
             if len(title) > width - 5:
                 title = title[:width-8] + "..."
-            output.append(f"{prefix}{self.terminal.bold_white(title.ljust(width-5-contains_emoji(title)))}│")
+            output.append(f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(title.ljust(width-5-contains_emoji(title)))}│")
             
             metadata = []
-            metadata.append(self.terminal.bright_cyan(f"r/{post.subreddit.display_name}"))
+            metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))(f"r/{post.subreddit.display_name}"))
             if post.subreddit.display_name == "explore":
                 metadata_additional_width += 2
-            metadata.append(self.terminal.bright_yellow(f"u/{post.author}"))
+            metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('author')))(f"u/{post.author}"))
             if hasattr(post, 'url') and any(post.url.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
-                metadata.append(self.terminal.bright_blue("🖼️"))
-                metadata_additional_width += 11
+                metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))("🖼️"))
+                metadata_additional_width += 23
             
             score_color = self.get_score_color(post.score)
             metadata.append(f"{score_color}↑{post.score}{self.terminal.normal}")
-            metadata.append(self.terminal.bright_magenta(f"💬{post.num_comments}"))
+            metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('comments')))(f"💬{post.num_comments}"))
             
             if hasattr(post, 'created_utc'):
                 age_color = self.get_age_color(post.created_utc)
@@ -112,10 +114,10 @@ class PostList:
             
                 
             if hasattr(post, 'over_18') and post.over_18:
-                metadata.append(self.terminal.bright_red("NSFW"))
+                metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))("NSFW"))
                 metadata_additional_width += 11
             if hasattr(post, 'stickied') and post.stickied:
-                metadata.append(self.terminal.bright_yellow("📌"))
+                metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))("📌"))
                 metadata_additional_width += 11
             
             metadata_line = "│    " + " | ".join(metadata)
@@ -173,3 +175,7 @@ class PostList:
             self.selected_index -= 1
             if self.selected_index < self.scroll_offset:
                 self.scroll_offset = self.selected_index
+
+    def _hex_to_rgb(self, hex_color):
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))

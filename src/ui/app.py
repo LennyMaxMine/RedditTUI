@@ -604,9 +604,24 @@ class RedditTUI:
                                 self.post_view.from_search = True
                                 self.current_screen = 'post'
                         elif self.current_screen == 'settings':
-                            if self.settings_screen.handle_enter():
-                                self.current_screen = 'settings'
-                                self.active_component = 'sidebar'
+                            if self.settings_screen.theme_screen_activated:
+                                if self.settings_screen.handle_input():
+                                    self.current_screen = 'home'
+                                    self.active_component = 'sidebar'
+                                    self.settings.load_settings_from_file()
+                                    self.settings.apply_settings()
+                            elif self.settings_screen.handle_enter():
+                                if self.settings_screen.theme_screen_activated:
+                                    self.current_screen = 'settings'
+                                else:
+                                    self.current_screen = 'home'
+                                    self.active_component = 'sidebar'
+                                    self.settings.load_settings_from_file()
+                                    self.settings.apply_settings()
+                            self.sidebar.active = False
+                            self.sidebar.selected_index = -1
+                            self.post_list.active = False
+                            self.active_component = None
                         elif self.current_screen == 'subreddits':
                             selected_subreddit, category = self.subreddits_screen.get_selected_subreddit()
                             if selected_subreddit:

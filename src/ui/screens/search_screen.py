@@ -3,6 +3,7 @@ import textwrap
 import time
 import emoji
 from services.theme_service import ThemeService
+from services.settings_service import Settings
 
 class SearchScreen:
     def __init__(self, terminal, reddit_instance):
@@ -24,6 +25,8 @@ class SearchScreen:
         self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         self.loading_index = 0
         self.last_loading_update = 0
+        self.settings = Settings()
+        self.settings.load_settings_from_file()
 
     def contains_emoji(self, text):
             emojis = emoji.emoji_list(text)
@@ -34,18 +37,18 @@ class SearchScreen:
         output = []
         
         output.append(f"┬{'─' * (width-2)}┤")
-        output.append(f"│{self.terminal.bold_white('Reddit Search').center(width-2)}│")
+        output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('Reddit Search').center(width+21)}│")
         output.append(f"├{'─' * (width-2)}┤")
         
-        output.append(f"│{self.terminal.cyan('Search Query: ')}{self.terminal.white(self.search_query)}{' ' * (width - len(self.search_query) - 16)}│")
+        output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))('Search Query: ')}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.search_query)}{' ' * (width - len(self.search_query) - 16)}│")
         
-        type_line = self.terminal.cyan("Search Type: ")
+        type_line = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))("Search Type: ")
         for i, stype in enumerate(self.search_types):
             if i == self.type_index:
-                type_line += self.terminal.green(f"[{stype}] ")
+                type_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))(f"[{stype}] ")
             else:
-                type_line += self.terminal.white(f"{stype} ")
-        output.append(f"│{type_line}{' ' * (width - len(type_line) + 42)}│")
+                type_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(f"{stype} ")
+        output.append(f"│{type_line}{' ' * (width - len(type_line) + 94)}│")
         
         output.append(f"├{'─' * (width-2)}┤")
         
@@ -56,7 +59,7 @@ class SearchScreen:
             for idx, post in enumerate(self.search_results[start_idx:end_idx], start=start_idx + 1):
                 metadata_additional_width = 0
                 if idx - 1 == self.selected_index:
-                    prefix = self.terminal.green("► ")
+                    prefix = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))("► ")
                     metadata_additional_width += 11
                 else:
                     prefix = "  "
@@ -66,26 +69,26 @@ class SearchScreen:
                 if len(title) > width - 40:
                     title = title[:width-43] + "..."
                 
-                subreddit = self.terminal.cyan(f"r/{post.subreddit.display_name}")
-                author = self.terminal.yellow(f"u/{post.author}")
-                score = self.terminal.green(f"↑{post.score}")
-                comments = self.terminal.magenta(f"💬{post.num_comments}")
+                subreddit = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))(f"r/{post.subreddit.display_name}")
+                author = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('author')))(f"u/{post.author}")
+                score = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('score')))(f"↑{post.score}")
+                comments = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('comments')))(f"💬{post.num_comments}")
                 
-                post_line = f"{prefix}{self.terminal.bold_white(post_num)} {self.terminal.white(title)}"
+                post_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(post_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(title)}"
                 metadata = f" | {subreddit} | {author} | {score} | {comments}"
                 
                 if hasattr(post, 'over_18') and post.over_18:
-                    metadata += f" | {self.terminal.red('NSFW')}"
+                    metadata += f" | {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))('NSFW')}"
                     metadata_additional_width += 7
                 
                 if hasattr(post, 'stickied') and post.stickied:
-                    metadata += f" | {self.terminal.yellow('📌')}"
+                    metadata += f" | {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('📌')}"
                     metadata_additional_width += 7
                 
                 full_line = post_line + metadata
                 if len(full_line) > width - 4:
                     available_space = width - 4 - len(metadata)
-                    post_line = f"{prefix}{self.terminal.bold_white(post_num)} {self.terminal.white(title[:available_space-3])}..."
+                    post_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(post_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(title[:available_space-3])}..."
                     full_line = post_line + metadata
                 
                 output.append(f"│ {full_line}{' ' * (width - len(full_line) + 67 - self.contains_emoji(full_line) + metadata_additional_width)}│")
@@ -93,17 +96,17 @@ class SearchScreen:
                     output.append(f"├{'─' * (width-2)}┤")
         else:
             if self.is_loading:
-                output.append(f"│ {self.terminal.yellow('Searching...')}{' ' * (width - 13)}│")
+                output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('Searching...')}{' ' * (width - 13)}│")
             else:
-                output.append(f"│ {self.terminal.yellow('No search results. Enter a query to search.')}{' ' * (width - 46)}│")
+                output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('No search results. Enter a query to search.')}{' ' * (width - 46)}│")
         
         output.append(f"├{'─' * (width-2)}┤")
-        output.append(f"│ {self.terminal.cyan('Instructions:')}{' ' * (width - 16)}│")
-        output.append(f"│ {self.terminal.white('• Type to enter search query')}{' ' * (width - 31)}│")
-        output.append(f"│ {self.terminal.white('• Tab to switch search type')}{' ' * (width - 30)}│")
-        output.append(f"│ {self.terminal.white('• Up/Down to navigate results')}{' ' * (width - 32)}│")
-        output.append(f"│ {self.terminal.white('• Enter to select result')}{' ' * (width - 27)}│")
-        output.append(f"│ {self.terminal.white('• Esc to return to main screen')}{' ' * (width - 33)}│")
+        output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))('Instructions:')}{' ' * (width - 16)}│")
+        output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Type to enter search query')}{' ' * (width - 31)}│")
+        output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Tab to switch search type')}{' ' * (width - 30)}│")
+        output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Up/Down to navigate results')}{' ' * (width - 32)}│")
+        output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Enter to select result')}{' ' * (width - 27)}│")
+        output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Esc to return to main screen')}{' ' * (width - 33)}│")
         output.append(f"╰{'─' * (width-2)}╯")
         
         if self.is_loading:
@@ -111,10 +114,14 @@ class SearchScreen:
             if current_time - self.last_loading_update >= 0.1:  # Update every 100ms
                 self.loading_index = (self.loading_index + 1) % len(self.loading_chars)
                 self.last_loading_update = current_time
-            loading_text = f"{self.terminal.bright_blue(self.loading_chars[self.loading_index])} Loading..."
-            print(self.term.move(self.term.height - 1, 0) + loading_text)
+            loading_text = f"{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))(self.loading_chars[self.loading_index])} Loading..."
+            print(self.terminal.move(self.terminal.height - 1, 0) + loading_text)
         
         return "\n".join(output)
+
+    def _hex_to_rgb(self, hex_color):
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
     def add_char(self, char):
         if not isinstance(char, str) or len(char) != 1:
@@ -164,10 +171,10 @@ class SearchScreen:
         try:
             if self.search_type == "all":
                 self.search_results = list(self.reddit_instance.subreddit("all").search(
-                    self.search_query, limit=25, sort="relevance", syntax="lucene"
+                    self.search_query, limit=self.settings.posts_per_page, sort="relevance", syntax="lucene"
                 ))
             elif self.search_type == "subreddit":
-                subreddits = list(self.reddit_instance.subreddits.search(self.search_query, limit=25))
+                subreddits = list(self.reddit_instance.subreddits.search(self.search_query, limit=self.settings.posts_per_page))
                 self.search_results = []
                 for subreddit in subreddits:
                     try:
@@ -177,7 +184,7 @@ class SearchScreen:
                     except:
                         continue
             elif self.search_type == "user":
-                users = list(self.reddit_instance.redditors.search(self.search_query, limit=25))
+                users = list(self.reddit_instance.redditors.search(self.search_query, limit=self.settings.posts_per_page))
                 self.search_results = []
                 for user in users:
                     try:
@@ -186,6 +193,9 @@ class SearchScreen:
                             self.search_results.extend(posts)
                     except:
                         continue
+            
+            if not self.settings.show_nsfw:
+                self.search_results = [post for post in self.search_results if not post.over_18]
             
             self.selected_index = 0
             self.scroll_offset = 0

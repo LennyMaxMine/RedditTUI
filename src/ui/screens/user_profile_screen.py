@@ -2,6 +2,7 @@ from blessed import Terminal
 import datetime
 import time
 from services.theme_service import ThemeService
+from services.settings_service import Settings
 
 class UserProfileScreen:
     def __init__(self, terminal, reddit_instance):
@@ -9,13 +10,14 @@ class UserProfileScreen:
         self.reddit_instance = reddit_instance
         self.theme_service = ThemeService()
         self.user = None
-        self.posts = []
-        self.comments = []
         self.selected_index = 0
         self.scroll_offset = 0
-        self.visible_results = 10
-        self.content_types = ["posts", "comments"]
-        self.content_index = 0
+        self.visible_posts = 10
+        self.current_tab = "posts"  # posts, comments, or about
+        self.tabs = ["posts", "comments", "about"]
+        self.tab_index = 0
+        self.posts = []
+        self.comments = []
         self.is_loading = False
         self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         self.loading_index = 0
@@ -24,6 +26,8 @@ class UserProfileScreen:
         self.comment_mode = False
         self.comment_text = ""
         self.comment_cursor_pos = 0
+        self.settings = Settings()
+        self.settings.load_settings_from_file()
 
     def display(self):
         width = self.terminal.width - 22
@@ -80,8 +84,8 @@ class UserProfileScreen:
             output.append(f"├{'─' * (width-2)}┤")
             
             content_line = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))("Content: ")
-            for i, ctype in enumerate(self.content_types):
-                if i == self.content_index:
+            for i, ctype in enumerate(self.tabs):
+                if i == self.tab_index:
                     content_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))(f"[{ctype}] ")
                 else:
                     content_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(f"{ctype} ")
@@ -89,10 +93,10 @@ class UserProfileScreen:
             
             output.append(f"├{'─' * (width-2)}┤")
             
-            items = self.posts if self.content_index == 0 else self.comments
+            items = self.posts if self.current_tab == "posts" else self.comments
             if items:
                 start_idx = self.scroll_offset
-                end_idx = min(start_idx + self.visible_results, len(items))
+                end_idx = min(start_idx + self.visible_posts, len(items))
                 
                 for idx, item in enumerate(items[start_idx:end_idx], start=start_idx + 1):
                     if idx - 1 == self.selected_index:
@@ -101,7 +105,7 @@ class UserProfileScreen:
                         prefix = "  "
                     
                     item_num = f"{idx}."
-                    if self.content_index == 0:  # Posts
+                    if self.current_tab == "posts":  # Posts
                         title = item.title
                         if len(title) > width - 40:
                             title = title[:width-43] + "..."
@@ -185,7 +189,7 @@ class UserProfileScreen:
         self.is_loading = True
         try:
             self.user = self.reddit_instance.redditor(username)
-            self.load_content()
+            self.load_user_content()
         except Exception as e:
             print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red(f"Error loading user: {e}"))
             self.user = None
@@ -194,44 +198,42 @@ class UserProfileScreen:
         finally:
             self.is_loading = False
 
-    def load_content(self):
+    def load_user_content(self):
         if not self.user:
             return
         
         self.is_loading = True
         try:
-            if self.content_index == 0:  # Posts
-                self.posts = list(self.user.submissions.new(limit=25))
-            else:  # Comments
-                self.comments = list(self.user.comments.new(limit=25))
+            if self.current_tab == "posts":
+                self.posts = list(self.user.submissions.new(limit=self.settings.posts_per_page))
+                if not self.settings.show_nsfw:
+                    self.posts = [post for post in self.posts if not post.over_18]
+            elif self.current_tab == "comments":
+                self.comments = list(self.user.comments.new(limit=self.settings.posts_per_page))
             self.selected_index = 0
             self.scroll_offset = 0
         except Exception as e:
-            print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red(f"Error loading content: {e}"))
-            if self.content_index == 0:
-                self.posts = []
-            else:
-                self.comments = []
+            self.terminal.print_at(0, 0, f"Error loading content: {str(e)}", self.theme_service.get_color("error"))
         finally:
             self.is_loading = False
 
     def scroll_up(self):
-        items = self.posts if self.content_index == 0 else self.comments
+        items = self.posts if self.current_tab == "posts" else self.comments
         if self.scroll_offset > 0:
             self.scroll_offset = max(0, self.scroll_offset - 3)
 
     def scroll_down(self):
-        items = self.posts if self.content_index == 0 else self.comments
-        if self.scroll_offset < len(items) - self.visible_results:
-            self.scroll_offset = min(len(items) - self.visible_results, self.scroll_offset + 3)
+        items = self.posts if self.current_tab == "posts" else self.comments
+        if self.scroll_offset < len(items) - self.visible_posts:
+            self.scroll_offset = min(len(items) - self.visible_posts, self.scroll_offset + 3)
 
     def switch_content_type(self):
-        self.content_index = (self.content_index + 1) % len(self.content_types)
+        self.tab_index = (self.tab_index + 1) % len(self.tabs)
         self.scroll_offset = 0
         self.selected_index = 0
 
     def select_item(self):
-        if self.content_index == 0:  # Posts
+        if self.current_tab == "posts":
             selected_item = self.posts[self.scroll_offset + self.selected_index]
             return selected_item
         else:  # Comments
@@ -269,19 +271,19 @@ class UserProfileScreen:
             elif self.scroll_offset > 0:
                 self.scroll_up()
         elif key == 'KEY_DOWN':
-            items = self.posts if self.content_index == 0 else self.comments
-            if self.selected_index < min(self.visible_results - 1, len(items) - self.scroll_offset - 1):
+            items = self.posts if self.current_tab == "posts" else self.comments
+            if self.selected_index < min(self.visible_posts - 1, len(items) - self.scroll_offset - 1):
                 self.selected_index += 1
-            elif self.scroll_offset < len(items) - self.visible_results:
+            elif self.scroll_offset < len(items) - self.visible_posts:
                 self.scroll_down()
         elif key == 'KEY_LEFT':
             self.switch_content_type()
-            self.load_content()
+            self.load_user_content()
         elif key == 'KEY_RIGHT':
             self.switch_content_type()
-            self.load_content()
+            self.load_user_content()
         elif key == 'KEY_ENTER':
-            if self.content_index == 0 and self.posts:  # Only allow comments on posts
+            if self.current_tab == "posts" and self.posts:  # Only allow comments on posts
                 self.comment_mode = True
                 return True
         return key != 'KEY_ESCAPE'
@@ -297,6 +299,6 @@ class UserProfileScreen:
                 self.comment_mode = False
                 self.comment_text = ""
                 self.comment_cursor_pos = 0
-                self.load_content()  # Refresh content to show new comment
+                self.load_user_content()  # Refresh content to show new comment
         except Exception as e:
             print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red(f"Error submitting comment: {e}")) 

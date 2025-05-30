@@ -80,10 +80,7 @@ class HelpScreen:
             output.append(f"│".ljust(width-1) + "│")
             output.append(f"├{'─' * (width-2)}┤")
             output.append(f"│{self.terminal.bright_cyan('Coming Soon:').center(width+9)}│")
-            output.append(f"│    {self.terminal.yellow('• Multi-account support')}".ljust(width+10) + "│")
-            output.append(f"│    {self.terminal.yellow('• Upvote/downvote posts')}".ljust(width+10) + "│")
-            output.append(f"│    {self.terminal.yellow('• Save posts')}".ljust(width+10) + "│")
-            output.append(f"│    {self.terminal.yellow('• Custom settings')}".ljust(width+10) + "│")
+            output.append(f"│    {self.terminal.yellow('• Look at the GitHub repo pls')}".ljust(width+10) + "│")
             output.append(f"│".ljust(width-1) + "│")
         
         output.append(f"╰{'─' * (width-2)}╯")
