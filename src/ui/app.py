@@ -368,7 +368,6 @@ class RedditTUI:
                             if selected_option in ['Home', 'New', 'Top']:
                                 self.current_feed = selected_option.lower()
                                 self.current_screen = 'home'
-                                #self.active_component = 'post_list'
                                 self.update_posts_from_reddit()
                             else:
                                 self.handle_sidebar_option(selected_option)
@@ -386,9 +385,10 @@ class RedditTUI:
                             else:
                                 self.settings_screen.theme_scroll_up()
                         elif self.current_screen == 'profile':
-                            self.user_profile_screen.scroll_up()
-                        elif self.settings_screen.theme_screen_activated == True:
-                            self.settings_screen.theme_scroll_up()
+                            if self.user_profile_screen.selected_index > 0:
+                                self.user_profile_screen.selected_index -= 1
+                            else:
+                                self.user_profile_screen.scroll_up()
                     elif key == '\x1b[B':  # Down Arrow
                         if self.active_component == 'sidebar':
                             self.sidebar.navigate("down")
@@ -396,7 +396,6 @@ class RedditTUI:
                             if selected_option in ['Home', 'New', 'Top']:
                                 self.current_feed = selected_option.lower()
                                 self.current_screen = 'home'
-                                #self.active_component = 'post_list'
                                 self.update_posts_from_reddit()
                             else:
                                 self.handle_sidebar_option(selected_option)
@@ -414,7 +413,11 @@ class RedditTUI:
                             else:
                                 self.settings_screen.theme_scroll_down()
                         elif self.current_screen == 'profile':
-                            self.user_profile_screen.scroll_down()
+                            items = self.user_profile_screen.posts if self.user_profile_screen.content_index == 0 else self.user_profile_screen.comments
+                            if self.user_profile_screen.selected_index < min(self.user_profile_screen.visible_results - 1, len(items) - self.user_profile_screen.scroll_offset - 1):
+                                self.user_profile_screen.selected_index += 1
+                            else:
+                                self.user_profile_screen.scroll_down()
                     elif key == '\x1b[C':  # Right Arrow
                         if self.current_screen == 'home' and self.active_component == 'sidebar':
                             self.active_component = 'post_list'
@@ -438,6 +441,9 @@ class RedditTUI:
                                 self.active_component = 'sidebar'
                         elif self.current_screen == 'subreddits':
                             self.subreddits_screen.next_category()
+                        elif self.current_screen == 'profile':
+                            self.user_profile_screen.switch_content_type()
+                            self.user_profile_screen.load_content()
                     elif key == '\x1b[D':  # Left Arrow
                         if self.current_screen == 'post':
                             self.current_screen = 'home'
@@ -450,6 +456,9 @@ class RedditTUI:
                             self.settings_screen.next_value()
                         elif self.current_screen == 'subreddits':
                             self.subreddits_screen.previous_category()
+                        elif self.current_screen == 'profile':
+                            self.user_profile_screen.switch_content_type()
+                            self.user_profile_screen.load_content()
                     elif key == 'k':  # Upvote
                         if self.current_screen == 'post':
                             self.post_view.upvote_post()
@@ -526,6 +535,13 @@ class RedditTUI:
                                 self.current_screen = 'home'
                                 self.active_component = 'post_list'
                                 self.update_posts_from_subreddit(selected_subreddit, category)
+                        elif self.current_screen == 'profile':
+                            selected_post = self.user_profile_screen.select_item()
+                            if selected_post:
+                                comments = self.load_post_comments(selected_post)
+                                self.post_view.display_post(selected_post, comments)
+                                self.post_view.from_search = False
+                                self.current_screen = 'post'
         finally:
             print(self.term.exit_fullscreen())
 
