@@ -1,0 +1,14 @@
+{
+  "name": "Dark",
+  "description": "A dark theme",
+  "colors": {
+    "background": "#1e1e1e",
+    "text": "#d4d4d4",
+    "title": "#569cd6",
+    "subreddit": "#c586c0",
+    "author": "#ce9178",
+    "score": "#608b4e",
+    "comments": "#9cdcb3",
+    "border": "#555555"
+  }
+} 
