@@ -41,6 +41,10 @@ class RedditTUI:
         self.post_view.reddit_instance = self.reddit_instance
         self.last_loaded_post = None
         self.current_feed = 'home'
+        self.is_loading = False
+        self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        self.loading_index = 0
+        self.last_loading_update = 0
         
         if self.reddit_instance:
             self.header.update_title(f"Reddit TUI - Logged in as {self.reddit_instance.user.me().name}")
@@ -129,6 +133,7 @@ class RedditTUI:
     def update_posts_from_reddit(self, load_more=False):
         self.post_list.current_page = self.current_feed
         if self.reddit_instance:
+            self.is_loading = True
             try:
                 if load_more and self.last_loaded_post:
                     if self.current_feed == 'home':
@@ -164,10 +169,13 @@ class RedditTUI:
                 with open("temp.txt", "w") as f:
                     f.write(str(e))
                 self.post_list.loading_more = False
+            finally:
+                self.is_loading = False
 
     def load_post_comments(self, post):
         if not post or not hasattr(post, 'comments'):
             return []
+        self.is_loading = True
         try:
             if self.settings.auto_load_comments:
                 depth = max(0, min(self.settings.comment_depth, 10))
@@ -178,6 +186,8 @@ class RedditTUI:
         except Exception as e:
             print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error loading comments: {e}"))
             return []
+        finally:
+            self.is_loading = False
 
     def render(self):
         print(self.term.clear())
@@ -241,8 +251,17 @@ class RedditTUI:
                 if i < available_lines:
                     print(self.term.move(i + 3, 22) + line)
 
+        if self.is_loading:
+            current_time = time.time()
+            if current_time - self.last_loading_update >= 0.1:  # Update every 100ms
+                self.loading_index = (self.loading_index + 1) % len(self.loading_chars)
+                self.last_loading_update = current_time
+            loading_text = f"{self.term.bright_blue(self.loading_chars[self.loading_index])} Loading..."
+            print(self.term.move(self.term.height - 1, 0) + loading_text)
+
     def update_posts_from_subreddit(self, subreddit, category="hot"):
         if self.reddit_instance:
+            self.is_loading = True
             try:
                 if category == "hot":
                     posts = list(subreddit.hot(limit=self.settings.posts_per_page))
@@ -266,9 +285,12 @@ class RedditTUI:
                 print(self.term.move(self.term.height - 3, 0) + 
                       self.term.red(f"Error fetching {category} posts: {e}"))
                 self.post_list.loading_more = False
+            finally:
+                self.is_loading = False
 
     def update_saved_posts(self, load_more=False):
         if self.reddit_instance:
+            self.is_loading = True
             try:
                 if load_more and self.last_loaded_post:
                     saved_items = list(self.reddit_instance.user.me().saved(limit=self.settings.posts_per_page, after=self.last_loaded_post))
@@ -299,6 +321,8 @@ class RedditTUI:
             except Exception as e:
                 print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error fetching saved items: {e}"))
                 self.post_list.loading_more = False
+            finally:
+                self.is_loading = False
 
     def run(self):
         print(self.term.enter_fullscreen())
@@ -443,6 +467,8 @@ class RedditTUI:
                                 self.active_component = 'sidebar'
                         elif self.current_screen == 'subreddits':
                             self.subreddits_screen.next_category()
+                        elif self.current_screen == "profile":
+                            self.user_profile_screen.switch_content_type()
                     elif key == '\x7f':  # Backspace
                         if self.current_screen == 'search':
                             self.search_screen.backspace()

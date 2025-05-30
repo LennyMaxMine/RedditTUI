@@ -1,98 +1,189 @@
 from blessed import Terminal
-from datetime import datetime
+import datetime
+import time
 
 class UserProfileScreen:
-    def __init__(self, term, reddit_instance):
-        self.term = term
+    def __init__(self, terminal, reddit_instance):
+        self.terminal = terminal
         self.reddit_instance = reddit_instance
-        self.current_user = None
-        self.scroll_position = 0
-        self.content = []
-        self.max_lines = self.term.height - 5
-        self.loading = False
-        self.error = None
-        self.width = self.term.width - 22
-
-    def load_user(self, username):
-        self.loading = True
-        self.error = None
-        try:
-            self.current_user = self.reddit_instance.redditor(username)
-            self.content = []
-            self.scroll_position = 0
-            
-            created_date = datetime.fromtimestamp(self.current_user.created_utc).strftime('%Y-%m-%d')
-            total_karma = self.current_user.link_karma + self.current_user.comment_karma
-            
-            header = [
-                f"┬{'─' * (self.width-2)}┤",
-                f"│{self.term.bright_blue(f'User Profile: {self.current_user.name}').center(self.width+9)}│",
-                f"├{'─' * (self.width-2)}┤",
-                f"│{self.term.bright_cyan(f'Karma: {total_karma:,}').ljust(self.width//2)}│{self.term.bright_yellow(f'Link: {self.current_user.link_karma:,}').ljust(self.width//2+19)}│",
-                f"│{self.term.bright_cyan(f'Comment: {self.current_user.comment_karma:,}').ljust(self.width//2)}│{self.term.bright_yellow(f'Created: {created_date}').ljust(self.width//2+19)}│",
-                f"│{self.term.bright_cyan(f'Gold: {self.term.bright_yellow("✓") if self.current_user.is_gold else self.term.red("✗")}').ljust(self.width//2)}│{self.term.bright_yellow(f'Mod: {self.term.bright_green("✓") if self.current_user.is_mod else self.term.red("✗")}').ljust(self.width//2-2)}│",
-                f"├{'─' * (self.width-2)}┤"
-            ]
-            
-            self.content.extend(header)
-            self.content.append(f"│{self.term.bright_blue('📝 Recent Posts').center(self.width+8)}│")
-            self.content.append(f"├{'─' * (self.width-2)}┤")
-            
-            for submission in self.current_user.submissions.new(limit=5):
-                title = submission.title[:self.width - 10]
-                subreddit = submission.subreddit.display_name
-                score = submission.score
-                self.content.append(f"│ {self.term.bold_white(f'• {title}')}".ljust(self.width+14) + "│")
-                self.content.append(f"│ {self.term.bright_cyan(f'r/{subreddit}')} | {self.term.bright_yellow(f'Score: {score:,}')}".ljust(self.width+21) + "│")
-                self.content.append(f"├{'─' * (self.width-2)}┤")
-            
-            self.content.append(f"│{self.term.bright_blue('💬 Recent Comments').center(self.width+8)}│")
-            self.content.append(f"├{'─' * (self.width-2)}┤")
-            
-            for comment in self.current_user.comments.new(limit=5):
-                body = comment.body[:self.width - 10].replace('\n', ' ')
-                subreddit = comment.subreddit.display_name
-                score = comment.score
-                self.content.append(f"│ {self.term.bold_white(f'• {body}')}".ljust(self.width+14) + "│")
-                self.content.append(f"│ {self.term.bright_cyan(f'r/{subreddit}')} | {self.term.bright_yellow(f'Score: {score:,}')}".ljust(self.width+21) + "│")
-                self.content.append(f"├{'─' * (self.width-2)}┤")
-            
-            self.content.append(f"╰{'─' * (self.width-2)}╯")
-                
-        except Exception as e:
-            self.error = str(e)
-            self.content = []
-        finally:
-            self.loading = False
-
-    def scroll_up(self):
-        if self.scroll_position > 0:
-            self.scroll_position = max(0, self.scroll_position - 3)
-
-    def scroll_down(self):
-        if self.scroll_position < len(self.content) - self.max_lines:
-            self.scroll_position = min(len(self.content) - self.max_lines, self.scroll_position + 3)
+        self.user = None
+        self.posts = []
+        self.comments = []
+        self.selected_index = 0
+        self.scroll_offset = 0
+        self.visible_results = 10
+        self.content_types = ["posts", "comments"]
+        self.content_index = 0
+        self.is_loading = False
+        self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        self.loading_index = 0
+        self.last_loading_update = 0
+        self.width = self.terminal.width - 22
 
     def display(self):
-        if self.loading:
-            return f"╭{'─' * (self.width-2)}╮\n│{self.term.bright_blue('Loading profile...').center(self.width+9)}│\n╰{'─' * (self.width-2)}╯"
-            
-        if self.error:
-            return f"╭{'─' * (self.width-2)}╮\n│{self.term.red(f'Error: {self.error}').center(self.width+9)}│\n╰{'─' * (self.width-2)}╯"
-            
-        if not self.current_user:
-            return f"╭{'─' * (self.width-2)}╮\n│{self.term.yellow('No user profile loaded').center(self.width+9)}│\n╰{'─' * (self.width-2)}╯"
-            
+        width = self.terminal.width - 22
         output = []
-        visible_content = self.content[self.scroll_position:self.scroll_position + self.max_lines]
         
-        for line in visible_content:
-            output.append(line)
+        output.append(f"┬{'─' * (width-2)}┤")
+        output.append(f"│{self.terminal.bold_white('User Profile').center(width+13)}│")
+        output.append(f"├{'─' * (width-2)}┤")
+        
+        if self.user:
+            output.append(f"│ {self.terminal.bold_white('Username: ')}{self.terminal.white(f'u/{self.user.name}')}{' ' * (width - len(self.user.name) - 15)}│")
+            output.append(f"│ {self.terminal.bold_white('Karma: ')}{self.terminal.white(f'{self.user.total_karma:,}')}{' ' * (width - len(str(self.user.total_karma)) - 10)}│")
+            if hasattr(self.user, 'created_utc'):
+                created = datetime.datetime.fromtimestamp(self.user.created_utc)
+                output.append(f"│ {self.terminal.bold_white('Created: ')}{self.terminal.white(created.strftime('%Y-%m-%d'))}{' ' * (width - 22)}│")
             
-        if len(self.content) > self.max_lines:
-            scroll_info = f"Scroll: {self.scroll_position + 1}-{min(self.scroll_position + self.max_lines, len(self.content))}/{len(self.content)}"
-            output.append(f"╭{'─' * (self.width-2)}╮")
-            output.append(f"│{self.term.bright_blue(scroll_info).center(self.width+9)}│")
-            output.append(f"╰{'─' * (self.width-2)}╯")
+            output.append(f"├{'─' * (width-2)}┤")
             
-        return "\n".join(output) 
+            content_line = self.terminal.cyan("Content: ")
+            for i, ctype in enumerate(self.content_types):
+                if i == self.content_index:
+                    content_line += self.terminal.green(f"[{ctype}] ")
+                else:
+                    content_line += self.terminal.white(f"{ctype} ")
+            output.append(f"│{content_line}{' ' * (width - len(content_line) + 31)}│")
+            
+            output.append(f"├{'─' * (width-2)}┤")
+            
+            items = self.posts if self.content_index == 0 else self.comments
+            if items:
+                start_idx = self.scroll_offset
+                end_idx = min(start_idx + self.visible_results, len(items))
+                
+                for idx, item in enumerate(items[start_idx:end_idx], start=start_idx + 1):
+                    if idx - 1 == self.selected_index:
+                        prefix = self.terminal.green("► ")
+                    else:
+                        prefix = "  "
+                    
+                    item_num = f"{idx}."
+                    if self.content_index == 0:  # Posts
+                        title = item.title
+                        if len(title) > width - 40:
+                            title = title[:width-43] + "..."
+                        subreddit = self.terminal.cyan(f"r/{item.subreddit.display_name}")
+                        score = self.terminal.green(f"↑{item.score}")
+                        comments = self.terminal.magenta(f"💬{item.num_comments}")
+                        
+                        item_line = f"{prefix}{self.terminal.bold_white(item_num)} {self.terminal.white(title)}"
+                        metadata = f" | {subreddit} | {score} | {comments}"
+                        
+                        if hasattr(item, 'over_18') and item.over_18:
+                            metadata += f" | {self.terminal.red('NSFW')}"
+                        
+                        if hasattr(item, 'stickied') and item.stickied:
+                            metadata += f" | {self.terminal.yellow('📌')}"
+                        
+                        full_line = item_line + metadata
+                        if len(full_line) > width - 4:
+                            available_space = width - 4 - len(metadata)
+                            item_line = f"{prefix}{self.terminal.bold_white(item_num)} {self.terminal.white(title[:available_space-3])}..."
+                            full_line = item_line + metadata
+                    else:  # Comments
+                        body = item.body
+                        if len(body) > width - 40:
+                            body = body[:width-43] + "..."
+                        subreddit = self.terminal.cyan(f"r/{item.subreddit.display_name}")
+                        score = self.terminal.green(f"↑{item.score}")
+                        
+                        item_line = f"{prefix}{self.terminal.bold_white(item_num)} {self.terminal.white(body)}"
+                        metadata = f" | {subreddit} | {score}"
+                        
+                        full_line = item_line + metadata
+                        if len(full_line) > width - 4:
+                            available_space = width - 4 - len(metadata)
+                            item_line = f"{prefix}{self.terminal.bold_white(item_num)} {self.terminal.white(body[:available_space-3])}..."
+                            full_line = item_line + metadata
+
+                    if prefix == "  ":
+                        output.append(f"│ {full_line}{' ' * (width - len(full_line) + 55)}│")
+                    else:
+                        output.append(f"│ {full_line}{' ' * (width - len(full_line) + 66)}│")
+                    if idx < end_idx:
+                        output.append(f"├{'─' * (width-2)}┤")
+            else:
+                if self.is_loading:
+                    output.append(f"│ {self.terminal.yellow('Loading content...')}{' ' * (width - 17)}│")
+                else:
+                    output.append(f"│ {self.terminal.yellow('No content found.')}{' ' * (width - 20)}│")
+        else:
+            if self.is_loading:
+                output.append(f"│ {self.terminal.yellow('Loading user profile...')}{' ' * (width - 22)}│")
+            else:
+                output.append(f"│ {self.terminal.yellow('No user profile loaded.')}{' ' * (width - 22)}│")
+        
+        output.append(f"├{'─' * (width-2)}┤")
+        output.append(f"│ {self.terminal.cyan('Instructions:')}{' ' * (width - 16)}│")
+        output.append(f"│ {self.terminal.white('• Left/Right to switch content type')}{' ' * (width - 38)}│")
+        output.append(f"│ {self.terminal.white('• Up/Down to navigate')}{' ' * (width - 24)}│")
+        output.append(f"│ {self.terminal.white('• Enter to select item')}{' ' * (width - 25)}│")
+        output.append(f"│ {self.terminal.white('• Esc to return to main screen')}{' ' * (width - 33)}│")
+        output.append(f"╰{'─' * (width-2)}╯")
+        
+        if self.is_loading:
+            current_time = time.time()
+            if current_time - self.last_loading_update >= 0.1:  # Update every 100ms
+                self.loading_index = (self.loading_index + 1) % len(self.loading_chars)
+                self.last_loading_update = current_time
+            loading_text = f"{self.terminal.bright_blue(self.loading_chars[self.loading_index])} Loading..."
+            print(self.terminal.move(self.terminal.height - 1, 0) + loading_text)
+        
+        return "\n".join(output)
+
+    def load_user(self, username):
+        if not self.reddit_instance:
+            return
+        
+        self.is_loading = True
+        try:
+            self.user = self.reddit_instance.redditor(username)
+            self.load_content()
+        except Exception as e:
+            print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red(f"Error loading user: {e}"))
+            self.user = None
+            self.posts = []
+            self.comments = []
+        finally:
+            self.is_loading = False
+
+    def load_content(self):
+        if not self.user:
+            return
+        
+        self.is_loading = True
+        try:
+            if self.content_index == 0:  # Posts
+                self.posts = list(self.user.submissions.new(limit=25))
+            else:  # Comments
+                self.comments = list(self.user.comments.new(limit=25))
+            self.selected_index = 0
+            self.scroll_offset = 0
+        except Exception as e:
+            print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red(f"Error loading content: {e}"))
+            if self.content_index == 0:
+                self.posts = []
+            else:
+                self.comments = []
+        finally:
+            self.is_loading = False
+
+    def scroll_up(self):
+        if self.scroll_offset > 0:
+            self.scroll_offset = max(0, self.scroll_offset - 3)
+
+    def scroll_down(self):
+        if self.scroll_offset < len(self.posts) - self.visible_results:
+            self.scroll_offset = min(len(self.posts) - self.visible_results, self.scroll_offset + 3)
+
+    def switch_content_type(self):
+        self.content_index = (self.content_index + 1) % len(self.content_types)
+
+    def select_item(self):
+        if self.content_index == 0:  # Posts
+            selected_item = self.posts[self.scroll_offset + self.selected_index]
+            print(f"Selected post: {selected_item.title}")
+        else:  # Comments
+            selected_item = self.comments[self.scroll_offset + self.selected_index]
+            print(f"Selected comment: {selected_item.body}") 

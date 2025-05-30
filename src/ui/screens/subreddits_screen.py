@@ -1,6 +1,7 @@
 from blessed import Terminal
 import textwrap
 from services.theme_service import ThemeService
+import time
 
 class SubredditsScreen:
     def __init__(self, terminal, reddit_instance):
@@ -13,20 +14,26 @@ class SubredditsScreen:
         self.subreddits = []
         self.post_categories = ["hot", "new", "top", "rising"]
         self.selected_category = 0
+        self.is_loading = False
+        self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        self.loading_index = 0
+        self.last_loading_update = 0
         self.load_subreddits()
 
     def load_subreddits(self):
         if not self.reddit_instance:
             return
         
+        self.is_loading = True
         try:
-            self.subreddits = list(self.reddit_instance.user.subreddits(limit=None))
+            self.subreddits = list(self.reddit_instance.user.subreddits(limit=100))
             self.selected_index = 0
             self.scroll_offset = 0
         except Exception as e:
-            print(self.terminal.move(self.terminal.height - 3, 0) + 
-                  self.terminal.red(f"Error loading subreddits: {e}"))
-            
+            print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red(f"Error loading subreddits: {e}"))
+            self.subreddits = []
+        finally:
+            self.is_loading = False
 
     def display(self):
         width = self.terminal.width - 22
@@ -92,6 +99,14 @@ class SubredditsScreen:
         output.append(f"│    {self.terminal.white('• Enter: Open subreddit')}".ljust(width+10) + "│")
         output.append(f"│    {self.terminal.white('• Escape: Return to main screen')}".ljust(width+10) + "│")
         output.append(f"╰{'─' * (width-2)}╯")
+        
+        if self.is_loading:
+            current_time = time.time()
+            if current_time - self.last_loading_update >= 0.1:  # Update every 100ms
+                self.loading_index = (self.loading_index + 1) % len(self.loading_chars)
+                self.last_loading_update = current_time
+            loading_text = f"{self.terminal.bright_blue(self.loading_chars[self.loading_index])} Loading..."
+            print(self.terminal.move(self.terminal.height - 1, 0) + loading_text)
         
         return "\n".join(output)
 

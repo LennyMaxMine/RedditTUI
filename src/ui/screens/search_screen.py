@@ -20,6 +20,10 @@ class SearchScreen:
         self.last_search_time = 0
         self.search_delay = 0.5  # 500ms delay between searches
         self.pending_search = False
+        self.is_loading = False
+        self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        self.loading_index = 0
+        self.last_loading_update = 0
 
     def contains_emoji(self, text):
             emojis = emoji.emoji_list(text)
@@ -88,7 +92,10 @@ class SearchScreen:
                 if idx < end_idx:
                     output.append(f"├{'─' * (width-2)}┤")
         else:
-            output.append(f"│ {self.terminal.yellow('No search results. Enter a query to search.')}{' ' * (width - 46)}│")
+            if self.is_loading:
+                output.append(f"│ {self.terminal.yellow('Searching...')}{' ' * (width - 13)}│")
+            else:
+                output.append(f"│ {self.terminal.yellow('No search results. Enter a query to search.')}{' ' * (width - 46)}│")
         
         output.append(f"├{'─' * (width-2)}┤")
         output.append(f"│ {self.terminal.cyan('Instructions:')}{' ' * (width - 16)}│")
@@ -98,6 +105,14 @@ class SearchScreen:
         output.append(f"│ {self.terminal.white('• Enter to select result')}{' ' * (width - 27)}│")
         output.append(f"│ {self.terminal.white('• Esc to return to main screen')}{' ' * (width - 33)}│")
         output.append(f"╰{'─' * (width-2)}╯")
+        
+        if self.is_loading:
+            current_time = time.time()
+            if current_time - self.last_loading_update >= 0.1:  # Update every 100ms
+                self.loading_index = (self.loading_index + 1) % len(self.loading_chars)
+                self.last_loading_update = current_time
+            loading_text = f"{self.terminal.bright_blue(self.loading_chars[self.loading_index])} Loading..."
+            print(self.term.move(self.term.height - 1, 0) + loading_text)
         
         return "\n".join(output)
 
@@ -145,19 +160,32 @@ class SearchScreen:
         if not self.search_query or not self.reddit_instance:
             return
         
+        self.is_loading = True
         try:
             if self.search_type == "all":
                 self.search_results = list(self.reddit_instance.subreddit("all").search(
                     self.search_query, limit=25, sort="relevance", syntax="lucene"
                 ))
             elif self.search_type == "subreddit":
-                self.search_results = list(self.reddit_instance.front.search(
-                    self.search_query, limit=25, sort="relevance", syntax="lucene"
-                ))
+                subreddits = list(self.reddit_instance.subreddits.search(self.search_query, limit=25))
+                self.search_results = []
+                for subreddit in subreddits:
+                    try:
+                        posts = list(subreddit.hot(limit=1))
+                        if posts:
+                            self.search_results.extend(posts)
+                    except:
+                        continue
             elif self.search_type == "user":
-                self.search_results = list(self.reddit_instance.user.me().submissions.search(
-                    self.search_query, limit=25, sort="relevance", syntax="lucene"
-                ))
+                users = list(self.reddit_instance.redditors.search(self.search_query, limit=25))
+                self.search_results = []
+                for user in users:
+                    try:
+                        posts = list(user.submissions.new(limit=1))
+                        if posts:
+                            self.search_results.extend(posts)
+                    except:
+                        continue
             
             self.selected_index = 0
             self.scroll_offset = 0
@@ -166,6 +194,8 @@ class SearchScreen:
             self.terminal.move(self.terminal.height - 3, 0)
             print(self.terminal.red(f"Error performing search: {str(e)}"))
             self.terminal.move(0, 0)
+        finally:
+            self.is_loading = False
 
     def scroll_up(self):
         if self.selected_index > 0:
