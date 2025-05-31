@@ -31,7 +31,7 @@ class MessagesScreen:
         self.reply_to_message = None
 
     def display(self):
-        width = self.terminal.width - 24
+        width = self.terminal.width - 23 - 1
         output = []
         
         if self.compose_mode:
