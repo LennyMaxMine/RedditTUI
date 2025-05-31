@@ -27,6 +27,7 @@ class MessagesScreen:
         self.message_text = ""
         self.cursor_pos = 0
         self.current_field = "recipient"  # recipient, subject, or message
+        self.active = False
 
     def display(self):
         width = self.terminal.width - 22
@@ -91,7 +92,7 @@ class MessagesScreen:
             end_idx = min(start_idx + self.visible_messages, len(self.messages))
             
             for idx, message in enumerate(self.messages[start_idx:end_idx], start=start_idx + 1):
-                if idx - 1 == self.selected_index:
+                if idx - 1 == self.selected_index and self.active == True:
                     prefix = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))("► ")
                 else:
                     prefix = "  "

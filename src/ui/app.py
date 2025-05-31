@@ -91,6 +91,7 @@ class RedditTUI:
         elif option == "Messages":
             if self.reddit_instance:
                 self.current_screen = 'messages'
+                self.active_component = 'messages'
                 self.messages_screen.load_messages()
                 self.header.update_title("RedditTUI - Messages")
             else:
@@ -205,6 +206,9 @@ class RedditTUI:
         print(self.header.display())
         
         content_height = self.term.height - 3
+        
+        # Set sidebar active state
+        self.sidebar.active = self.active_component == 'sidebar'
         
         sidebar_lines = self.sidebar.display().split('\n')
         for i, line in enumerate(sidebar_lines):
@@ -347,6 +351,8 @@ class RedditTUI:
                 while True:
                     self.sidebar.active = self.active_component == 'sidebar'
                     self.post_list.active = self.active_component == 'post_list'
+                    self.messages_screen.active = self.active_component == 'messages'
+                    print(self.term.move(self.term.height - 2, 0) + f"Active component: {self.active_component}, Messages active: {self.messages_screen.active}")
                     self.render()
                     key = self.term.inkey()
                     
@@ -689,6 +695,9 @@ class RedditTUI:
                             self.render()
                         elif self.active_component == 'sidebar':
                             selected_option = self.sidebar.get_selected_option()
+                            if selected_option == 'messages':
+                                self.active_component = 'messages'
+                                self.messages_screen.active == True
                             if self.handle_sidebar_option(selected_option):
                                 break
                             else:
@@ -756,7 +765,9 @@ class RedditTUI:
                                     self.messages_screen.current_field = "message"
                                     self.messages_screen.cursor_pos = len(self.messages_screen.message_text)
                             else:
-                                if self.messages_screen.messages:
+                                if self.active_component == 'sidebar':
+                                    self.active_component = 'messages'
+                                elif self.messages_screen.messages:
                                     selected_message = self.messages_screen.select_message()
                                     if selected_message:
                                         self.messages_screen.start_reply(selected_message)
