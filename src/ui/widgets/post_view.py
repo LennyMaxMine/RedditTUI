@@ -24,6 +24,7 @@ from rich.prompt import Prompt
 from services.settings_service import Settings
 from services.theme_service import ThemeService
 
+#AI helped in this thingy (claude)
 class PostView:
     def __init__(self, terminal):
         self.terminal = terminal
@@ -34,7 +35,7 @@ class PostView:
         self.comment_lines = []
         self.need_more_comments = False
         self.from_search = False
-        self.vote_status = 0  # 0: no vote, 1: upvoted, -1: downvoted
+        self.vote_status = 0
         self.scroll_position = 0
         self.settings = Settings()
         self.settings.load_settings_from_file()
@@ -70,17 +71,17 @@ class PostView:
 
     def get_age_color(self, created_utc):
         if not created_utc:
-            return self.terminal.normal
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))
             
         age = max(0, datetime.datetime.utcnow().timestamp() - created_utc)
         if age < 3600:
-            return self.terminal.bright_red
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))
         elif age < 86400:
-            return self.terminal.red
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))
         elif age < 604800:
-            return self.terminal.yellow
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))
         else:
-            return self.terminal.normal
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))
 
     def get_comment_line_type(self, line):
         if line.startswith("u/") and "|" in line and "points" in line:
@@ -91,8 +92,8 @@ class PostView:
             return "content"
         
     def contains_emoji(self, text):
-            emojis = emoji.emoji_list(text)
-            return int(len(emojis))
+        emojis = emoji.emoji_list(text)
+        return int(len(emojis))
 
     def remove_ansi_escape_sequences(self, text):
         ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
@@ -102,11 +103,16 @@ class PostView:
         only_numbers_int = re.findall(r'\d+', text)
         return only_numbers_int
 
+    def get_visible_length(self, text):
+        clean_text = self.remove_ansi_escape_sequences(text)
+        return len(clean_text)
+
     def display_comment(self, comment, depth=0, width=0):
         if depth > self.settings.comment_depth:
             return []
         output = []
         indent = "  " * depth
+        available_width = width - len(indent) - 4
         
         if hasattr(comment, 'body'):
             author = getattr(comment, 'author', '[deleted]')
@@ -123,18 +129,29 @@ class PostView:
                 else:
                     age_str = f"{int(age/86400)}d"
                 age_color = self.get_age_color(created)
-                created_str = f" | {age_color}{age_str.replace("-", "")}{self.terminal.normal}"
+                created_str = f" | {age_color}{age_str.replace('-', '')}{self.terminal.normal}"
             
-            score_color = self.get_score_color(score)
-            comment_header = f"{indent}{self.terminal.bright_yellow(f'u/{author}')} | {score_color}{score} points{self.terminal.normal}{created_str}:"
+            score_color = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))
+            author_color = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('author')))
+            
+            header_text = f"u/{author} | {score} points{created_str}"
+            header_clean = self.remove_ansi_escape_sequences(header_text)
+            padding_needed = max(0, available_width - len(header_clean) + 3)
+            
+            comment_header = f"{indent}{author_color}u/{author}{self.terminal.normal} | {score_color}{score} points{self.terminal.normal}{created_str}{' ' * padding_needed}"
             output.append(comment_header)
             
-            comment_body = textwrap.fill(comment.body, width=width-6-(depth*2))
+            comment_body = textwrap.fill(comment.body, width=available_width)
+            content_color = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))
             for line in comment_body.splitlines():
-                output.append(f"{indent}  {self.terminal.white(line)}")
+                line_padding = max(0, available_width - len(line) - 2)
+                output.append(f"{indent}  {content_color}{line}{self.terminal.normal}{' ' * line_padding}")
             
-            separator = "─" * (width-6-(depth*2))
-            output.append(f"{indent}  {self.terminal.bright_blue(separator)}")
+            separator_width = available_width - 2
+            separator_color = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))
+            separator_line = "─" * separator_width
+            separator_padding = max(0, available_width - separator_width - 2)
+            output.append(f"{indent}  {separator_color}{separator_line}{self.terminal.normal}{' ' * separator_padding}")
             
             if hasattr(comment, 'replies') and comment.replies and self.settings.auto_load_comments:
                 for reply in comment.replies:
@@ -239,13 +256,13 @@ class PostView:
             width = self.content_width
             output = []
             
-            output.append(f"┬{'─' * (width-2)}┤")
+            output.append(f"┬{'─' * (width-2)}┬")
             output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('Add Comment').center(width+21)}│")
             output.append(f"├{'─' * (width-2)}┤")
-            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.comment_text[:self.comment_cursor_pos])}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))('|')}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.comment_text[self.comment_cursor_pos:])}{' ' * (width - len(self.comment_text) - 2)}│")
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.comment_text[:self.comment_cursor_pos])}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))('|')}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.comment_text[self.comment_cursor_pos:])}{' ' * (width - len(self.comment_text) - 4)}│")
             output.append(f"├{'─' * (width-2)}┤")
             output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))('Instructions:')}{' ' * (width - 16)}│")
-            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Type your comment')}{' ' * (width - 20)}│")
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Type your comment')}{' ' * (width - 22)}│")
             output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Enter to submit')}{' ' * (width - 20)}│")
             output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('• Esc to cancel')}{' ' * (width - 18)}│")
             output.append(f"╰{'─' * (width-2)}╯")
@@ -255,34 +272,32 @@ class PostView:
         output = []
         
         output.append(f"┬{'─' * (width-2)}┬")
-        output.append(f"│{self.terminal.bold_white(f'r/{self.current_post.subreddit.display_name}/{self.current_post.title}').center(width+13)}│")
+        output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))(f'r/{self.current_post.subreddit.display_name}/{self.current_post.title}').center(width+21)}│")
         output.append(f"├{'─' * (width-2)}┤")
         
         metadata = []
         if hasattr(self.current_post, 'origin'):
             origin_exists = True
-            #metadata.append(self.terminal.bright_blue(f"From: {self.current_post.origin}"))
-            #metadata.append("")
             pass
         else:
             origin_exists = False
             
-        metadata.append(self.terminal.bright_cyan(f"Subreddit: r/{self.current_post.subreddit.display_name}"))
-        metadata.append(self.terminal.bright_yellow(f"Author: u/{self.current_post.author}"))
+        metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))(f"Subreddit: r/{self.current_post.subreddit.display_name}"))
+        metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('author')))(f"Author: u/{self.current_post.author}{' ' * (width - 110)}"))
         
-        score_color = self.get_score_color(self.current_post.score)
-        vote_indicator = ""  # Two spaces for consistent width
+        score_color = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))
+        vote_indicator = ""
         vote_indicator_afterwards = ""
         if self.vote_status == 1:
-            vote_indicator = self.terminal.bright_green("↑ ")
+            vote_indicator = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))("↑ ")
             vote_indicator_afterwards = "          "
         elif self.vote_status == -1:
-            vote_indicator = self.terminal.bright_red("↓ ")
+            vote_indicator = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))("↓ ")
             vote_indicator_afterwards = "          "
         else:
             vote_indicator_afterwards = "  "
         metadata.append(f"{score_color}{vote_indicator}Score: {self.current_post.score}{vote_indicator_afterwards}{self.terminal.normal}")
-        metadata.append(self.terminal.bright_magenta(f"Comments: {self.current_post.num_comments}"))
+        metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('comments')))(f"    Comments: {self.current_post.num_comments}{' ' * (width - 99)}"))
         
         if hasattr(self.current_post, 'created_utc'):
             age_color = self.get_age_color(self.current_post.created_utc)
@@ -293,81 +308,61 @@ class PostView:
                 age_str = f"{int(age/3600)}h ago"
             else:
                 age_str = f"{int(age/86400)}d ago"
-            if "-"in age_str: additionalchar = 1
-            else: additionalchar = 0
-            for i in range(0, len(self.remove_all_letters(age_str))):
-                additionalchar += 1
-            metadata.append(f"{age_color}Posted: {age_str.replace("-", "")}{self.terminal.normal}")
+            metadata.append(f"{age_color}Posted: {age_str.replace('-', '')}{self.terminal.normal}")
         
         if hasattr(self.current_post, 'url'):
-            if additionalchar >= 1 and origin_exists == True: addchar = " "
-            else: addchar = ""
             try:
                 s = Shortener()
                 short_url = s.tinyurl.short(self.current_post.url)
             except:
                 short_url = self.current_post.url
-            metadata.append(self.terminal.bright_cyan(f"{addchar}URL: {short_url}"))
+            metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))(f"  URL: {short_url}{' ' * (width - 120)}"))
             
         if hasattr(self.current_post, 'is_self'):
-            metadata.append(self.terminal.bright_yellow(f"Type: {'Self Post' if self.current_post.is_self else 'Link Post'}"))
+            metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(f"Type: {'Self Post' if self.current_post.is_self else 'Link Post'}"))
             
         if hasattr(self.current_post, 'upvote_ratio'):
             ratio = self.current_post.upvote_ratio
             if ratio > 0.8:
-                color = self.terminal.bright_green
+                color = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))
             elif ratio > 0.6:
-                color = self.terminal.green
+                color = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))
             elif ratio > 0.4:
-                color = self.terminal.yellow
+                color = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))
             else:
-                color = self.terminal.red
-            metadata.append(f"{color}Upvote Ratio: {ratio:.1%}{self.terminal.normal}")
+                color = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))
+            metadata.append(f"{color}    Upvote Ratio: {ratio:.1%}{self.terminal.normal}{' ' * (width - 106)}")
             
         if hasattr(self.current_post, 'over_18'):
             if self.current_post.over_18:
-                metadata.append(self.terminal.bright_red("NSFW: Yes"))
+                metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))("NSFW: Yes"))
             else:
-                metadata.append(self.terminal.bright_green("NSFW: No"))
+                metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))("NSFW: No"))
             
         if hasattr(self.current_post, 'spoiler'):
             if self.current_post.spoiler:
-                metadata.append(self.terminal.bright_yellow("Spoiler: Yes"))
+                metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))(f"Spoiler: Yes{' ' * (width - 99)}"))
             else:
-                metadata.append(self.terminal.bright_green("Spoiler: No"))
+                metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))(f"Spoiler: No{' ' * (width - 98)}"))
             
         if hasattr(self.current_post, 'locked'):
             if self.current_post.locked:
-                metadata.append(self.terminal.bright_red("Locked: Yes"))
+                metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))("Locked: Yes"))
             else:
-                metadata.append(self.terminal.bright_green("Locked: No"))
+                metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))("Locked: No"))
             
         if hasattr(self.current_post, 'stickied'):
             if self.current_post.stickied:
-                metadata.append(self.terminal.bright_yellow("Stickied: Yes"))
+                metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))(f"Stickied: Yes{' ' * (width - 100)}"))
             else:
-                metadata.append(self.terminal.bright_green("Stickied: No"))
+                metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))(f"Stickied: No{' ' * (width - 99)}"))
         
         metadata_lines = []
         for i in range(0, len(metadata), 2):
             line = metadata[i]
             if i + 1 < len(metadata):
-                line = line.ljust(width // 2) + metadata[i + 1]
-            if "URL" in line and origin_exists == True:
-                metadata_lines.append(f"│ {line.ljust(width+19)} │")
-            if "points" in line and origin_exists == True:
-                splitline = line.split("|")
-                getnum = self.remove_all_letters(splitline[1])
-                numcount = 0
-                for num in getnum:
-                    numcount += int(num)
-                if numcount <= 100: 
-                    metadata_lines.append(f"│ {line.ljust(width+19)} │")
-                else:
-                    metadata_lines.append(f"│ {line.ljust(width+18)} │")
-
-            else:
-                metadata_lines.append(f"│ {line.ljust(width+18)} │")
+                line = line.ljust(width // 2 + 10) + metadata[i + 1]
+            metadata_lines.append(f"│ {line.ljust(width-2)} │")
         
         output.extend(metadata_lines)
         output.append(f"├{'─' * (width-2)}┤")
@@ -416,11 +411,10 @@ class PostView:
             
             visible_lines = self.comment_lines[self.comment_scroll_offset:self.comment_scroll_offset + self.terminal.height - 10]
             for line in visible_lines:
-                line_type = self.get_comment_line_type(self.remove_ansi_escape_sequences(line.strip()))
-                if line_type == "header":
-                    output.append(f"│ {line.ljust(width+30-self.contains_emoji(line))} │")
-                else:
-                    output.append(f"│ {line.ljust(width+7-self.contains_emoji(line))} │")
+                clean_line = self.remove_ansi_escape_sequences(line)
+                emoji_count = self.contains_emoji(clean_line)
+                padding_needed = max(0, width - 2 - len(clean_line) + emoji_count)
+                output.append(f"│ {line}{' ' * padding_needed} │")
         
         output.append(f"╰{'─' * (width-2)}╯")
         return "\n".join(output)
@@ -531,7 +525,6 @@ class PostView:
             self.comment_mode = False
             self.comment_text = ""
             self.comment_cursor_pos = 0
-            # Refresh comments to show the new one
             if hasattr(self.current_post, 'comments'):
                 self.current_post.comments.replace_more(limit=0)
                 self.comments = list(self.current_post.comments.list())

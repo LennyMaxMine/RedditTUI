@@ -89,7 +89,7 @@ class UserProfileScreen:
                     content_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))(f"[{ctype}] ")
                 else:
                     content_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(f"{ctype} ")
-            output.append(f"│{content_line}{' ' * (width - len(content_line) + 67)}│")
+            output.append(f"│{content_line}{' ' * (width - len(content_line) + 92)}│")
             
             output.append(f"├{'─' * (width-2)}┤")
             
