@@ -10,6 +10,7 @@ from ui.screens.help_screen import HelpScreen
 from ui.screens.settings_screen import SettingsScreen
 from ui.screens.subreddits_screen import SubredditsScreen
 from ui.screens.user_profile_screen import UserProfileScreen
+from ui.screens.messages_screen import MessagesScreen
 from services.settings_service import Settings
 import praw
 import time
@@ -35,9 +36,11 @@ class RedditTUI:
         self.settings_screen.reddit_instance = self.reddit_instance
         self.subreddits_screen = SubredditsScreen(self.term, self.reddit_instance)
         self.user_profile_screen = UserProfileScreen(self.term, self.reddit_instance)
+        self.messages_screen = MessagesScreen(self.term, self.reddit_instance)
         self.search_screen.reddit_instance = self.reddit_instance
         self.subreddits_screen.reddit_instance = self.reddit_instance
         self.user_profile_screen.reddit_instance = self.reddit_instance
+        self.messages_screen.reddit_instance = self.reddit_instance
         self.post_view.reddit_instance = self.reddit_instance
         self.last_loaded_post = None
         self.current_feed = 'home'
@@ -81,9 +84,15 @@ class RedditTUI:
         elif option == "Saved":
             if self.reddit_instance:
                 self.current_screen = 'home'
-                #self.active_component = 'post_list'
                 self.current_feed = 'saved'
                 self.update_saved_posts()
+            else:
+                print(self.term.move(self.term.height - 3, 0) + self.term.red("Please login first"))
+        elif option == "Messages":
+            if self.reddit_instance:
+                self.current_screen = 'messages'
+                self.messages_screen.load_messages()
+                self.header.update_title("RedditTUI - Messages")
             else:
                 print(self.term.move(self.term.height - 3, 0) + self.term.red("Please login first"))
         elif option == "Search":
@@ -250,6 +259,12 @@ class RedditTUI:
             for i, line in enumerate(profile_lines):
                 if i < available_lines:
                     print(self.term.move(i + 3, 22) + line)
+        elif self.current_screen == 'messages':
+            messages_lines = self.messages_screen.display().split('\n')
+            available_lines = content_height
+            for i, line in enumerate(messages_lines):
+                if i < available_lines:
+                    print(self.term.move(i + 3, 22) + line)
 
         if self.is_loading:
             current_time = time.time()
@@ -357,9 +372,17 @@ class RedditTUI:
                                 self.active_component = 'post_list'
                                 self.post_view.current_post = None
                                 self.post_view.comments = []
-                        elif self.current_screen in ['search', 'help', 'settings', 'subreddits', 'profile']:
+                        elif self.current_screen in ['search', 'help', 'settings', 'subreddits', 'profile', 'messages']:
                             if self.current_screen == 'search':
                                 self.search_screen.clear_query()
+                            elif self.current_screen == 'messages' and self.messages_screen.compose_mode:
+                                self.messages_screen.compose_mode = False
+                                self.messages_screen.recipient = ""
+                                self.messages_screen.subject = ""
+                                self.messages_screen.message_text = ""
+                                self.messages_screen.cursor_pos = 0
+                                self.messages_screen.current_field = "recipient"
+                                continue
                             self.current_screen = 'home'
                             self.active_component = 'sidebar'
                             self.header.update_title(f"RedditTUI - {self.current_feed.capitalize()} Feed")
@@ -395,6 +418,19 @@ class RedditTUI:
                                 self.user_profile_screen.selected_index -= 1
                             else:
                                 self.user_profile_screen.scroll_up()
+                        elif self.current_screen == 'messages':
+                            if self.messages_screen.compose_mode:
+                                if self.messages_screen.current_field == "recipient" and self.messages_screen.cursor_pos > 0:
+                                    self.messages_screen.cursor_pos -= 1
+                                elif self.messages_screen.current_field == "subject" and self.messages_screen.cursor_pos > 0:
+                                    self.messages_screen.cursor_pos -= 1
+                                elif self.messages_screen.current_field == "message" and self.messages_screen.cursor_pos > 0:
+                                    self.messages_screen.cursor_pos -= 1
+                            else:
+                                if self.messages_screen.selected_index > 0:
+                                    self.messages_screen.selected_index -= 1
+                                elif self.messages_screen.scroll_offset > 0:
+                                    self.messages_screen.scroll_up()
                     elif key == '\x1b[B':  # Down Arrow
                         if self.active_component == 'sidebar':
                             self.sidebar.navigate("down")
@@ -424,6 +460,19 @@ class RedditTUI:
                                 self.user_profile_screen.selected_index += 1
                             else:
                                 self.user_profile_screen.scroll_down()
+                        elif self.current_screen == 'messages':
+                            if self.messages_screen.compose_mode:
+                                if self.messages_screen.current_field == "recipient" and self.messages_screen.cursor_pos < len(self.messages_screen.recipient):
+                                    self.messages_screen.cursor_pos += 1
+                                elif self.messages_screen.current_field == "subject" and self.messages_screen.cursor_pos < len(self.messages_screen.subject):
+                                    self.messages_screen.cursor_pos += 1
+                                elif self.messages_screen.current_field == "message" and self.messages_screen.cursor_pos < len(self.messages_screen.message_text):
+                                    self.messages_screen.cursor_pos += 1
+                            else:
+                                if self.messages_screen.selected_index < min(self.messages_screen.visible_messages - 1, len(self.messages_screen.messages) - self.messages_screen.scroll_offset - 1):
+                                    self.messages_screen.selected_index += 1
+                                elif self.messages_screen.scroll_offset < len(self.messages_screen.messages) - self.messages_screen.visible_messages:
+                                    self.messages_screen.scroll_down()
                     elif key == '\x1b[C':  # Right Arrow
                         if self.current_screen == 'home' and self.active_component == 'sidebar':
                             self.active_component = 'post_list'
@@ -450,6 +499,16 @@ class RedditTUI:
                         elif self.current_screen == 'profile':
                             self.user_profile_screen.switch_content_type()
                             self.user_profile_screen.load_content()
+                        elif self.current_screen == 'messages':
+                            if self.messages_screen.compose_mode:
+                                if self.messages_screen.current_field == "recipient" and self.messages_screen.cursor_pos < len(self.messages_screen.recipient):
+                                    self.messages_screen.cursor_pos += 1
+                                elif self.messages_screen.current_field == "subject" and self.messages_screen.cursor_pos < len(self.messages_screen.subject):
+                                    self.messages_screen.cursor_pos += 1
+                                elif self.messages_screen.current_field == "message" and self.messages_screen.cursor_pos < len(self.messages_screen.message_text):
+                                    self.messages_screen.cursor_pos += 1
+                            else:
+                                self.messages_screen.next_message()
                     elif key == '\x1b[D':  # Left Arrow
                         if self.current_screen == 'post':
                             self.current_screen = 'home'
@@ -465,6 +524,16 @@ class RedditTUI:
                         elif self.current_screen == 'profile':
                             self.user_profile_screen.switch_content_type()
                             self.user_profile_screen.load_content()
+                        elif self.current_screen == 'messages':
+                            if self.messages_screen.compose_mode:
+                                if self.messages_screen.current_field == "recipient" and self.messages_screen.cursor_pos > 0:
+                                    self.messages_screen.cursor_pos -= 1
+                                elif self.messages_screen.current_field == "subject" and self.messages_screen.cursor_pos > 0:
+                                    self.messages_screen.cursor_pos -= 1
+                                elif self.messages_screen.current_field == "message" and self.messages_screen.cursor_pos > 0:
+                                    self.messages_screen.cursor_pos -= 1
+                            else:
+                                self.messages_screen.previous_message()
                     elif key == 'k':  # Upvote
                         if self.current_screen == 'post':
                             self.post_view.upvote_post()
@@ -503,6 +572,16 @@ class RedditTUI:
                                     if hasattr(comment, 'body'):
                                         self.post_view.comment_lines.extend(self.post_view.display_comment(comment, 0, self.post_view.content_width))
                                 self.post_view.comment_scroll_offset = 0
+                        elif self.current_screen == 'messages' and self.messages_screen.compose_mode:
+                            if self.messages_screen.current_field == "recipient":
+                                self.messages_screen.current_field = "subject"
+                                self.messages_screen.cursor_pos = len(self.messages_screen.subject)
+                            elif self.messages_screen.current_field == "subject":
+                                self.messages_screen.current_field = "message"
+                                self.messages_screen.cursor_pos = len(self.messages_screen.message_text)
+                            else:
+                                self.messages_screen.current_field = "recipient"
+                                self.messages_screen.cursor_pos = len(self.messages_screen.recipient)
                     elif key == '\x7f':  # Backspace
                         if self.current_screen == 'search':
                             self.search_screen.backspace()
@@ -510,6 +589,19 @@ class RedditTUI:
                             if self.post_view.comment_cursor_pos > 0:
                                 self.post_view.comment_text = self.post_view.comment_text[:self.post_view.comment_cursor_pos-1] + self.post_view.comment_text[self.post_view.comment_cursor_pos:]
                                 self.post_view.comment_cursor_pos -= 1
+                        elif self.current_screen == 'messages' and self.messages_screen.compose_mode:
+                            if self.messages_screen.current_field == "recipient":
+                                if self.messages_screen.cursor_pos > 0:
+                                    self.messages_screen.recipient = self.messages_screen.recipient[:self.messages_screen.cursor_pos-1] + self.messages_screen.recipient[self.messages_screen.cursor_pos:]
+                                    self.messages_screen.cursor_pos -= 1
+                            elif self.messages_screen.current_field == "subject":
+                                if self.messages_screen.cursor_pos > 0:
+                                    self.messages_screen.subject = self.messages_screen.subject[:self.messages_screen.cursor_pos-1] + self.messages_screen.subject[self.messages_screen.cursor_pos:]
+                                    self.messages_screen.cursor_pos -= 1
+                            elif self.messages_screen.current_field == "message":
+                                if self.messages_screen.cursor_pos > 0:
+                                    self.messages_screen.message_text = self.messages_screen.message_text[:self.messages_screen.cursor_pos-1] + self.messages_screen.message_text[self.messages_screen.cursor_pos:]
+                                    self.messages_screen.cursor_pos -= 1
                     elif len(key) == 1 and key.isprintable():  # Regular character input
                         if self.current_screen == 'search':
                             self.search_screen.add_char(key)
@@ -543,6 +635,18 @@ class RedditTUI:
                             self.post_view.comment_cursor_pos += 1
                         elif key == '3' and self.current_screen == 'post':
                             self.post_view.report_post()
+                        elif self.current_screen == 'messages' and self.messages_screen.compose_mode:
+                            if self.messages_screen.current_field == "recipient":
+                                self.messages_screen.recipient = self.messages_screen.recipient[:self.messages_screen.cursor_pos] + key + self.messages_screen.recipient[self.messages_screen.cursor_pos:]
+                                self.messages_screen.cursor_pos += 1
+                            elif self.messages_screen.current_field == "subject":
+                                self.messages_screen.subject = self.messages_screen.subject[:self.messages_screen.cursor_pos] + key + self.messages_screen.subject[self.messages_screen.cursor_pos:]
+                                self.messages_screen.cursor_pos += 1
+                            elif self.messages_screen.current_field == "message":
+                                self.messages_screen.message_text = self.messages_screen.message_text[:self.messages_screen.cursor_pos] + key + self.messages_screen.message_text[self.messages_screen.cursor_pos:]
+                                self.messages_screen.cursor_pos += 1
+                        elif key.lower() == 'n' and self.current_screen == 'messages' and not self.messages_screen.compose_mode:
+                            self.messages_screen.start_compose()
                     elif key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter
                         if self.current_screen == 'post' and self.post_view.comment_mode:
                             if self.post_view.comment_text.strip():
@@ -635,6 +739,27 @@ class RedditTUI:
                                 self.post_view.display_post(selected_post, comments)
                                 self.post_view.from_search = False
                                 self.current_screen = 'post'
+                        elif self.current_screen == 'messages':
+                            if self.messages_screen.compose_mode:
+                                if self.messages_screen.current_field == "message":
+                                    if self.messages_screen.send_message():
+                                        self.messages_screen.compose_mode = False
+                                        self.messages_screen.recipient = ""
+                                        self.messages_screen.subject = ""
+                                        self.messages_screen.message_text = ""
+                                        self.messages_screen.cursor_pos = 0
+                                        self.messages_screen.current_field = "recipient"
+                                elif self.messages_screen.current_field == "recipient":
+                                    self.messages_screen.current_field = "subject"
+                                    self.messages_screen.cursor_pos = len(self.messages_screen.subject)
+                                elif self.messages_screen.current_field == "subject":
+                                    self.messages_screen.current_field = "message"
+                                    self.messages_screen.cursor_pos = len(self.messages_screen.message_text)
+                            else:
+                                if self.messages_screen.messages:
+                                    selected_message = self.messages_screen.select_message()
+                                    if selected_message:
+                                        self.messages_screen.start_reply(selected_message)
         finally:
             print(self.term.exit_fullscreen())
 

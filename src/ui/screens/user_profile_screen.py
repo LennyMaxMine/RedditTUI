@@ -3,6 +3,7 @@ import datetime
 import time
 from services.theme_service import ThemeService
 from services.settings_service import Settings
+import praw
 
 class UserProfileScreen:
     def __init__(self, terminal, reddit_instance):
@@ -13,11 +14,12 @@ class UserProfileScreen:
         self.selected_index = 0
         self.scroll_offset = 0
         self.visible_posts = 10
-        self.current_tab = "posts"  # posts, comments, or about
-        self.tabs = ["posts", "comments", "about"]
+        self.current_tab = "posts"
+        self.tabs = ["posts", "comments", "inbox", "about"]
         self.tab_index = 0
         self.posts = []
         self.comments = []
+        self.messages = []
         self.is_loading = False
         self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         self.loading_index = 0
@@ -89,71 +91,114 @@ class UserProfileScreen:
                     content_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))(f"[{ctype}] ")
                 else:
                     content_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(f"{ctype} ")
-            output.append(f"│{content_line}{' ' * (width - len(content_line) + 92)}│")
+            output.append(f"│{content_line}{' ' * (width - len(content_line) + 117)}│")
             
             output.append(f"├{'─' * (width-2)}┤")
             
-            items = self.posts if self.current_tab == "posts" else self.comments
-            if items:
-                start_idx = self.scroll_offset
-                end_idx = min(start_idx + self.visible_posts, len(items))
-                
-                for idx, item in enumerate(items[start_idx:end_idx], start=start_idx + 1):
-                    if idx - 1 == self.selected_index:
-                        prefix = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))("► ")
-                    else:
-                        prefix = "  "
-                    
-                    item_num = f"{idx}."
-                    if self.current_tab == "posts":  # Posts
-                        title = item.title
-                        if len(title) > width - 40:
-                            title = title[:width-43] + "..."
-                        subreddit = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))(f"r/{item.subreddit.display_name}")
-                        score = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('score')))(f"↑{item.score}")
-                        comments = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('comments')))(f"💬{item.num_comments}")
-                        
-                        item_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(item_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(title)}"
-                        metadata = f" | {subreddit} | {score} | {comments}"
-                        
-                        if hasattr(item, 'over_18') and item.over_18:
-                            metadata += f" | {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))('NSFW')}"
-                        
-                        if hasattr(item, 'stickied') and item.stickied:
-                            metadata += f" | {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('📌')}"
-                        
-                        full_line = item_line + metadata
-                        if len(full_line) > width - 4:
-                            available_space = width - 4 - len(metadata)
-                            item_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(item_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(title[:available_space-3])}..."
-                            full_line = item_line + metadata
-                    else:  # Commentstype
-                        body = item.body
-                        if len(body) > width - 40:
-                            body = body[:width-43] + "..."
-                        subreddit = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))(f"r/{item.subreddit.display_name}")
-                        score = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('score')))(f"↑{item.score}")
-                        
-                        item_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(item_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(body)}"
-                        metadata = f" | {subreddit} | {score}"
-                        
-                        full_line = item_line + metadata
-                        if len(full_line) > width - 4:
-                            available_space = width - 4 - len(metadata)
-                            item_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(item_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(body[:available_space-3])}..."
-                            full_line = item_line + metadata
-
-                    if prefix == "  ":
-                        output.append(f"│ {full_line}{' ' * (width - len(full_line) + 109)}│")
-                    else:
-                        output.append(f"│ {full_line}{' ' * (width - len(full_line) + 132)}│")
-                    if idx < end_idx:
-                        output.append(f"├{'─' * (width-2)}┤")
-            else:
-                if self.is_loading:
-                    output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('Loading content...')}{' ' * (width - 17)}│")
+            if self.current_tab == "about":
+                if hasattr(self.user, 'subreddit'):
+                    try:
+                        if hasattr(self.user.subreddit, 'public_description') and self.user.subreddit.public_description:
+                            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('About:')}{' ' * (width - 8)}│")
+                            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.user.subreddit.public_description)}{' ' * (width - len(self.user.subreddit.public_description) - 2)}│")
+                        else:
+                            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('No profile description available.')}{' ' * (width - 36)}│")
+                    except:
+                        output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('No profile description available.')}{' ' * (width - 36)}│")
                 else:
-                    output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('No content found.')}{' ' * (width - 20)}│")
+                    output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('No profile description available.')}{' ' * (width - 36)}│")
+            else:
+                items = self.posts if self.current_tab == "posts" else (self.comments if self.current_tab == "comments" else self.messages)
+                if items:
+                    start_idx = self.scroll_offset
+                    end_idx = min(start_idx + self.visible_posts, len(items))
+                    
+                    for idx, item in enumerate(items[start_idx:end_idx], start=start_idx + 1):
+                        if idx - 1 == self.selected_index:
+                            prefix = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))("► ")
+                        else:
+                            prefix = "  "
+                        
+                        item_num = f"{idx}."
+                        if self.current_tab == "posts":
+                            title = item.title
+                            if len(title) > width - 40:
+                                title = title[:width-43] + "..."
+                            subreddit = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))(f"r/{item.subreddit.display_name}")
+                            score = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('score')))(f"↑{item.score}")
+                            comments = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('comments')))(f"💬{item.num_comments}")
+                            
+                            item_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(item_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(title)}"
+                            metadata = f" | {subreddit} | {score} | {comments}"
+                            
+                            if hasattr(item, 'over_18') and item.over_18:
+                                metadata += f" | {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))('NSFW')}"
+                            
+                            if hasattr(item, 'stickied') and item.stickied:
+                                metadata += f" | {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('📌')}"
+                            
+                            full_line = item_line + metadata
+                            if len(full_line) > width - 4:
+                                available_space = width - 4 - len(metadata)
+                                item_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(item_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(title[:available_space-3])}..."
+                                full_line = item_line + metadata
+                        elif self.current_tab == "comments":
+                            body = item.body
+                            if len(body) > width - 40:
+                                body = body[:width-43] + "..."
+                            subreddit = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))(f"r/{item.subreddit.display_name}")
+                            score = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('score')))(f"↑{item.score}")
+                            
+                            item_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(item_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(body)}"
+                            metadata = f" | {subreddit} | {score}"
+                            
+                            full_line = item_line + metadata
+                            if len(full_line) > width - 4:
+                                available_space = width - 4 - len(metadata)
+                                item_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(item_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(body[:available_space-3])}..."
+                                full_line = item_line + metadata
+                        else:  # Inbox messages
+                            if isinstance(item, praw.models.Message):
+                                subject = item.subject if hasattr(item, 'subject') else "No subject"
+                                author = item.author.name if hasattr(item, 'author') else "Unknown"
+                                created = datetime.datetime.fromtimestamp(item.created_utc).strftime('%Y-%m-%d')
+                                
+                                if len(subject) > width - 40:
+                                    subject = subject[:width-43] + "..."
+                                
+                                item_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(item_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(subject)}"
+                                metadata = f" | From: {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))(author)} | {created}"
+                            else:  # Comment
+                                body = item.body
+                                if len(body) > width - 40:
+                                    body = body[:width-43] + "..."
+                                author = item.author.name if hasattr(item, 'author') else "Unknown"
+                                subreddit = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))(f"r/{item.subreddit.display_name}")
+                                created = datetime.datetime.fromtimestamp(item.created_utc).strftime('%Y-%m-%d')
+                                
+                                item_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(item_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(body)}"
+                                metadata = f" | From: {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))(author)} | {subreddit} | {created}"
+                            
+                            if not item.read:
+                                metadata += f" | {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))('NEW')}"
+                            
+                            full_line = item_line + metadata
+                            if len(full_line) > width - 4:
+                                available_space = width - 4 - len(metadata)
+                                item_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(item_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(body[:available_space-3])}..."
+                                full_line = item_line + metadata
+
+                        if prefix == "  ":
+                            output.append(f"│ {full_line}{' ' * (width - len(full_line) + 109)}│")
+                        else:
+                            output.append(f"│ {full_line}{' ' * (width - len(full_line) + 132)}│")
+                        if idx < end_idx:
+                            output.append(f"├{'─' * (width-2)}┤")
+                else:
+                    if self.is_loading:
+                        output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('Loading content...')}{' ' * (width - 17)}│")
+                    else:
+                        output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('No content found.')}{' ' * (width - 20)}│")
         else:
             if self.is_loading:
                 output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('Loading user profile...')}{' ' * (width - 22)}│")
@@ -195,6 +240,7 @@ class UserProfileScreen:
             self.user = None
             self.posts = []
             self.comments = []
+            self.messages = []
         finally:
             self.is_loading = False
 
@@ -210,25 +256,37 @@ class UserProfileScreen:
                     self.posts = [post for post in self.posts if not post.over_18]
             elif self.current_tab == "comments":
                 self.comments = list(self.user.comments.new(limit=self.settings.posts_per_page))
+            elif self.current_tab == "inbox":
+                self.messages = list(self.reddit_instance.inbox.all(limit=self.settings.posts_per_page))
+            elif self.current_tab == "about":
+                self.posts = []
+                self.comments = []
+                self.messages = []
+                try:
+                    self.user.subreddit.load()
+                except:
+                    pass
             self.selected_index = 0
             self.scroll_offset = 0
         except Exception as e:
+            print(f"Error loading content: {str(e)}")
             self.terminal.print_at(0, 0, f"Error loading content: {str(e)}", self.theme_service.get_color("error"))
         finally:
             self.is_loading = False
 
     def scroll_up(self):
-        items = self.posts if self.current_tab == "posts" else self.comments
+        items = self.posts if self.current_tab == "posts" else (self.comments if self.current_tab == "comments" else self.messages)
         if self.scroll_offset > 0:
             self.scroll_offset = max(0, self.scroll_offset - 3)
 
     def scroll_down(self):
-        items = self.posts if self.current_tab == "posts" else self.comments
+        items = self.posts if self.current_tab == "posts" else (self.comments if self.current_tab == "comments" else self.messages)
         if self.scroll_offset < len(items) - self.visible_posts:
             self.scroll_offset = min(len(items) - self.visible_posts, self.scroll_offset + 3)
 
     def switch_content_type(self):
         self.tab_index = (self.tab_index + 1) % len(self.tabs)
+        self.current_tab = self.tabs[self.tab_index]
         self.scroll_offset = 0
         self.selected_index = 0
 
@@ -236,9 +294,14 @@ class UserProfileScreen:
         if self.current_tab == "posts":
             selected_item = self.posts[self.scroll_offset + self.selected_index]
             return selected_item
-        else:  # Comments
+        elif self.current_tab == "comments":
             selected_item = self.comments[self.scroll_offset + self.selected_index]
-            return selected_item.submission  # Return the parent submission for comments
+            return selected_item.submission
+        else:  # Inbox
+            selected_item = self.messages[self.scroll_offset + self.selected_index]
+            if not selected_item.read:
+                selected_item.mark_read()
+            return selected_item
 
     def handle_input(self, key):
         if self.comment_mode:
@@ -271,7 +334,7 @@ class UserProfileScreen:
             elif self.scroll_offset > 0:
                 self.scroll_up()
         elif key == 'KEY_DOWN':
-            items = self.posts if self.current_tab == "posts" else self.comments
+            items = self.posts if self.current_tab == "posts" else (self.comments if self.current_tab == "comments" else self.messages)
             if self.selected_index < min(self.visible_posts - 1, len(items) - self.scroll_offset - 1):
                 self.selected_index += 1
             elif self.scroll_offset < len(items) - self.visible_posts:
@@ -283,9 +346,14 @@ class UserProfileScreen:
             self.switch_content_type()
             self.load_user_content()
         elif key == 'KEY_ENTER':
-            if self.current_tab == "posts" and self.posts:  # Only allow comments on posts
+            if self.current_tab == "posts" and self.posts:
                 self.comment_mode = True
                 return True
+            elif self.current_tab == "inbox" and self.messages:
+                selected_item = self.select_item()
+                if hasattr(selected_item, 'reply'):
+                    self.comment_mode = True
+                    return True
         return key != 'KEY_ESCAPE'
 
     def submit_comment(self):

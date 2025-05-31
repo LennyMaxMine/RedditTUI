@@ -8,6 +8,7 @@ class Sidebar:
             "New",
             "Top",
             "Saved",
+            "Messages",
             "Search",
             "Subreddits",
             "Profile",
