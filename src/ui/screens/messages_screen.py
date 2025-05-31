@@ -20,25 +20,82 @@ class MessagesScreen:
         self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         self.loading_index = 0
         self.last_loading_update = 0
-        self.width = self.terminal.width - 22
+        self.width = self.terminal.width - 24
         self.compose_mode = False
         self.recipient = ""
         self.subject = ""
         self.message_text = ""
         self.cursor_pos = 0
-        self.current_field = "recipient"  # recipient, subject, or message
+        self.current_field = "recipient"
         self.active = False
+        self.reply_to_message = None
 
     def display(self):
-        width = self.terminal.width - 22
+        width = self.terminal.width - 24
         output = []
         
         if self.compose_mode:
             output.append(f"┬{'─' * (width-2)}┤")
             output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('Compose Message').center(width+21)}│")
             output.append(f"├{'─' * (width-2)}┤")
+
+            output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('I currently do not know if this is the right use of PRAW direct messages (doesnt seem to be). So this function is currently unsupported.').center(width+21)}│")
+            output.append(f"├{'─' * (width-2)}┤")
+            output.append(f"│{self.terminal.red('UNSUPPORTED & BUGGY | USE WITH CAUTION').center(width+9)}│")
+            output.append(f"├{'─' * (width-2)}┤")
             
-            # Recipient field
+            if hasattr(self, 'reply_to_message') and self.reply_to_message:
+                messages = []
+                if isinstance(self.reply_to_message, praw.models.Message):
+                    messages = list(self.reddit_instance.inbox.messages(limit=50))
+                    messages = [msg for msg in messages if (msg.author and msg.author.name == self.recipient) or 
+                              (hasattr(msg, 'dest') and msg.dest.name == self.recipient)]
+                elif isinstance(self.reply_to_message, praw.models.Comment):
+                    messages = list(self.reddit_instance.inbox.comment_replies(limit=50))
+                    messages = [msg for msg in messages if (msg.author and msg.author.name == self.recipient) or 
+                              (hasattr(msg, 'parent_id') and msg.parent_id == self.reply_to_message.id)]
+                
+                for msg in reversed(messages):
+                    if isinstance(msg, praw.models.Message):
+                        body = msg.body
+                        author = msg.author.name if hasattr(msg, 'author') and msg.author else "Unknown"
+                        is_sent = author != self.reddit_instance.user.me().name
+                    else:
+                        body = msg.body
+                        author = msg.author.name if hasattr(msg, 'author') and msg.author else "Unknown"
+                        is_sent = author != self.reddit_instance.user.me().name
+                    
+                    timestamp = datetime.datetime.fromtimestamp(msg.created_utc).strftime('%H:%M')
+                    author_display = f"{author} • {timestamp}"
+                    
+                    wrapped_lines = []
+                    current_line = ""
+                    for word in body.split():
+                        if len(current_line) + len(word) + 1 <= width - 8:
+                            current_line += (word + " ")
+                        else:
+                            wrapped_lines.append(current_line.strip())
+                            current_line = word + " "
+                    if current_line:
+                        wrapped_lines.append(current_line.strip())
+                    
+                    if is_sent:
+                        output.append(f"│{' ' * (width-2)}│")
+                        output.append(f"│{' ' * (width-2)}│")
+                        for line in wrapped_lines:
+                            padding = width - len(line) - 6
+                            output.append(f"│{' ' * padding}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(line)}{' ' * 6}│")
+                        author_padding = width - len(author_display) - 6
+                        output.append(f"│{' ' * author_padding}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))(author_display)}{' ' * 6}│")
+                    else:
+                        output.append(f"│{' ' * (width-2)}│")
+                        output.append(f"│{' ' * (width-2)}│")
+                        for line in wrapped_lines:
+                            output.append(f"│{' ' * 6}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(line)}{' ' * (width - len(line) - 6)}│")
+                        output.append(f"│{' ' * 6}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('subreddit')))(author_display)}{' ' * (width - len(author_display) - 6)}│")
+                
+                output.append(f"├{'─' * (width-2)}┤")
+            
             recipient_line = f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('To: ')}"
             if self.current_field == "recipient":
                 recipient_line += f"{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.recipient[:self.cursor_pos])}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))('|')}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.recipient[self.cursor_pos:])}"
@@ -47,7 +104,6 @@ class MessagesScreen:
             recipient_line += ' ' * (width - len(recipient_line) + 47) + "│"
             output.append(recipient_line)
             
-            # Subject field
             subject_line = f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('Subject: ')}"
             if self.current_field == "subject":
                 subject_line += f"{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.subject[:self.cursor_pos])}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))('|')}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(self.subject[self.cursor_pos:])}"
@@ -58,15 +114,13 @@ class MessagesScreen:
             
             output.append(f"├{'─' * (width-2)}┤")
             
-            # Message field
             message_lines = self.message_text.split('\n')
             for i, line in enumerate(message_lines):
-                # Wrap long lines to fit the width
-                while len(line) > width - 4:
-                    display_line = f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(line[:width-4])}"
+                while len(line) > width - 6:
+                    display_line = f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(line[:width-6])}"
                     display_line += ' ' * (width - len(display_line) + 24) + "│"
                     output.append(display_line)
-                    line = line[width-4:]
+                    line = line[width-6:]
                 
                 if self.current_field == "message" and i == len(message_lines) - 1:
                     display_line = f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(line[:self.cursor_pos])}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))('|')}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(line[self.cursor_pos:])}"
@@ -86,20 +140,24 @@ class MessagesScreen:
         output.append(f"┬{'─' * (width-2)}┤")
         output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('Direct Messages').center(width+21)}│")
         output.append(f"├{'─' * (width-2)}┤")
+
+        output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('I currently do not know if this is the right use of PRAW direct messages (doesnt seem to be). So this function is currently unsupported.').center(width+21)}│")
+        output.append(f"├{'─' * (width-2)}┤")
+        output.append(f"│{self.terminal.red('UNSUPPORTED & BUGGY | USE WITH CAUTION').center(width+9)}│")
+        output.append(f"├{'─' * (width-2)}┤")
         
         if self.messages:
             start_idx = self.scroll_offset
             end_idx = min(start_idx + self.visible_messages, len(self.messages))
             
             for idx, message in enumerate(self.messages[start_idx:end_idx], start=start_idx + 1):
-                if idx - 1 == self.selected_index and self.active == True:
+                if idx - 1 == self.selected_index and self.active:
                     prefix = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))("► ")
                 else:
                     prefix = "  "
                 
                 item_num = f"{idx}."
                 
-                # Handle different types of messages
                 if isinstance(message, praw.models.Message):
                     subject = message.subject if hasattr(message, 'subject') else "No subject"
                     author = message.author.name if hasattr(message, 'author') and message.author else "Unknown"
@@ -128,8 +186,8 @@ class MessagesScreen:
                     metadata_additional_width += 23
                 
                 full_line = item_line + metadata
-                if len(full_line) > width - 4:
-                    available_space = width - 4 - len(metadata)
+                if len(full_line) > width - 6:
+                    available_space = width - 6 - len(metadata)
                     item_line = f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(item_num)} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(subject[:available_space-3])}..."
                     full_line = item_line + metadata
 
@@ -226,6 +284,7 @@ class MessagesScreen:
 
     def start_reply(self, message):
         self.compose_mode = True
+        self.reply_to_message = message
         if hasattr(message, 'author'):
             self.recipient = message.author.name
         if hasattr(message, 'subject'):

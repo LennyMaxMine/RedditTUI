@@ -108,8 +108,10 @@ class PostList:
                 
             if hasattr(post, 'over_18') and post.over_18:
                 metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))("NSFW"))
+                metadata_additional_width += 2
             if hasattr(post, 'stickied') and post.stickied:
                 metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))("📌"))
+                metadata_additional_width += 2
             
             metadata_line = "│    " + " | ".join(metadata)
             metadata_display_length = self._get_display_length(metadata_line)

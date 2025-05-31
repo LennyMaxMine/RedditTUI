@@ -543,9 +543,29 @@ class RedditTUI:
                     elif key == 'k':  # Upvote
                         if self.current_screen == 'post':
                             self.post_view.upvote_post()
+                        elif self.current_screen == 'messages' and self.messages_screen.compose_mode:
+                            if self.messages_screen.current_field == "recipient":
+                                self.messages_screen.recipient = self.messages_screen.recipient[:self.messages_screen.cursor_pos] + 'k' + self.messages_screen.recipient[self.messages_screen.cursor_pos:]
+                                self.messages_screen.cursor_pos += 1
+                            elif self.messages_screen.current_field == "subject":
+                                self.messages_screen.subject = self.messages_screen.subject[:self.messages_screen.cursor_pos] + 'k' + self.messages_screen.subject[self.messages_screen.cursor_pos:]
+                                self.messages_screen.cursor_pos += 1
+                            elif self.messages_screen.current_field == "message":
+                                self.messages_screen.message_text = self.messages_screen.message_text[:self.messages_screen.cursor_pos] + 'k' + self.messages_screen.message_text[self.messages_screen.cursor_pos:]
+                                self.messages_screen.cursor_pos += 1
                     elif key == 'j':  # Downvote
                         if self.current_screen == 'post':
                             self.post_view.downvote_post()
+                        elif self.current_screen == 'messages' and self.messages_screen.compose_mode:
+                            if self.messages_screen.current_field == "recipient":
+                                self.messages_screen.recipient = self.messages_screen.recipient[:self.messages_screen.cursor_pos] + 'j' + self.messages_screen.recipient[self.messages_screen.cursor_pos:]
+                                self.messages_screen.cursor_pos += 1
+                            elif self.messages_screen.current_field == "subject":
+                                self.messages_screen.subject = self.messages_screen.subject[:self.messages_screen.cursor_pos] + 'j' + self.messages_screen.subject[self.messages_screen.cursor_pos:]
+                                self.messages_screen.cursor_pos += 1
+                            elif self.messages_screen.current_field == "message":
+                                self.messages_screen.message_text = self.messages_screen.message_text[:self.messages_screen.cursor_pos] + 'j' + self.messages_screen.message_text[self.messages_screen.cursor_pos:]
+                                self.messages_screen.cursor_pos += 1
                     elif key == '\t':  # Tab
                         if self.current_screen == 'search':
                             self.search_screen.next_search_type()
@@ -697,7 +717,7 @@ class RedditTUI:
                             selected_option = self.sidebar.get_selected_option()
                             if selected_option == 'messages':
                                 self.active_component = 'messages'
-                                self.messages_screen.active == True
+                                self.messages_screen.active = True
                             if self.handle_sidebar_option(selected_option):
                                 break
                             else:
@@ -758,6 +778,7 @@ class RedditTUI:
                                         self.messages_screen.message_text = ""
                                         self.messages_screen.cursor_pos = 0
                                         self.messages_screen.current_field = "recipient"
+                                        self.messages_screen.load_messages()
                                 elif self.messages_screen.current_field == "recipient":
                                     self.messages_screen.current_field = "subject"
                                     self.messages_screen.cursor_pos = len(self.messages_screen.subject)
