@@ -3,6 +3,7 @@ import datetime
 import time
 from services.theme_service import ThemeService
 from services.settings_service import Settings
+from utils.logger import Logger
 import praw
 
 class MessagesScreen:
@@ -12,6 +13,7 @@ class MessagesScreen:
         self.theme_service = ThemeService()
         self.settings = Settings()
         self.settings.load_settings_from_file()
+        self.logger = Logger()
         self.selected_index = 0
         self.scroll_offset = 0
         self.visible_messages = 15
@@ -227,6 +229,7 @@ class MessagesScreen:
 
     def load_messages(self):
         if not self.reddit_instance:
+            self.logger.warning("Attempted to load messages without Reddit instance")
             return
         
         self.is_loading = True
@@ -234,34 +237,44 @@ class MessagesScreen:
             self.messages = list(self.reddit_instance.inbox.all(limit=self.settings.posts_per_page))
             self.selected_index = 0
             self.scroll_offset = 0
+            self.logger.info(f"Loaded {len(self.messages)} messages")
         except Exception as e:
+            error_msg = f"Error loading messages: {str(e)}"
             print(f"Error loading messages: {str(e)}")
-            self.terminal.print_at(0, 0, f"Error loading messages: {str(e)}", self.theme_service.get_color("error"))
+            self.terminal.print_at(0, 0, error_msg, self.theme_service.get_color("error"))
+            self.logger.error(error_msg, exc_info=True)
         finally:
             self.is_loading = False
 
     def scroll_up(self):
         if self.scroll_offset > 0:
             self.scroll_offset = max(0, self.scroll_offset - 3)
+            self.logger.debug(f"Scrolled up in messages. New offset: {self.scroll_offset}")
 
     def scroll_down(self):
         if self.scroll_offset < len(self.messages) - self.visible_messages:
             self.scroll_offset = min(len(self.messages) - self.visible_messages, self.scroll_offset + 3)
+            self.logger.debug(f"Scrolled down in messages. New offset: {self.scroll_offset}")
 
     def select_message(self):
         if not self.messages:
+            self.logger.debug("Attempted to select message but no messages available")
             return None
         selected_message = self.messages[self.scroll_offset + self.selected_index]
         if hasattr(selected_message, 'mark_read'):
             selected_message.mark_read()
+            self.logger.debug(f"Marked message as read: {selected_message.id}")
         return selected_message
 
     def send_message(self):
         if not self.recipient or not self.subject or not self.message_text:
+            self.logger.warning("Attempted to send message with missing fields")
             return False
         
         try:
+            self.logger.info(f"Attempting to send message to {self.recipient}")
             self.reddit_instance.redditor(self.recipient).message(self.subject, self.message_text)
+            self.logger.info(f"Message sent to {self.recipient}")
             self.compose_mode = False
             self.recipient = ""
             self.subject = ""
@@ -271,10 +284,13 @@ class MessagesScreen:
             self.load_messages()
             return True
         except Exception as e:
-            print(f"Error sending message: {str(e)}")
+            error_msg = f"Error sending message: {str(e)}"
+            print(error_msg)
+            self.logger.error(error_msg, exc_info=True)
             return False
 
     def start_compose(self):
+        self.logger.info("Starting new message composition")
         self.compose_mode = True
         self.recipient = ""
         self.subject = ""
@@ -283,6 +299,7 @@ class MessagesScreen:
         self.current_field = "recipient"
 
     def start_reply(self, message):
+        self.logger.info(f"Starting reply to message from {message.author.name if hasattr(message, 'author') else 'Unknown'}")
         self.compose_mode = True
         self.reply_to_message = message
         if hasattr(message, 'author'):
@@ -293,4 +310,18 @@ class MessagesScreen:
             self.subject = "Re: Message"
         self.message_text = ""
         self.cursor_pos = 0
-        self.current_field = "message" 
+        self.current_field = "message"
+
+    def next_message(self):
+        if self.selected_index < min(self.visible_messages - 1, len(self.messages) - self.scroll_offset - 1):
+            self.selected_index += 1
+            if self.scroll_offset < len(self.messages) - self.visible_messages:
+                self.scroll_down()
+            self.logger.debug(f"Selected next message. New index: {self.selected_index}")
+
+    def previous_message(self):
+        if self.selected_index > 0:
+            self.selected_index -= 1
+            if self.scroll_offset > 0:
+                self.scroll_up()
+            self.logger.debug(f"Selected previous message. New index: {self.selected_index}") 

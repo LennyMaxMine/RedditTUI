@@ -4,12 +4,16 @@ import time
 import emoji
 from services.theme_service import ThemeService
 from services.settings_service import Settings
+from utils.logger import Logger
 
 class SearchScreen:
     def __init__(self, terminal, reddit_instance):
         self.terminal = terminal
         self.reddit_instance = reddit_instance
         self.theme_service = ThemeService()
+        self.settings = Settings()
+        self.settings.load_settings_from_file()
+        self.logger = Logger()
         self.search_query = ""
         self.search_results = []
         self.selected_index = 0
@@ -25,8 +29,6 @@ class SearchScreen:
         self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         self.loading_index = 0
         self.last_loading_update = 0
-        self.settings = Settings()
-        self.settings.load_settings_from_file()
 
     def contains_emoji(self, text):
             emojis = emoji.emoji_list(text)
@@ -169,6 +171,7 @@ class SearchScreen:
         
         self.is_loading = True
         try:
+            self.logger.info(f"Performing {self.search_type} search for query: {self.search_query}")
             if self.search_type == "all":
                 self.search_results = list(self.reddit_instance.subreddit("all").search(
                     self.search_query, limit=self.settings.posts_per_page, sort="relevance", syntax="lucene"
@@ -199,6 +202,7 @@ class SearchScreen:
             
             self.selected_index = 0
             self.scroll_offset = 0
+            self.logger.info(f"Found {len(self.search_results)} {self.search_type} matching query")
         except Exception as e:
             self.search_results = []
             self.terminal.move(self.terminal.height - 3, 0)
