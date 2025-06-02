@@ -92,7 +92,8 @@ class PostList:
                 metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))("🖼️"))
                 metadata_additional_width += 2
             
-            metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(f"↑{post.score}"))
+            score_color = self.get_score_color(post.score)
+            metadata.append(score_color(f"↑{post.score}"))
             metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('comments')))(f"💬{post.num_comments}"))
             
             if hasattr(post, 'created_utc'):
@@ -104,8 +105,8 @@ class PostList:
                     age_str = f"{int(age/3600)}h"
                 else:
                     age_str = f"{int(age/86400)}d"
-                metadata.append(f"{age_color}{age_str.replace('-', '')}{self.terminal.normal}")
-                
+                metadata.append(age_color(age_str.replace('-', '')))
+            
             if hasattr(post, 'over_18') and post.over_18:
                 metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))("NSFW"))
                 metadata_additional_width += 2
@@ -143,12 +144,12 @@ class PostList:
         return None
 
     def append_posts(self, new_posts):
-        if not self.settings.show_nsfw:
-            new_posts = [post for post in new_posts if not post.over_18]
+        if not self.settings.get_setting('show_nsfw'):
+            new_posts = [post for post in new_posts if not post.over18]
         self.posts.extend(new_posts)
 
     def update_posts(self, new_posts):
-        if not self.settings.show_nsfw:
+        if not self.settings.get_setting('show_nsfw'):
             new_posts = [post for post in new_posts if not post.over_18]
         self.posts = new_posts
         self.selected_index = 0

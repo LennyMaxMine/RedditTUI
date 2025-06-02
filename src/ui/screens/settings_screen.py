@@ -175,7 +175,7 @@ class SettingsScreen:
             self.theme_screen_activated = True
             return True
         elif self.selected_option == 0:  # Login
-            self.show_login_screen()
+            return True
         elif self.selected_option == len(self.options) - 1:  # Save Settings
             if self.save_settings():
                 return True

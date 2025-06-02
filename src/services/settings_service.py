@@ -5,7 +5,7 @@ from utils.logger import Logger
 class Settings:
     def __init__(self):
         self.logger = Logger()
-        self.settings_file = "settings.json"
+        self.settings_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'settings.json')
         self.default_settings = {
             "posts_per_page": 25,
             "comment_depth": 3,
@@ -45,7 +45,21 @@ class Settings:
 
     def get_setting(self, key):
         self.logger.debug(f"Getting setting: {key}")
-        return self.settings.get(key, self.default_settings.get(key))
+        value = self.settings.get(key, self.default_settings.get(key))
+        
+        # Convert numeric settings to integers
+        if key in ['posts_per_page', 'comment_depth']:
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                self.logger.warning(f"Invalid {key} value: {value}, using default")
+                return int(self.default_settings[key])
+        
+        # Convert boolean settings
+        if key in ['auto_load_comments', 'show_nsfw']:
+            return value.lower() == 'true'
+            
+        return value
 
     def set_setting(self, key, value):
         self.logger.info(f"Setting {key} to {value}")

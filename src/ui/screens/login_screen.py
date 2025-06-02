@@ -57,17 +57,21 @@ class LoginScreen:
                     user_agent='RedditTUI/0.1'
                 )
                 self.reddit_instance.user.me()
-                print(self.term.clear())
-                print(self.term.move(0, 0))
-                print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))(f"Auto-login successful! Welcome back, u/{saved_creds['username']}"))
+                sys.stdout.write(self.term.clear())
+                sys.stdout.write(self.term.move(0, 0))
+                success_color = self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))
+                sys.stdout.write(success_color(f"Auto-login successful! Welcome back, u/{saved_creds['username']}\n"))
+                sys.stdout.flush()
                 time.sleep(0.15)
                 return True
             except Exception as e:
-                print(self.term.clear())
-                print(self.term.move(0, 0))
-                print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))(f"Auto-login failed: {str(e)}"))
-                print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))("Please log in manually."))
-                print(self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))("Press Enter to continue..."))
+                sys.stdout.write(self.term.clear())
+                sys.stdout.write(self.term.move(0, 0))
+                warning_color = self.term.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))
+                sys.stdout.write(warning_color(f"Auto-login failed: {str(e)}\n"))
+                sys.stdout.write(warning_color("Please log in manually.\n"))
+                sys.stdout.write(warning_color("Press Enter to continue...\n"))
+                sys.stdout.flush()
                 input()
                 return False
         return False

@@ -68,7 +68,7 @@ class RedditTUI:
 
             test_posts = [
                 MockPost("Welcome to Reddit TUI", "reddit", 100, 50),
-                MockPost("This is a test post", "test", 50, self.settings.posts_per_page),
+                MockPost("This is a test post", "test", 50, self.settings.get_setting('posts_per_page')),
                 MockPost("Another test post", "test", 75, 30)
             ]
             self.post_list.update_posts(test_posts)
@@ -96,7 +96,7 @@ class RedditTUI:
         elif option == "Messages":
             if self.reddit_instance:
                 self.current_screen = 'messages'
-                self.active_component = 'messages'
+                #self.active_component = 'messages'
                 self.messages_screen.load_messages()
                 self.header.update_title("RedditTUI - Messages")
             else:
@@ -162,20 +162,20 @@ class RedditTUI:
             try:
                 if load_more and self.last_loaded_post:
                     if self.current_feed == 'home':
-                        posts = list(self.reddit_instance.front.hot(limit=self.settings.posts_per_page, after=self.last_loaded_post))
+                        posts = list(self.reddit_instance.front.hot(limit=self.settings.get_setting('posts_per_page'), after=self.last_loaded_post))
                     elif self.current_feed == 'new':
-                        posts = list(self.reddit_instance.front.new(limit=self.settings.posts_per_page, after=self.last_loaded_post))
+                        posts = list(self.reddit_instance.front.new(limit=self.settings.get_setting('posts_per_page'), after=self.last_loaded_post))
                     elif self.current_feed == 'top':
-                        posts = list(self.reddit_instance.front.top(limit=self.settings.posts_per_page, after=self.last_loaded_post))
+                        posts = list(self.reddit_instance.front.top(limit=self.settings.get_setting('posts_per_page'), after=self.last_loaded_post))
                 else:
                     if self.current_feed == 'home':
-                        posts = list(self.reddit_instance.front.hot(limit=self.settings.posts_per_page))
+                        posts = list(self.reddit_instance.front.hot(limit=self.settings.get_setting('posts_per_page')))
                     elif self.current_feed == 'new':
-                        posts = list(self.reddit_instance.front.new(limit=self.settings.posts_per_page))
+                        posts = list(self.reddit_instance.front.new(limit=self.settings.get_setting('posts_per_page')))
                     elif self.current_feed == 'top':
-                        posts = list(self.reddit_instance.front.top(limit=self.settings.posts_per_page))
+                        posts = list(self.reddit_instance.front.top(limit=self.settings.get_setting('posts_per_page')))
                 
-                if not self.settings.show_nsfw:
+                if not self.settings.get_setting('show_nsfw'):
                     posts = [post for post in posts if not post.over_18]
                 
                 if posts:
@@ -204,8 +204,8 @@ class RedditTUI:
             return []
         self.is_loading = True
         try:
-            if self.settings.auto_load_comments:
-                depth = max(0, min(self.settings.comment_depth, 10))
+            if self.settings.get_setting('auto_load_comments'):
+                depth = max(0, min(self.settings.get_setting('comment_depth'), 10))
                 post.comments.replace_more(limit=depth)
             else:
                 post.comments.replace_more(limit=0)
@@ -305,17 +305,17 @@ class RedditTUI:
             try:
                 self.logger.info(f"Loading {category} posts from subreddit: {subreddit.display_name}")
                 if category == "hot":
-                    posts = list(subreddit.hot(limit=self.settings.posts_per_page))
+                    posts = list(subreddit.hot(limit=self.settings.get_setting('posts_per_page')))
                 elif category == "new":
-                    posts = list(subreddit.new(limit=self.settings.posts_per_page))
+                    posts = list(subreddit.new(limit=self.settings.get_setting('posts_per_page')))
                 elif category == "top":
-                    posts = list(subreddit.top(limit=self.settings.posts_per_page))
+                    posts = list(subreddit.top(limit=self.settings.get_setting('posts_per_page')))
                 elif category == "rising":
-                    posts = list(subreddit.rising(limit=self.settings.posts_per_page))
+                    posts = list(subreddit.rising(limit=self.settings.get_setting('posts_per_page')))
                 else:
-                    posts = list(subreddit.hot(limit=self.settings.posts_per_page))
+                    posts = list(subreddit.hot(limit=self.settings.get_setting('posts_per_page')))
 
-                if not self.settings.show_nsfw:
+                if not self.settings.get_setting('show_nsfw'):
                     posts = [post for post in posts if not post.over_18]
 
                 if posts:
@@ -339,10 +339,10 @@ class RedditTUI:
             try:
                 if load_more and self.last_loaded_post:
                     self.logger.info("Loading more saved posts")
-                    saved_items = list(self.reddit_instance.user.me().saved(limit=self.settings.posts_per_page, after=self.last_loaded_post))
+                    saved_items = list(self.reddit_instance.user.me().saved(limit=self.settings.get_setting('posts_per_page'), after=self.last_loaded_post))
                 else:
                     self.logger.info("Loading initial saved posts")
-                    saved_items = list(self.reddit_instance.user.me().saved(limit=self.settings.posts_per_page))
+                    saved_items = list(self.reddit_instance.user.me().saved(limit=self.settings.get_setting('posts_per_page')))
                 
                 posts = []
                 for item in saved_items:
@@ -351,7 +351,7 @@ class RedditTUI:
                     else:  # It's a comment
                         posts.append(item.submission)
                 
-                if not self.settings.show_nsfw:
+                if not self.settings.get_setting('show_nsfw'):
                     posts = [post for post in posts if not post.over_18]
                 
                 if posts:

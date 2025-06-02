@@ -13,14 +13,12 @@ class ThemeService:
         return cls._instance
 
     def __init__(self):
-        self.logger = Logger()
-        self.themes_dir = "themes"
-        self.current_theme = "default"
-        self.themes = {}
-        self.logger.info("Theme service initialized")
-        self.load_themes()
+        # Remove duplicate initialization
+        pass
 
     def _initialize_themes(self):
+        self.logger = Logger()
+        self.themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'themes')
         self.themes = {
             "default": {
                 "title": "#00ffff",
@@ -88,7 +86,12 @@ class ThemeService:
                     theme_path = os.path.join(self.themes_dir, filename)
                     try:
                         with open(theme_path, 'r') as f:
-                            self.themes[theme_name] = json.load(f)
+                            theme_data = json.load(f)
+                            # Handle both nested and flat theme structures
+                            if 'colors' in theme_data:
+                                self.themes[theme_name] = theme_data['colors']
+                            else:
+                                self.themes[theme_name] = theme_data
                         self.logger.info(f"Loaded theme: {theme_name}")
                     except Exception as e:
                         error_msg = f"Error loading theme {theme_name}: {str(e)}"
@@ -99,20 +102,34 @@ class ThemeService:
 
     def get_theme(self, theme_name):
         self.logger.debug(f"Getting theme: {theme_name}")
-        return self.themes.get(theme_name, self.themes.get('default', {}))
+        theme = self.themes.get(theme_name)
+        if not theme:
+            self.logger.warning(f"Theme {theme_name} not found, falling back to default")
+            theme = self.themes.get('default', {})
+        return theme
 
     def set_theme(self, theme_name):
         self.logger.info(f"Setting theme to: {theme_name}")
-        if theme_name in self.themes:
-            self.current_theme = theme_name
+        # Convert theme name to lowercase for case-insensitive comparison
+        theme_name_lower = theme_name.lower()
+        # Find the actual theme name with correct case
+        actual_theme_name = next((name for name in self.themes.keys() if name.lower() == theme_name_lower), None)
+        if actual_theme_name:
+            self.current_theme = actual_theme_name
             return True
-        self.logger.warning(f"Theme not found: {theme_name}")
+        self.logger.warning(f"Theme not found: {theme_name}, falling back to default")
+        self.current_theme = "default"
         return False
 
     def get_style(self, style_name):
         self.logger.debug(f"Getting style {style_name} from theme {self.current_theme}")
         theme = self.get_theme(self.current_theme)
-        return theme.get(style_name, '#000000')  # Default to black if style not found
+        color = theme.get(style_name)
+        if not color:
+            self.logger.warning(f"Style {style_name} not found in theme {self.current_theme}, falling back to default")
+            default_theme = self.get_theme('default')
+            color = default_theme.get(style_name, '#ffffff')  # Default to white if style not found
+        return color
 
     def get_available_themes(self):
         self.logger.debug("Getting available themes")
@@ -173,7 +190,8 @@ class ThemeService:
                         colors = theme_data.get('colors', {})
                         self.themes[theme_name] = colors
                 except Exception as e:
-                    print(f"Error loading theme {theme_file}: {e}")
+                    error_msg = f"Error loading theme {theme_file}: {e}"
+                    self.logger.error(error_msg, exc_info=True)
 
     def load_theme_from_settings(self):
         settings_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'settings.json')
@@ -182,9 +200,18 @@ class ThemeService:
                 with open(settings_file, 'r') as f:
                     settings = json.load(f)
                     if 'theme' in settings:
-                        self.set_theme(settings['theme'].lower())
+                        # Convert theme name to lowercase for case-insensitive comparison
+                        theme_name = settings['theme']
+                        theme_name_lower = theme_name.lower()
+                        # Find the actual theme name with correct case
+                        actual_theme_name = next((name for name in self.themes.keys() if name.lower() == theme_name_lower), None)
+                        if actual_theme_name:
+                            self.set_theme(actual_theme_name)
+                        else:
+                            self.logger.warning(f"Theme not found in settings: {theme_name}")
         except Exception as e:
-            print(f"Error loading theme from settings: {e}")
+            error_msg = f"Error loading theme from settings: {e}"
+            self.logger.error(error_msg, exc_info=True)
 
     def create_custom_theme(self, name, colors):
         themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'themes')
@@ -204,5 +231,6 @@ class ThemeService:
             self.load_custom_themes()
             return True
         except Exception as e:
-            print(f"Error creating theme: {e}")
+            error_msg = f"Error creating theme: {e}"
+            self.logger.error(error_msg, exc_info=True)
             return False 

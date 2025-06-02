@@ -251,13 +251,13 @@ class UserProfileScreen:
         self.is_loading = True
         try:
             if self.current_tab == "posts":
-                self.posts = list(self.user.submissions.new(limit=self.settings.posts_per_page))
-                if not self.settings.show_nsfw:
+                self.posts = list(self.user.submissions.new(limit=self.settings.get_setting('posts_per_page')))
+                if not self.settings.get_setting('show_nsfw'):
                     self.posts = [post for post in self.posts if not post.over_18]
             elif self.current_tab == "comments":
-                self.comments = list(self.user.comments.new(limit=self.settings.posts_per_page))
+                self.comments = list(self.user.comments.new(limit=self.settings.get_setting('posts_per_page')))
             elif self.current_tab == "inbox":
-                self.messages = list(self.reddit_instance.inbox.all(limit=self.settings.posts_per_page))
+                self.messages = list(self.reddit_instance.inbox.all(limit=self.settings.get_setting('posts_per_page')))
             elif self.current_tab == "about":
                 self.posts = []
                 self.comments = []

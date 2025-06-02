@@ -8,3 +8,5 @@ cryptography
 blessed
 emoji
 pyshorteners
+textual
+pillow
