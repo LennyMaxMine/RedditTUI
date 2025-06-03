@@ -109,10 +109,10 @@ class PostList:
             
             if hasattr(post, 'over_18') and post.over_18:
                 metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))("NSFW"))
-                metadata_additional_width += 2
+                metadata_additional_width += 1
             if hasattr(post, 'stickied') and post.stickied:
                 metadata.append(self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))("📌"))
-                metadata_additional_width += 2
+                metadata_additional_width += 1
             
             metadata_line = "│    " + " | ".join(metadata)
             metadata_display_length = self._get_display_length(metadata_line)
@@ -174,3 +174,13 @@ class PostList:
     def _hex_to_rgb(self, hex_color):
         hex_color = hex_color.lstrip('#')
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+    def handle_input(self, key):
+        if key == '\x1b[A':  # Up Arrow
+            self.scroll_up()
+            return True
+        elif key == '\x1b[B':  # Down Arrow
+            return self.scroll_down()
+        elif key == '\r' or key == '\n':  # Enter
+            return self.get_selected_post()
+        return False

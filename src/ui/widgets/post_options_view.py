@@ -75,6 +75,9 @@ class PostOptionsScreen:
             return None
         elif self.confirming_report:
             if key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter
+                if self.confirming_save == True:
+                    self.confirming_save = False
+
                 if self.selected_reason:
                     try:
                         if self.selected_reason == "Other":
@@ -105,6 +108,7 @@ class PostOptionsScreen:
             self.confirming_save = True
             return None
         elif key.lower() == 'c':
+            self.confirming_save = False
             return "comment"
         return None
 

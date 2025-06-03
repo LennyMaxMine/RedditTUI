@@ -23,7 +23,7 @@ class SearchScreen:
         self.search_types = ["all", "subreddit", "user"]
         self.type_index = 0
         self.last_search_time = 0
-        self.search_delay = 0.5  # 500ms delay between searches
+        self.search_delay = 0.3  # Reduced to 300ms for better responsiveness
         self.pending_search = False
         self.is_loading = False
         self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
@@ -59,10 +59,10 @@ class SearchScreen:
             end_idx = min(start_idx + self.visible_results, len(self.search_results))
             
             for idx, post in enumerate(self.search_results[start_idx:end_idx], start=start_idx + 1):
-                metadata_additional_width = 0
+                metadata_additional_width = 66
                 if idx - 1 == self.selected_index:
                     prefix = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))("► ")
-                    metadata_additional_width += 11
+                    metadata_additional_width += 23
                 else:
                     prefix = "  "
 
@@ -172,41 +172,73 @@ class SearchScreen:
         self.is_loading = True
         try:
             self.logger.info(f"Performing {self.search_type} search for query: {self.search_query}")
+            
             if self.search_type == "all":
                 self.search_results = list(self.reddit_instance.subreddit("all").search(
-                    self.search_query, limit=self.settings.posts_per_page, sort="relevance", syntax="lucene"
+                    self.search_query, 
+                    limit=self.settings.get_setting('posts_per_page'), 
+                    sort="relevance", 
+                    syntax="lucene",
+                    time_filter="all"
                 ))
+                
             elif self.search_type == "subreddit":
-                subreddits = list(self.reddit_instance.subreddits.search(self.search_query, limit=self.settings.posts_per_page))
+                subreddits = list(self.reddit_instance.subreddits.search(
+                    self.search_query, 
+                    limit=min(10, self.settings.get_setting('posts_per_page'))
+                ))
                 self.search_results = []
+                
                 for subreddit in subreddits:
                     try:
-                        posts = list(subreddit.hot(limit=1))
+                        posts = list(subreddit.hot(limit=5))
                         if posts:
                             self.search_results.extend(posts)
-                    except:
+                            if len(self.search_results) >= self.settings.get_setting('posts_per_page'):
+                                break
+                    except Exception as e:
+                        self.logger.warning(f"Error fetching posts from r/{subreddit.display_name}: {str(e)}")
                         continue
+                
             elif self.search_type == "user":
-                users = list(self.reddit_instance.redditors.search(self.search_query, limit=self.settings.posts_per_page))
+                users = list(self.reddit_instance.redditors.search(
+                    self.search_query, 
+                    limit=min(10, self.settings.get_setting('posts_per_page'))
+                ))
                 self.search_results = []
+                
                 for user in users:
                     try:
-                        posts = list(user.submissions.new(limit=1))
+                        posts = list(user.submissions.new(limit=5))
                         if posts:
                             self.search_results.extend(posts)
-                    except:
+                            if len(self.search_results) >= self.settings.get_setting('posts_per_page'):
+                                break
+                    except Exception as e:
+                        self.logger.warning(f"Error fetching posts from u/{user.name}: {str(e)}")
                         continue
             
-            if not self.settings.show_nsfw:
+            if not self.settings.get_setting('show_nsfw'):
                 self.search_results = [post for post in self.search_results if not post.over_18]
+            
+            self.search_results.sort(key=lambda x: x.score, reverse=True)
+            
+            self.search_results = self.search_results[:self.settings.get_setting('posts_per_page')]
             
             self.selected_index = 0
             self.scroll_offset = 0
-            self.logger.info(f"Found {len(self.search_results)} {self.search_type} matching query")
+            
+            if not self.search_results:
+                self.logger.info(f"No results found for query: {self.search_query}")
+            else:
+                self.logger.info(f"Found {len(self.search_results)} {self.search_type} matching query")
+                
         except Exception as e:
+            error_msg = f"Error performing search: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
             self.search_results = []
             self.terminal.move(self.terminal.height - 3, 0)
-            print(self.terminal.red(f"Error performing search: {str(e)}"))
+            print(self.terminal.red(error_msg))
             self.terminal.move(0, 0)
         finally:
             self.is_loading = False

@@ -61,13 +61,13 @@ class PostView:
     
     def get_score_color(self, score):
         if score > 1000:
-            return self.terminal.bright_green
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('score')))
         elif score > 500:
-            return self.terminal.green
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('score')))
         elif score > 100:
-            return self.terminal.yellow
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('score')))
         else:
-            return self.terminal.normal
+            return self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))
 
     def get_age_color(self, created_utc):
         if not created_utc:
@@ -131,7 +131,7 @@ class PostView:
                 age_color = self.get_age_color(created)
                 created_str = f" | {age_color}{age_str.replace('-', '')}{self.terminal.normal}"
             
-            score_color = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))
+            score_color = self.get_score_color(score)
             author_color = self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('author')))
             
             header_text = f"u/{author} | {score} points{created_str}"
@@ -351,6 +351,19 @@ class PostView:
                 output.append(f"│ {line}{' ' * padding_needed} │")
         
         output.append(f"╰{'─' * (width-2)}╯")
+        
+        if self.comment_mode:
+            output.append(f"\n┬{'─' * (width-2)}┬")
+            output.append(f"│{self.terminal.bold_white('Add Comment:').center(width+13)}│")
+            output.append(f"├{'─' * (width-2)}┤")
+            comment_text = self.comment_text
+            if len(comment_text) > width - 4:
+                comment_text = comment_text[:width-7] + "..."
+            output.append(f"│ {comment_text.ljust(width-4)} │")
+            output.append(f"├{'─' * (width-2)}┤")
+            output.append(f"│ {self.terminal.bright_yellow('Press Enter to submit or ESC to cancel').center(width+7)} │")
+            output.append(f"╰{'─' * (width-2)}╯")
+        
         return "\n".join(output)
 
     def update_post(self, post, reddit_instance):
@@ -364,9 +377,7 @@ class PostView:
 
     def report_post(self):
         if not self.reddit_instance:
-            self.terminal.move(self.terminal.height - 3, 0)
-            print(self.terminal.red("You must be logged in to report posts"))
-            return True
+            return "error:not_logged_in"
 
         width = self.content_width
         output = []
@@ -413,7 +424,8 @@ class PostView:
                 output.append(f"│{self.terminal.bold_red('Invalid choice').center(width+13)}│")
                 output.append(f"╰{'─' * (width-2)}╯")
                 self.terminal.move(0, 0)
-                print("\n".join(output))
+                print("\n".join(output)) 
+            return "reported"
         except ValueError:
             output = []
             output.append(f"┬{'─' * (width-2)}┬")
@@ -422,13 +434,7 @@ class PostView:
             self.terminal.move(0, 0)
             print("\n".join(output))
         except Exception as e:
-            output = []
-            output.append(f"┬{'─' * (width-2)}┬")
-            output.append(f"│{self.terminal.bold_red(f'Error reporting post: {str(e)}').center(width+13)}│")
-            output.append(f"╰{'─' * (width-2)}╯")
-            self.terminal.move(0, 0)
-            print("\n".join(output))
-        return True
+            return f"error:{str(e)}"
 
     def get_image_links(self, post):
         links = []
@@ -468,3 +474,42 @@ class PostView:
                         self.comment_lines.extend(self.display_comment(comment, 0, self.content_width))
         except Exception as e:
             print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red(f"Error submitting comment: {e}"))
+
+    def handle_input(self, key):
+        if key == '\x1b[A':  # Up Arrow
+            self.scroll_comments_up()
+            return True
+        elif key == '\x1b[B':  # Down Arrow
+            self.scroll_comments_down()
+            return True
+        elif key == '\x1b[D':  # Left Arrow
+            return "back"
+        elif key == 'k':  # Upvote
+            self.upvote_post()
+            return True
+        elif key == 'j':  # Downvote
+            self.downvote_post()
+            return True
+        elif key == '3':  # Report
+            return self.report_post()
+        elif key == '\t':  # Tab
+            self.comment_sort_index = (self.comment_sort_index + 1) % len(self.comment_sort_options)
+            self.comment_sort_mode = self.comment_sort_options[self.comment_sort_index]
+            if self.current_post:
+                comments = list(self.current_post.comments.list())
+                if self.comment_sort_mode == "best":
+                    comments.sort(key=lambda x: x.score, reverse=True)
+                elif self.comment_sort_mode == "top":
+                    comments.sort(key=lambda x: x.score, reverse=True)
+                elif self.comment_sort_mode == "new":
+                    comments.sort(key=lambda x: x.created_utc, reverse=True)
+                elif self.comment_sort_mode == "controversial":
+                    comments.sort(key=lambda x: x.controversiality, reverse=True)
+                self.comments = comments
+                self.comment_lines = []
+                for comment in self.comments:
+                    if hasattr(comment, 'body'):
+                        self.comment_lines.extend(self.display_comment(comment, 0, self.content_width))
+                self.comment_scroll_offset = 0
+            return True
+        return False

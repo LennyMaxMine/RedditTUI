@@ -37,7 +37,7 @@ class MessagesScreen:
         output = []
         
         if self.compose_mode:
-            output.append(f"┬{'─' * (width-2)}┤")
+            output.append(f"┬{'─' * (width-2)}┬")
             output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('Compose Message').center(width+21)}│")
             output.append(f"├{'─' * (width-2)}┤")
 
@@ -234,14 +234,13 @@ class MessagesScreen:
         
         self.is_loading = True
         try:
-            self.messages = list(self.reddit_instance.inbox.all(limit=self.settings.posts_per_page))
+            self.messages = list(self.reddit_instance.inbox.all(limit=self.settings.get_setting('posts_per_page')))
             self.selected_index = 0
             self.scroll_offset = 0
             self.logger.info(f"Loaded {len(self.messages)} messages")
         except Exception as e:
             error_msg = f"Error loading messages: {str(e)}"
-            print(f"Error loading messages: {str(e)}")
-            self.terminal.print_at(0, 0, error_msg, self.theme_service.get_color("error"))
+            self.terminal.print_at(0, 0, error_msg, self.theme_service.get_style("error"))
             self.logger.error(error_msg, exc_info=True)
         finally:
             self.is_loading = False
