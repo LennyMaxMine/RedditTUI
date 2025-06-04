@@ -1,12 +1,12 @@
 {
-    "name": "Monokai",
-    "description": "A high contrast theme inspired by Monokai",
+    "name": "High Contrast",
+    "description": "A high contrast theme for better visibility",
     "colors": {
-        "title": "#00ffff",
+        "title": "#ffffff",
         "subreddit": "#ffff00",
-        "author": "#ff00ff",
-        "score": "#00ff00",
-        "comments": "#ff0000",
+        "author": "#00ffff",
+        "score": "#ff00ff",
+        "comments": "#00ff00",
         "content": "#ffffff",
         "sidebar": "#ffffff",
         "sidebar_item": "#ffffff",

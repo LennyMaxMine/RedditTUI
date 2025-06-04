@@ -1,14 +1,22 @@
 {
   "name": "Dark",
-  "description": "A dark theme",
+  "description": "A high contrast dark theme",
   "colors": {
-    "background": "#1e1e1e",
-    "text": "#d4d4d4",
-    "title": "#569cd6",
-    "subreddit": "#c586c0",
-    "author": "#ce9178",
-    "score": "#608b4e",
-    "comments": "#9cdcb3",
-    "border": "#555555"
+    "background": "#000000",
+    "text": "#ffffff",
+    "title": "#00ffff",
+    "subreddit": "#ffff00",
+    "author": "#ff00ff",
+    "score": "#00ff00",
+    "comments": "#ff0000",
+    "border": "#ffffff",
+    "sidebar": "#ffffff",
+    "sidebar_item": "#ffffff",
+    "panel_title": "#ffffff",
+    "error": "#ff0000",
+    "success": "#00ff00",
+    "warning": "#ffff00",
+    "info": "#00ffff",
+    "highlight": "#ff00ff"
   }
 } 

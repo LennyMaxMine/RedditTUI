@@ -1,14 +1,22 @@
 {
   "name": "Light",
-  "description": "A light theme",
+  "description": "A high contrast light theme",
   "colors": {
     "background": "#ffffff",
-    "text": "#ffcccc",
+    "text": "#000000",
     "title": "#0000ff",
     "subreddit": "#800080",
-    "author": "#ffa500",
+    "author": "#ff0000",
     "score": "#008000",
     "comments": "#ff0000",
-    "border": "#cccccc"
+    "border": "#000000",
+    "sidebar": "#000000",
+    "sidebar_item": "#000000",
+    "panel_title": "#000000",
+    "error": "#ff0000",
+    "success": "#008000",
+    "warning": "#800080",
+    "info": "#0000ff",
+    "highlight": "#ff0000"
   }
 } 

@@ -19,8 +19,15 @@ class ThemeService:
     def _initialize_themes(self):
         self.logger = Logger()
         self.themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'themes')
-        self.themes = {
-            "default": {
+        self.themes = {}
+        self.current_theme = "default"
+        
+        # First load custom themes from JSON files
+        self.load_custom_themes()
+        
+        # Then add default themes if they don't exist
+        if "default" not in self.themes:
+            self.themes["default"] = {
                 "title": "#00ffff",
                 "subreddit": "#00ff00",
                 "author": "#ffff00",
@@ -35,8 +42,10 @@ class ThemeService:
                 "warning": "#ffff00",
                 "info": "#00ffff",
                 "highlight": "#ff00ff"
-            },
-            "dark": {
+            }
+        
+        if "dark" not in self.themes:
+            self.themes["dark"] = {
                 "title": "#4ec9b0",
                 "subreddit": "#9cdcfe",
                 "author": "#dcdcaa",
@@ -51,8 +60,10 @@ class ThemeService:
                 "warning": "#dcdcaa",
                 "info": "#4ec9b0",
                 "highlight": "#ce9178"
-            },
-            "light": {
+            }
+        
+        if "light" not in self.themes:
+            self.themes["light"] = {
                 "title": "#008080",
                 "subreddit": "#008000",
                 "author": "#808000",
@@ -68,9 +79,8 @@ class ThemeService:
                 "info": "#008080",
                 "highlight": "#800080"
             }
-        }
-        self.current_theme = "default"
-        self.load_custom_themes()
+        
+        # Finally load theme from settings
         self.load_theme_from_settings()
 
     def load_themes(self):

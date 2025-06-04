@@ -1,14 +1,22 @@
 {
   "name": "Oceanic",
-  "description": "An oceanic theme",
+  "description": "A high contrast oceanic theme",
   "colors": {
-    "background": "#0f1a2b",
-    "text": "#a3bdc9",
-    "title": "#4ec9b0",
-    "subreddit": "#569cd6",
-    "author": "#c586c0",
-    "score": "#608b4e",
-    "comments": "#9cdcb3",
-    "border": "#3a5e7a"
+    "background": "#000000",
+    "text": "#ffffff",
+    "title": "#00ffff",
+    "subreddit": "#ffff00",
+    "author": "#ff00ff",
+    "score": "#00ff00",
+    "comments": "#ff0000",
+    "border": "#ffffff",
+    "sidebar": "#ffffff",
+    "sidebar_item": "#ffffff",
+    "panel_title": "#ffffff",
+    "error": "#ff0000",
+    "success": "#00ff00",
+    "warning": "#ffff00",
+    "info": "#00ffff",
+    "highlight": "#ff00ff"
   }
 } 

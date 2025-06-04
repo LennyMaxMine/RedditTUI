@@ -119,6 +119,7 @@ class RedditTUI:
         elif option == "Settings":
             self.current_screen = 'settings'
             self.header.update_title("RedditTUI")
+            self.sidebar.active = False
             self.logger.info("Entered settings screen")
         elif option == "Subreddits":
             self.current_screen = 'subreddits'
@@ -343,7 +344,7 @@ class RedditTUI:
                     posts = list(subreddit.hot(limit=self.settings.get_setting('posts_per_page')))
 
                 if not self.settings.get_setting('show_nsfw'):
-                    posts = [post for post in posts if not post.over_18]
+                    posts = [post for post in posts if not post.over_18] 
 
                 if posts:
                     self.post_list.update_posts(posts)
@@ -461,6 +462,9 @@ class RedditTUI:
                                     continue
                                 self.current_screen = 'home'
                                 self.active_component = 'sidebar'
+                                self.sidebar.active = True
+                                self.sidebar.selected_index = 0
+                                self.post_list.active = False
                                 self.header.update_title(f"RedditTUI - {self.current_feed.capitalize()} Feed")
                                 self.update_posts_from_reddit()
                         elif key == '\x1b[B':  # Down Arrow
@@ -491,10 +495,25 @@ class RedditTUI:
                             elif self.current_screen == 'subreddits':
                                 self.subreddits_screen.scroll_down()
                             elif self.current_screen == 'settings':
-                                if self.settings_screen.theme_screen_activated != True:
-                                    self.settings_screen.previous_option()
-                                else:
-                                    self.settings_screen.theme_scroll_up()
+                                if self.settings_screen.theme_screen_activated:
+                                    if self.settings_screen.handle_input(key):
+                                        self.current_screen = 'home'
+                                        self.active_component = 'sidebar'
+                                        self.sidebar.active = True
+                                        self.settings.load_settings_from_file()
+                                        self.settings.apply_settings()
+                                elif self.settings_screen.handle_input(key):
+                                    self.current_screen = 'home'
+                                    self.active_component = 'sidebar'
+                                    self.sidebar.active = True
+                                    self.settings.load_settings_from_file()
+                                    self.settings.apply_settings()
+                                # Only reset sidebar state if returning to home
+                                if self.current_screen == 'home':
+                                    self.sidebar.active = True
+                                    self.sidebar.selected_index = 0
+                                    self.post_list.active = False
+                                    self.active_component = 'sidebar'
                             elif self.current_screen == 'profile':
                                 items = self.user_profile_screen.posts if self.user_profile_screen.content_index == 0 else self.user_profile_screen.comments
                                 if self.user_profile_screen.selected_index < min(self.user_profile_screen.visible_results - 1, len(items) - self.user_profile_screen.scroll_offset - 1):
@@ -716,6 +735,9 @@ class RedditTUI:
                                     continue
                                 self.current_screen = 'home'
                                 self.active_component = 'sidebar'
+                                self.sidebar.active = True
+                                self.sidebar.selected_index = 0
+                                self.post_list.active = False
                                 self.header.update_title(f"RedditTUI - {self.current_feed.capitalize()} Feed")
                                 self.update_posts_from_reddit()
                             elif key == '3' and self.current_screen == 'post':
@@ -788,19 +810,18 @@ class RedditTUI:
                                     self.current_screen = 'post'
                             elif self.current_screen == 'settings':
                                 if self.settings_screen.theme_screen_activated:
-                                    if self.settings_screen.handle_input():
+                                    if self.settings_screen.handle_input(key):
                                         self.current_screen = 'home'
                                         self.active_component = 'sidebar'
+                                        self.sidebar.active = True
                                         self.settings.load_settings_from_file()
                                         self.settings.apply_settings()
-                                elif self.settings_screen.handle_enter():
-                                    if self.settings_screen.theme_screen_activated:
-                                        self.current_screen = 'settings'
-                                    else:
-                                        self.current_screen = 'home'
-                                        self.active_component = 'sidebar'
-                                        self.settings.load_settings_from_file()
-                                        self.settings.apply_settings()
+                                elif self.settings_screen.handle_input(key):
+                                    self.current_screen = 'home'
+                                    self.active_component = 'sidebar'
+                                    self.sidebar.active = True
+                                    self.settings.load_settings_from_file()
+                                    self.settings.apply_settings()
                                 # Only reset sidebar state if returning to home
                                 if self.current_screen == 'home':
                                     self.sidebar.active = True

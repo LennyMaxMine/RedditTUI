@@ -5,12 +5,14 @@ import time
 from ui.screens.login_screen import LoginScreen
 from ui.screens.theme_screen import ThemeScreen
 from services.theme_service import ThemeService
+from utils.logger import Logger
 import sys
 
 class SettingsScreen:
     def __init__(self, terminal):
         self.terminal = terminal
         self.theme_service = ThemeService()
+        self.logger = Logger()
         self.selected_option = 0
         self.settings_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'settings.json')
         self.settings = self.load_settings()
@@ -25,17 +27,25 @@ class SettingsScreen:
         self.posts_per_page_options = ["10", "25", "50", "100", "250", "500"]
         self.comment_depth_options = ["1", "2", "3", "4", "5", "25", "50", "100"]
         self.boolean_options = ["True", "False"]
+        self.spinner_refresh_rate_options = ["50", "100", "200", "500", "1000"]
         self.message = None
         self.message_time = 0
         self.login_screen = LoginScreen(None)
         self.theme_screen = ThemeScreen(terminal)
+        self.theme_screen.themes = self.theme_service.get_available_themes()
+        self.theme_screen.current_theme = self.theme_service.get_current_theme()
         self.reddit_instance = None
         self.theme_screen_activated = False
+        self.logger.info("Settings screen initialized")
 
     def show_message(self, message, is_error=False):
         self.message = message
         self.message_time = time.time()
         self.is_error = is_error
+        if is_error:
+            self.logger.error(message)
+        else:
+            self.logger.info(message)
 
     def load_settings(self):
         default_settings = {
@@ -49,30 +59,39 @@ class SettingsScreen:
         
         try:
             if os.path.exists(self.settings_file):
+                self.logger.info(f"Loading settings from {self.settings_file}")
                 with open(self.settings_file, 'r') as f:
                     loaded_settings = json.load(f)
                     for key, value in default_settings.items():
                         if key not in loaded_settings:
                             loaded_settings[key] = value
+                    self.logger.info("Settings loaded successfully")
                     return loaded_settings
             else:
+                self.logger.info("No settings file found, creating with defaults")
                 with open(self.settings_file, 'w') as f:
                     json.dump(default_settings, f, indent=4)
                 return default_settings
         except Exception as e:
-            self.show_message(f"Error loading settings: {e}", True)
+            error_msg = f"Error loading settings: {e}"
+            self.show_message(error_msg, True)
+            self.logger.error(error_msg, exc_info=True)
             return default_settings
 
     def save_settings(self):
         try:
             os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
+            self.logger.info(f"Saving settings to {self.settings_file}")
             with open(self.settings_file, 'w') as f:
                 json.dump(self.settings, f, indent=4)
             self.theme_service.set_theme(self.settings["theme"].lower())
             self.show_message("Settings saved successfully!")
+            self.logger.info("Settings saved successfully")
             return True
         except Exception as e:
-            self.show_message(f"Error saving settings: {e}", True)
+            error_msg = f"Error saving settings: {e}"
+            self.show_message(error_msg, True)
+            self.logger.error(error_msg, exc_info=True)
             return False
 
     def display(self):
@@ -83,7 +102,7 @@ class SettingsScreen:
         output = []
         
         output.append(f"┬{'─' * (width-2)}┤")
-        output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('Settings').center(width+21)}│")
+        output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('Settings').center(width+22)}│")
         
         for idx, option in enumerate(self.options):
             if idx == self.selected_option:
@@ -94,9 +113,9 @@ class SettingsScreen:
             output.append(f"├{'─' * (width-2)}┤")
 
             if prefix != "│   ":
-                output.append(f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(option[0])}".ljust(width+45) + "│")
+                output.append(f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(option[0])}".ljust(width+46) + "│")
             else:
-                output.append(f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(option[0])}".ljust(width+22) + "│")
+                output.append(f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(option[0])}".ljust(width+23) + "│")
             
             if option[0] == "Login":
                 if self.reddit_instance:
@@ -146,12 +165,18 @@ class SettingsScreen:
                 output.append(f"{options_line}".ljust(width+47) + "│")
             
             elif option[0] == "Spinner refresh rate (ms)":
-                output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))('Press Enter to change spinner refresh rate')}".ljust(width+22) + "│")
-                output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('Current refresh rate: ' + option[1])}".ljust(width+24) + "│")
+                options_line = "│    "
+                for rate in self.spinner_refresh_rate_options:
+                    if rate == option[1]:
+                        options_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))(f"[{rate}] ")
+                    else:
+                        options_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(f"{rate} ")
+                output.append(f"{options_line}".ljust(width+147) + "│")
             
             elif option[0] == "Save Settings":
                 output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))('Press Enter to save current settings')}".ljust(width+22) + "│")
-                output.append(f"╰{'─' * (width-2)}╯")
+
+        output.append(f"╰{'─' * (width-2)}╯")
         
         output.append(f"")
         output.append(f"╭{'─' * (width-2)}╮")
@@ -175,85 +200,218 @@ class SettingsScreen:
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
     def handle_enter(self):
-        if self.selected_option == 1:  # Theme
+        if self.selected_option == 0:  # Theme
+            self.logger.info("Activating theme screen")
             self.theme_screen_activated = True
-            return True
-        elif self.selected_option == 0:  # Login
-            return True
-        elif self.selected_option == len(self.options) - 1:  # Save Settings
-            if self.save_settings():
-                return True
+            return False
+        elif self.selected_option == 1:  # Posts per page
+            current_idx = self.posts_per_page_options.index(self.settings["posts_per_page"])
+            self.settings["posts_per_page"] = self.posts_per_page_options[(current_idx + 1) % len(self.posts_per_page_options)]
+            self.logger.info(f"Changed posts per page to {self.settings['posts_per_page']}")
+            self.save_settings()
+            return False
+        elif self.selected_option == 2:  # Comment depth
+            current_idx = self.comment_depth_options.index(self.settings["comment_depth"])
+            self.settings["comment_depth"] = self.comment_depth_options[(current_idx + 1) % len(self.comment_depth_options)]
+            self.logger.info(f"Changed comment depth to {self.settings['comment_depth']}")
+            self.save_settings()
+            return False
+        elif self.selected_option == 3:  # Auto load comments
+            current_idx = self.boolean_options.index(self.settings["auto_load_comments"])
+            self.settings["auto_load_comments"] = self.boolean_options[(current_idx + 1) % len(self.boolean_options)]
+            self.logger.info(f"Changed auto load comments to {self.settings['auto_load_comments']}")
+            self.save_settings()
+            return False
+        elif self.selected_option == 4:  # Show NSFW content
+            current_idx = self.boolean_options.index(self.settings["show_nsfw"])
+            self.settings["show_nsfw"] = self.boolean_options[(current_idx + 1) % len(self.boolean_options)]
+            self.logger.info(f"Changed show NSFW content to {self.settings['show_nsfw']}")
+            self.save_settings()
+            return False
+        elif self.selected_option == 5:  # Spinner refresh rate
+            current_idx = self.spinner_refresh_rate_options.index(self.settings["spinner_refresh_rate"])
+            self.settings["spinner_refresh_rate"] = self.spinner_refresh_rate_options[(current_idx + 1) % len(self.spinner_refresh_rate_options)]
+            self.logger.info(f"Changed spinner refresh rate to {self.settings['spinner_refresh_rate']}")
+            self.save_settings()
+            return False
         return False
 
     def theme_scroll_up(self):
-        self.theme_screen.scroll_up()
+        if self.theme_screen_activated:
+            self.logger.debug("Scrolling theme screen up")
+            self.theme_screen.scroll_up()
 
     def theme_scroll_down(self):
-        self.theme_screen.scroll_down()
+        if self.theme_screen_activated:
+            self.logger.debug("Scrolling theme screen down")
+            self.theme_screen.scroll_down()
 
-    def handle_input(self):
-        if self.theme_screen_activated:  # Theme screen is active
-            with self.terminal.cbreak():
-                key = self.terminal.inkey()
-                if key.code == self.terminal.KEY_UP:
-                    self.theme_screen.scroll_up()
-                elif key.code == self.terminal.KEY_DOWN:
-                    self.theme_screen.scroll_down()
-                elif key.code == self.terminal.KEY_ENTER:
-                    selected_theme = self.theme_screen.select_theme()
-                    if selected_theme:
-                        self.settings["theme"] = selected_theme
-                        self.theme_service.set_theme(selected_theme.lower())
-                        self.theme_screen_activated = False
-                        return True
-                elif key.code == self.terminal.KEY_ESCAPE:
+    def handle_input(self, key):
+        if self.theme_screen_activated:
+            if key == '\x1b[A':  # Up Arrow
+                self.theme_screen.scroll_up()
+                return False
+            elif key == '\x1b[B':  # Down Arrow
+                self.theme_screen.scroll_down()
+                return False
+            elif key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter
+                selected_theme = self.theme_screen.select_theme()
+                if selected_theme:
+                    self.logger.info(f"Selected theme: {selected_theme}")
+                    self.settings["theme"] = selected_theme
+                    self.theme_service.set_theme(selected_theme.lower())
                     self.theme_screen_activated = False
+                    self.save_settings()
+                    return True
+            elif key == '\x1b':  # Escape
+                self.logger.info("Exiting theme screen")
+                self.theme_screen_activated = False
+                return False
+            return False
+        else:
+            if key == '\x1b[A':  # Up Arrow
+                self.previous_option()
+                self.logger.debug(f"Selected option: {self.options[self.selected_option][0]}")
+                return False
+            elif key == '\x1b[B':  # Down Arrow
+                self.next_option()
+                self.logger.debug(f"Selected option: {self.options[self.selected_option][0]}")
+                return False
+            elif key == '\x1b[C':  # Right Arrow
+                if self.selected_option == 0:  # Theme
+                    self.logger.info("Activating theme screen")
+                    self.theme_screen_activated = True
                     return False
-            return False
-        elif self.selected_option == 0:  # Login
-            print(self.terminal.clear())
-            self.login_screen.display()
-            if self.login_screen.reddit_instance:
-                self.reddit_instance = self.login_screen.reddit_instance
-                self.show_message(f"Successfully logged in as {self.reddit_instance.user.me().name}")
-            else:
-                self.reddit_instance = None
-                self.show_message("Login failed", True)
-            return False
-        elif self.selected_option == 6:  # Save Settings
-            if self.save_settings():
+                elif self.selected_option == 1:  # Posts Per Page
+                    current_idx = self.posts_per_page_options.index(self.settings["posts_per_page"])
+                    self.settings["posts_per_page"] = self.posts_per_page_options[(current_idx + 1) % len(self.posts_per_page_options)]
+                    self.logger.info(f"Changed posts per page to {self.settings['posts_per_page']}")
+                    self.save_settings()
+                elif self.selected_option == 2:  # Comment Depth
+                    current_idx = self.comment_depth_options.index(self.settings["comment_depth"])
+                    self.settings["comment_depth"] = self.comment_depth_options[(current_idx + 1) % len(self.comment_depth_options)]
+                    self.logger.info(f"Changed comment depth to {self.settings['comment_depth']}")
+                    self.save_settings()
+                elif self.selected_option == 3:  # Auto Load Comments
+                    current_idx = self.boolean_options.index(self.settings["auto_load_comments"])
+                    self.settings["auto_load_comments"] = self.boolean_options[(current_idx + 1) % len(self.boolean_options)]
+                    self.logger.info(f"Changed auto load comments to {self.settings['auto_load_comments']}")
+                    self.save_settings()
+                elif self.selected_option == 4:  # Show NSFW Content
+                    current_idx = self.boolean_options.index(self.settings["show_nsfw"])
+                    self.settings["show_nsfw"] = self.boolean_options[(current_idx + 1) % len(self.boolean_options)]
+                    self.logger.info(f"Changed show NSFW content to {self.settings['show_nsfw']}")
+                    self.save_settings()
+                elif self.selected_option == 5:  # Spinner Refresh Rate
+                    current_idx = self.spinner_refresh_rate_options.index(self.settings["spinner_refresh_rate"])
+                    self.settings["spinner_refresh_rate"] = self.spinner_refresh_rate_options[(current_idx + 1) % len(self.spinner_refresh_rate_options)]
+                    self.logger.info(f"Changed spinner refresh rate to {self.settings['spinner_refresh_rate']}")
+                    self.save_settings()
+                return False
+            elif key == '\x1b[D':  # Left Arrow
+                if self.selected_option == 0:  # Theme
+                    self.logger.info("Activating theme screen")
+                    self.theme_screen_activated = True
+                    return False
+                elif self.selected_option == 1:  # Posts Per Page
+                    current_idx = self.posts_per_page_options.index(self.settings["posts_per_page"])
+                    self.settings["posts_per_page"] = self.posts_per_page_options[(current_idx - 1) % len(self.posts_per_page_options)]
+                    self.logger.info(f"Changed posts per page to {self.settings['posts_per_page']}")
+                    self.save_settings()
+                elif self.selected_option == 2:  # Comment Depth
+                    current_idx = self.comment_depth_options.index(self.settings["comment_depth"])
+                    self.settings["comment_depth"] = self.comment_depth_options[(current_idx - 1) % len(self.comment_depth_options)]
+                    self.logger.info(f"Changed comment depth to {self.settings['comment_depth']}")
+                    self.save_settings()
+                elif self.selected_option == 3:  # Auto Load Comments
+                    current_idx = self.boolean_options.index(self.settings["auto_load_comments"])
+                    self.settings["auto_load_comments"] = self.boolean_options[(current_idx - 1) % len(self.boolean_options)]
+                    self.logger.info(f"Changed auto load comments to {self.settings['auto_load_comments']}")
+                    self.save_settings()
+                elif self.selected_option == 4:  # Show NSFW Content
+                    current_idx = self.boolean_options.index(self.settings["show_nsfw"])
+                    self.settings["show_nsfw"] = self.boolean_options[(current_idx - 1) % len(self.boolean_options)]
+                    self.logger.info(f"Changed show NSFW content to {self.settings['show_nsfw']}")
+                    self.save_settings()
+                elif self.selected_option == 5:  # Spinner Refresh Rate
+                    current_idx = self.spinner_refresh_rate_options.index(self.settings["spinner_refresh_rate"])
+                    self.settings["spinner_refresh_rate"] = self.spinner_refresh_rate_options[(current_idx - 1) % len(self.spinner_refresh_rate_options)]
+                    self.logger.info(f"Changed spinner refresh rate to {self.settings['spinner_refresh_rate']}")
+                    self.save_settings()
+                return False
+            elif key == '\t':  # Tab
+                return self.next_value()
+            elif key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter
+                return self.handle_enter()
+            elif key == '\x1b':  # Escape
+                self.logger.info("Exiting settings screen")
                 return True
-        return False
+            return False
 
     def next_option(self):
         self.selected_option = (self.selected_option + 1) % len(self.options)
+        self.logger.debug(f"Selected option: {self.options[self.selected_option][0]}")
 
     def previous_option(self):
         self.selected_option = (self.selected_option - 1) % len(self.options)
+        self.logger.debug(f"Selected option: {self.options[self.selected_option][0]}")
 
     def next_value(self):
-        if self.selected_option == 0:  # Login
+        if self.selected_option == 0:  # Theme
             return False
-        elif self.selected_option == 1:  # Theme
-            return False
-        elif self.selected_option == 2:  # Posts Per Page
+        elif self.selected_option == 1:  # Posts Per Page
             current_idx = self.posts_per_page_options.index(self.settings["posts_per_page"])
             self.settings["posts_per_page"] = self.posts_per_page_options[(current_idx + 1) % len(self.posts_per_page_options)]
+            self.logger.info(f"Changed posts per page to {self.settings['posts_per_page']}")
             self.save_settings()
-        elif self.selected_option == 3:  # Comment Depth
+        elif self.selected_option == 2:  # Comment Depth
             current_idx = self.comment_depth_options.index(self.settings["comment_depth"])
             self.settings["comment_depth"] = self.comment_depth_options[(current_idx + 1) % len(self.comment_depth_options)]
+            self.logger.info(f"Changed comment depth to {self.settings['comment_depth']}")
             self.save_settings()
-        elif self.selected_option == 4:  # Auto Load Comments
+        elif self.selected_option == 3:  # Auto Load Comments
             current_idx = self.boolean_options.index(self.settings["auto_load_comments"])
             self.settings["auto_load_comments"] = self.boolean_options[(current_idx + 1) % len(self.boolean_options)]
+            self.logger.info(f"Changed auto load comments to {self.settings['auto_load_comments']}")
             self.save_settings()
-        elif self.selected_option == 5:  # Show NSFW Content
+        elif self.selected_option == 4:  # Show NSFW Content
             current_idx = self.boolean_options.index(self.settings["show_nsfw"])
             self.settings["show_nsfw"] = self.boolean_options[(current_idx + 1) % len(self.boolean_options)]
+            self.logger.info(f"Changed show NSFW content to {self.settings['show_nsfw']}")
             self.save_settings()
-        elif self.selected_option == 6:  # Spinner Refresh Rate
-            current_idx = self.boolean_options.index(self.settings["spinner_refresh_rate"])
-            self.settings["spinner_refresh_rate"] = self.boolean_options[(current_idx + 1) % len(self.boolean_options)]
+        elif self.selected_option == 5:  # Spinner Refresh Rate
+            current_idx = self.spinner_refresh_rate_options.index(self.settings["spinner_refresh_rate"])
+            self.settings["spinner_refresh_rate"] = self.spinner_refresh_rate_options[(current_idx + 1) % len(self.spinner_refresh_rate_options)]
+            self.logger.info(f"Changed spinner refresh rate to {self.settings['spinner_refresh_rate']}")
+            self.save_settings()
+        return False
+
+    def previous_value(self):
+        if self.selected_option == 0:  # Theme
+            return False
+        elif self.selected_option == 1:  # Posts Per Page
+            current_idx = self.posts_per_page_options.index(self.settings["posts_per_page"])
+            self.settings["posts_per_page"] = self.posts_per_page_options[(current_idx - 1) % len(self.posts_per_page_options)]
+            self.logger.info(f"Changed posts per page to {self.settings['posts_per_page']}")
+            self.save_settings()
+        elif self.selected_option == 2:  # Comment Depth
+            current_idx = self.comment_depth_options.index(self.settings["comment_depth"])
+            self.settings["comment_depth"] = self.comment_depth_options[(current_idx - 1) % len(self.comment_depth_options)]
+            self.logger.info(f"Changed comment depth to {self.settings['comment_depth']}")
+            self.save_settings()
+        elif self.selected_option == 3:  # Auto Load Comments
+            current_idx = self.boolean_options.index(self.settings["auto_load_comments"])
+            self.settings["auto_load_comments"] = self.boolean_options[(current_idx - 1) % len(self.boolean_options)]
+            self.logger.info(f"Changed auto load comments to {self.settings['auto_load_comments']}")
+            self.save_settings()
+        elif self.selected_option == 4:  # Show NSFW Content
+            current_idx = self.boolean_options.index(self.settings["show_nsfw"])
+            self.settings["show_nsfw"] = self.boolean_options[(current_idx - 1) % len(self.boolean_options)]
+            self.logger.info(f"Changed show NSFW content to {self.settings['show_nsfw']}")
+            self.save_settings()
+        elif self.selected_option == 5:  # Spinner Refresh Rate
+            current_idx = self.spinner_refresh_rate_options.index(self.settings["spinner_refresh_rate"])
+            self.settings["spinner_refresh_rate"] = self.spinner_refresh_rate_options[(current_idx - 1) % len(self.spinner_refresh_rate_options)]
+            self.logger.info(f"Changed spinner refresh rate to {self.settings['spinner_refresh_rate']}")
             self.save_settings()
         return False 

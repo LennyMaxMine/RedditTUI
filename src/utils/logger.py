@@ -11,6 +11,8 @@ class Logger:
             os.makedirs('logs')
             
         log_file = f'logs/reddit_tui_{datetime.now().strftime("%Y%m%d")}.log'
+        with open(log_file, 'w') as f:
+            pass
         file_handler = logging.FileHandler(log_file)
         file_handler.setLevel(logging.INFO)
         
