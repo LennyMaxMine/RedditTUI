@@ -52,6 +52,8 @@ class RedditTUI:
         self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         self.loading_index = 0
         self.last_loading_update = 0
+        self.current_screen = 'home'
+        self.active_component = 'sidebar'
         
         if self.reddit_instance:
             self.header.update_title(f"Reddit TUI - Logged in as {self.reddit_instance.user.me().name}")
@@ -75,8 +77,6 @@ class RedditTUI:
             ]
             self.post_list.update_posts(test_posts)
 
-        self.current_screen = 'home'
-        self.active_component = 'sidebar'
         self.post_options_view.reddit_instance = self.reddit_instance
         self.logger.info("RedditTUI initialized")
 
@@ -161,7 +161,8 @@ class RedditTUI:
     def update_posts_from_reddit(self, load_more=False):
         self.post_list.current_page = self.current_feed
         if self.reddit_instance:
-            self.is_loading = True
+            self.post_list.is_loading = True
+            self.render()
             try:
                 posts = []  # Initialize posts variable
                 if load_more and self.last_loaded_post:
@@ -201,12 +202,12 @@ class RedditTUI:
                 self.logger.error(error_msg, exc_info=True)
                 self.post_list.loading_more = False
             finally:
-                self.is_loading = False
+                self.post_list.is_loading = False
+                self.render()
 
     def load_post_comments(self, post):
         if not post or not hasattr(post, 'comments'):
             return []
-        self.is_loading = True
         try:
             if self.settings.get_setting('auto_load_comments'):
                 depth = max(0, min(self.settings.get_setting('comment_depth'), 10))
@@ -221,8 +222,23 @@ class RedditTUI:
             print(self.term.move(self.term.height - 3, 0) + self.term.red(error_msg))
             self.logger.error(error_msg, exc_info=True)
             return []
-        finally:
-            self.is_loading = False
+
+    def load_comments_async(self, post):
+        if not post or not hasattr(post, 'comments'):
+            return
+        self.post_view.display_post(post)
+        self.current_screen = 'post'
+        self.active_component = 'post_view'
+        self.render()
+        
+        try:
+            comments = self.load_post_comments(post)
+            self.post_view.display_post(post, comments)
+            self.render()
+        except Exception as e:
+            error_msg = f"Error loading comments: {e}"
+            print(self.term.move(self.term.height - 3, 0) + self.term.red(error_msg))
+            self.logger.error(error_msg, exc_info=True)
 
     def render(self):
         print(self.term.clear())
@@ -303,7 +319,8 @@ class RedditTUI:
 
         if self.is_loading:
             current_time = time.time()
-            if current_time - self.last_loading_update >= 0.1:  # Update every 100ms
+            refresh_rate = float(self.settings.get_setting('spinner_refresh_rate')) / 1000  # Convert ms to seconds
+            if current_time - self.last_loading_update >= refresh_rate:
                 self.loading_index = (self.loading_index + 1) % len(self.loading_chars)
                 self.last_loading_update = current_time
             loading_text = f"{self.term.bright_blue(self.loading_chars[self.loading_index])} Loading..."
@@ -452,10 +469,7 @@ class RedditTUI:
                                 if self.active_component == 'post_list':
                                     result = self.post_list.handle_input(key)
                                     if result and not isinstance(result, bool):  # Only open post if result is a post object
-                                        comments = self.load_post_comments(result)
-                                        self.post_view.display_post(result, comments)
-                                        self.post_view.from_search = False
-                                        self.current_screen = 'post'
+                                        self.load_comments_async(result)
                                 elif self.active_component == 'sidebar':
                                     self.sidebar.navigate("down")
                                     selected_option = self.sidebar.get_selected_option()
@@ -507,17 +521,12 @@ class RedditTUI:
                             elif self.current_screen == 'home' and self.active_component == 'post_list':
                                 selected_post = self.post_list.get_selected_post()
                                 if selected_post:
-                                    comments = self.load_post_comments(selected_post)
-                                    self.post_view.display_post(selected_post, comments)
-                                    self.post_view.from_search = False
-                                    self.current_screen = 'post'
+                                    self.load_comments_async(selected_post)
                             elif self.current_screen == 'search':
                                 selected_post = self.search_screen.get_selected_post()
                                 if selected_post:
-                                    comments = self.load_post_comments(selected_post)
-                                    self.post_view.display_post(selected_post, comments)
+                                    self.load_comments_async(selected_post)
                                     self.post_view.from_search = True
-                                    self.current_screen = 'post'
                             elif self.current_screen == 'settings':
                                 if self.settings_screen.next_value():
                                     self.current_screen = 'settings'
@@ -770,15 +779,11 @@ class RedditTUI:
                             elif self.current_screen == 'home' and self.active_component == 'post_list':
                                 result = self.post_list.handle_input(key)
                                 if result and not isinstance(result, bool):  # Only open post if result is a post object
-                                    comments = self.load_post_comments(result)
-                                    self.post_view.display_post(result, comments)
-                                    self.post_view.from_search = False
-                                    self.current_screen = 'post'
+                                    self.load_comments_async(result)
                             elif self.current_screen == 'search':
                                 selected_post = self.search_screen.get_selected_post()
                                 if selected_post:
-                                    comments = self.load_post_comments(selected_post)
-                                    self.post_view.display_post(selected_post, comments)
+                                    self.load_comments_async(selected_post)
                                     self.post_view.from_search = True
                                     self.current_screen = 'post'
                             elif self.current_screen == 'settings':
@@ -811,8 +816,7 @@ class RedditTUI:
                             elif self.current_screen == 'profile':
                                 selected_post = self.user_profile_screen.select_item()
                                 if selected_post:
-                                    comments = self.load_post_comments(selected_post)
-                                    self.post_view.display_post(selected_post, comments)
+                                    self.load_comments_async(selected_post)
                                     self.post_view.from_search = False
                                     self.current_screen = 'post'
                             elif self.current_screen == 'messages':
@@ -858,10 +862,7 @@ class RedditTUI:
                                 if self.active_component == 'post_list':
                                     result = self.post_list.handle_input(key)
                                     if result and not isinstance(result, bool):  # Only open post if result is a post object
-                                        comments = self.load_post_comments(result)
-                                        self.post_view.display_post(result, comments)
-                                        self.post_view.from_search = False
-                                        self.current_screen = 'post'
+                                        self.load_comments_async(result)
                                 elif self.active_component == 'sidebar':
                                     self.sidebar.navigate("up")
                                     selected_option = self.sidebar.get_selected_option()

@@ -23,6 +23,7 @@ from rich import box
 from rich.prompt import Prompt
 from services.settings_service import Settings
 from services.theme_service import ThemeService
+import time
 
 #AI helped in this thingy (claude)
 class PostView:
@@ -55,6 +56,10 @@ class PostView:
             "Breaking Reddit",
             "Other"
         ]
+        self.is_loading = False
+        self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        self.loading_index = 0
+        self.last_loading_update = 0
 
     def return_current_post(self):
         return self.current_post()
@@ -236,7 +241,7 @@ class PostView:
 
     def display_post(self, post, comments=None):
         self.current_post = post
-        self.comments = comments or []
+        self.comments = []
         self.comment_lines = []
         self.comment_scroll_offset = 0
         self.comment_mode = False
@@ -246,11 +251,14 @@ class PostView:
         self.comment_sort_index = 0
         self.comment_sort_options = ["best", "top", "new", "controversial"]
         self.from_search = False
+        self.is_loading = True
 
-        # Process comments
-        for comment in self.comments:
-            if hasattr(comment, 'body'):
-                self.comment_lines.extend(self.display_comment(comment, 0, self.content_width))
+        if comments:
+            self.comments = comments
+            self.is_loading = False
+            for comment in self.comments:
+                if hasattr(comment, 'body'):
+                    self.comment_lines.extend(self.display_comment(comment, 0, self.content_width))
 
     def display(self):
         if not self.current_post:
@@ -267,6 +275,17 @@ class PostView:
         output.append(f"┬{'─' * (width-2)}┬")
         output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(title.center(width-2))}│")
         output.append(f"├{'─' * (width-2)}┤")
+        
+        if self.is_loading:
+            current_time = time.time()
+            refresh_rate = float(self.settings.get_setting('spinner_refresh_rate')) / 1000  # Convert ms to seconds
+            if current_time - self.last_loading_update >= refresh_rate:
+                self.loading_index = (self.loading_index + 1) % len(self.loading_chars)
+                self.last_loading_update = current_time
+            loading_text = f"{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))(self.loading_chars[self.loading_index])} Loading..."
+            output.append(f"│{loading_text.center(width+21)}│")
+            output.append(f"╰{'─' * (width-2)}╯")
+            return "\n".join(output)
         
         # Post metadata
         metadata = []
@@ -333,11 +352,6 @@ class PostView:
             output.append(sort_options_line)
             output.append(f"├{'─' * (width-2)}┤")
             
-            self.comment_lines = []
-            for comment in self.comments:
-                if hasattr(comment, 'body'):
-                    self.comment_lines.extend(self.display_comment(comment, 0, width))
-            
             if len(self.comment_lines) > self.terminal.height - 10:
                 scroll_info = f"Scroll: {self.comment_scroll_offset + 1}-{min(self.comment_scroll_offset + self.terminal.height - 10, len(self.comment_lines))} of {len(self.comment_lines)}"
                 output.append(f"│ {self.terminal.bright_blue(scroll_info.center(width-4))} │")
@@ -369,11 +383,14 @@ class PostView:
     def update_post(self, post, reddit_instance):
         self.current_post = post
         self.reddit_instance = reddit_instance
+        self.is_loading = True
         if hasattr(post, 'comments'):
             post.comments.replace_more(limit=0)
             self.comments = list(post.comments.list())
+            self.is_loading = False
         else:
             self.comments = []
+            self.is_loading = False
 
     def report_post(self):
         if not self.reddit_instance:

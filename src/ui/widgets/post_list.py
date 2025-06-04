@@ -4,6 +4,7 @@ from datetime import datetime
 import emoji
 from services.settings_service import Settings
 from services.theme_service import ThemeService
+import time
 
 class PostList:
     def __init__(self, terminal, visible_posts=10, current_page='home'):
@@ -12,12 +13,17 @@ class PostList:
         self.selected_index = 0
         self.scroll_offset = 0
         self.visible_posts = visible_posts
+        self.current_page = current_page
+        self.active = False
         self.loading_more = False
-        self.current_page = 'home'
+        self.is_loading = False
+        self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        self.loading_index = 0
+        self.last_loading_update = 0
         self.settings = Settings()
         self.settings.load_settings_from_file()
         self.theme_service = ThemeService()
-        self.active = False
+        self.theme_service.set_theme(self.settings.get_setting('theme'))
 
     def get_score_color(self, score):
         if score > 1000:
@@ -49,13 +55,29 @@ class PostList:
         return len(clean_text) - emoji_count
 
     def display(self):
-        if not self.posts:
-            return "No posts available"
-        
         width = self.terminal.width - 24
         output = []
         
         output.append(f"┬{'─' * (width-2)}┬")
+        output.append(f"│{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))(f'{self.current_page.capitalize()} Posts').center(width+21)}│")
+        output.append(f"├{'─' * (width-2)}┤")
+        
+        if self.is_loading:
+            current_time = time.time()
+            refresh_rate = float(self.settings.get_setting('spinner_refresh_rate')) / 1000  # Convert ms to seconds
+            if current_time - self.last_loading_update >= refresh_rate:
+                self.loading_index = (self.loading_index + 1) % len(self.loading_chars)
+                self.last_loading_update = current_time
+            loading_text = f"{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))(self.loading_chars[self.loading_index])} Loading posts..."
+            output.append(f"│{loading_text.center(width+21)}│")
+            output.append(f"╰{'─' * (width-2)}╯")
+            return "\n".join(output)
+        
+        if not self.posts:
+            output.append(f"│ {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('warning')))('No posts available').center(width-4)} │")
+            output.append(f"╰{'─' * (width-2)}╯")
+            return "\n".join(output)
+        
         scroll_indicator = f"[{self.selected_index + 1}/{len(self.posts)}]"
         title = f"{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('panel_title')))('Reddit Posts')} {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))(scroll_indicator)}"
         output.append(f"│{title.center(width+44)}│")
@@ -144,16 +166,20 @@ class PostList:
         return None
 
     def append_posts(self, new_posts):
+        self.is_loading = True
         if not self.settings.get_setting('show_nsfw'):
             new_posts = [post for post in new_posts if not post.over18]
         self.posts.extend(new_posts)
+        self.is_loading = False
 
     def update_posts(self, new_posts):
+        self.is_loading = True
         if not self.settings.get_setting('show_nsfw'):
             new_posts = [post for post in new_posts if not post.over_18]
         self.posts = new_posts
         self.selected_index = 0
         self.scroll_offset = 0
+        self.is_loading = False
 
     def scroll_down(self):
         if self.selected_index < len(self.posts) - 1:

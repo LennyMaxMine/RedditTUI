@@ -113,7 +113,8 @@ class SearchScreen:
         
         if self.is_loading:
             current_time = time.time()
-            if current_time - self.last_loading_update >= 0.1:  # Update every 100ms
+            refresh_rate = float(self.settings.get_setting('spinner_refresh_rate')) / 1000  # Convert ms to seconds
+            if current_time - self.last_loading_update >= refresh_rate:
                 self.loading_index = (self.loading_index + 1) % len(self.loading_chars)
                 self.last_loading_update = current_time
             loading_text = f"{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))(self.loading_chars[self.loading_index])} Loading..."

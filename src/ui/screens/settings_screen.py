@@ -15,13 +15,12 @@ class SettingsScreen:
         self.settings_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'settings.json')
         self.settings = self.load_settings()
         self.options = [
-            "Login",
-            "Theme",
-            "Posts Per Page",
-            "Comment Depth",
-            "Auto Load Comments",
-            "Show NSFW Content",
-            "Save Settings"
+            ("Theme", self.settings["theme"]),
+            ("Posts per page", self.settings["posts_per_page"]),
+            ("Comment depth", self.settings["comment_depth"]),
+            ("Auto load comments", self.settings["auto_load_comments"]),
+            ("Show NSFW content", self.settings["show_nsfw"]),
+            ("Spinner refresh rate (ms)", self.settings["spinner_refresh_rate"])
         ]
         self.posts_per_page_options = ["10", "25", "50", "100", "250", "500"]
         self.comment_depth_options = ["1", "2", "3", "4", "5", "25", "50", "100"]
@@ -44,7 +43,8 @@ class SettingsScreen:
             "posts_per_page": "25",
             "comment_depth": "3",
             "auto_load_comments": "True",
-            "show_nsfw": "False"
+            "show_nsfw": "False",
+            "spinner_refresh_rate": "500"
         }
         
         try:
@@ -94,58 +94,62 @@ class SettingsScreen:
             output.append(f"├{'─' * (width-2)}┤")
 
             if prefix != "│   ":
-                output.append(f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(option)}".ljust(width+45) + "│")
+                output.append(f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(option[0])}".ljust(width+45) + "│")
             else:
-                output.append(f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(option)}".ljust(width+22) + "│")
+                output.append(f"{prefix}{self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('title')))(option[0])}".ljust(width+22) + "│")
             
-            if option == "Login":
+            if option[0] == "Login":
                 if self.reddit_instance:
                     output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('success')))('Logged in as: ' + self.reddit_instance.user.me().name)}".ljust(width+20) + "│")
                 else:
                     output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('error')))('Not logged in')}".ljust(width+10) + "│")
                 output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))('Press Enter to login/logout')}".ljust(width+22) + "│")
             
-            elif option == "Theme":
+            elif option[0] == "Theme":
                 output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))('Press Enter to select theme')}".ljust(width+22) + "│")
-                output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('Current theme: ' + self.settings['theme'])}".ljust(width+24) + "│")
+                output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('Current theme: ' + option[1])}".ljust(width+24) + "│")
             
-            elif option == "Posts Per Page":
+            elif option[0] == "Posts per page":
                 options_line = "│    "
                 for count in self.posts_per_page_options:
-                    if count == self.settings["posts_per_page"]:
+                    if count == option[1]:
                         options_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))(f"[{count}] ")
                     else:
                         options_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(f"{count} ")
                 output.append(f"{options_line}".ljust(width+147) + "│")
             
-            elif option == "Comment Depth":
+            elif option[0] == "Comment depth":
                 options_line = "│    "
                 for depth in self.comment_depth_options:
-                    if depth == self.settings["comment_depth"]:
+                    if depth == option[1]:
                         options_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))(f"[{depth}] ")
                     else:
                         options_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(f"{depth} ")
                 output.append(f"{options_line}".ljust(width+197) + "│")
             
-            elif option == "Auto Load Comments":
+            elif option[0] == "Auto load comments":
                 options_line = "│    "
                 for value in self.boolean_options:
-                    if value == self.settings["auto_load_comments"]:
+                    if value == option[1]:
                         options_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))(f"[{value}] ")
                     else:
                         options_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(f"{value} ")
                 output.append(f"{options_line}".ljust(width+47) + "│")
             
-            elif option == "Show NSFW Content":
+            elif option[0] == "Show NSFW content":
                 options_line = "│    "
                 for value in self.boolean_options:
-                    if value == self.settings["show_nsfw"]:
+                    if value == option[1]:
                         options_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('highlight')))(f"[{value}] ")
                     else:
                         options_line += self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))(f"{value} ")
                 output.append(f"{options_line}".ljust(width+47) + "│")
             
-            elif option == "Save Settings":
+            elif option[0] == "Spinner refresh rate (ms)":
+                output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))('Press Enter to change spinner refresh rate')}".ljust(width+22) + "│")
+                output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('content')))('Current refresh rate: ' + option[1])}".ljust(width+24) + "│")
+            
+            elif option[0] == "Save Settings":
                 output.append(f"│    {self.terminal.color_rgb(*self._hex_to_rgb(self.theme_service.get_style('info')))('Press Enter to save current settings')}".ljust(width+22) + "│")
                 output.append(f"╰{'─' * (width-2)}╯")
         
@@ -247,5 +251,9 @@ class SettingsScreen:
         elif self.selected_option == 5:  # Show NSFW Content
             current_idx = self.boolean_options.index(self.settings["show_nsfw"])
             self.settings["show_nsfw"] = self.boolean_options[(current_idx + 1) % len(self.boolean_options)]
+            self.save_settings()
+        elif self.selected_option == 6:  # Spinner Refresh Rate
+            current_idx = self.boolean_options.index(self.settings["spinner_refresh_rate"])
+            self.settings["spinner_refresh_rate"] = self.boolean_options[(current_idx + 1) % len(self.boolean_options)]
             self.save_settings()
         return False 
