@@ -53,9 +53,11 @@ class CommentInputView:
     def handle_input(self, key):
         if key == '\x1b':  # Escape
             return "cancel"
-        elif key == '\r' or key == '\n':  # Enter
+        elif key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter
             if self.comment_text.strip():
                 try:
+                    if not self.reddit_instance:
+                        return "error:Not logged in"
                     self.current_post.reply(self.comment_text)
                     self.logger.info("Comment submitted successfully")
                     return "submitted"
@@ -63,7 +65,7 @@ class CommentInputView:
                     self.logger.error(f"Error submitting comment: {e}")
                     return f"error:{str(e)}"
             return "cancel"
-        elif key == '\x7f' or key == '\x08':  # Backspace (both ASCII and ANSI)
+        elif key == '\x7f':  # Backspace
             if self.cursor_pos > 0:
                 self.comment_text = self.comment_text[:self.cursor_pos-1] + self.comment_text[self.cursor_pos:]
                 self.cursor_pos -= 1

@@ -266,3 +266,21 @@ class SearchScreen:
             post.origin = f"Search: {self.search_query}"
             return post
         return None 
+
+    def handle_input(self, key):
+        if key == '\x1b':  # Escape
+            self.clear_query()
+            return "back"
+        elif key == '\x1b[A':  # Up Arrow
+            self.scroll_up()
+        elif key == '\x1b[B':  # Down Arrow
+            self.scroll_down()
+        elif key == '\t':  # Tab
+            self.next_search_type()
+        elif key == '\x7f':  # Backspace
+            self.backspace()
+        elif len(key) == 1 and key.isprintable():
+            self.add_char(key)
+        elif key in ['\r', '\n', '\x0a', '\x0d', '\x1b\x0d', '\x1b\x0a']:  # Enter
+            return self.get_selected_post()
+        return None 

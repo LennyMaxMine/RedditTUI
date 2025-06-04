@@ -98,7 +98,8 @@ class RedditTUI:
         elif option == "Messages":
             if self.reddit_instance:
                 self.current_screen = 'messages'
-                #self.active_component = 'messages'
+                self.active_component = 'messages'
+                self.messages_screen.active = True
                 self.messages_screen.load_messages()
                 self.header.update_title("RedditTUI - Messages")
             else:
@@ -394,7 +395,7 @@ class RedditTUI:
                     try:
                         self.sidebar.active = self.active_component == 'sidebar'
                         self.post_list.active = self.active_component == 'post_list'
-                        self.messages_screen.active = self.active_component == 'messages'
+                        #self.messages_screen.active = self.active_component == 'messages'
                         print(self.term.move(self.term.height - 2, 0) + f"Active component: {self.active_component}, Messages active: {self.messages_screen.active}")
                         self.render()
                         key = self.term.inkey()
@@ -404,14 +405,32 @@ class RedditTUI:
                             break
                         elif key == '\x1b':  # Escape
                             self.logger.debug("Escape key pressed")
-                            if self.current_screen == 'post_options':
+                            if self.current_screen == 'post':
+                                result = self.post_view.handle_input(key)
+                                if result == "back":
+                                    self.current_screen = 'home'
+                                    self.active_component = 'sidebar'
+                                    self.post_view.current_post = None
+                                    self.post_view.comments = []
+                            elif self.current_screen == 'post_options':
                                 if self.post_options_view.confirming_report:
                                     self.post_options_view.confirming_report = False
                                     self.post_options_view.selected_reason = None
                                 else:
                                     self.current_screen = 'post'
                             elif self.current_screen == 'comment_input':
-                                self.current_screen = 'post'
+                                if key == '\x1b':  # Escape
+                                    self.current_screen = 'post'
+                                else:
+                                    result = self.comment_input_view.handle_input(key)
+                                    if result == "submitted":
+                                        self.current_screen = 'post'
+                                        if self.post_view.current_post:
+                                            comments = self.load_post_comments(self.post_view.current_post)
+                                            self.post_view.display_post(self.post_view.current_post, comments)
+                                    elif result and result.startswith("error:"):
+                                        print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error: {result[6:]}"))
+                                        time.sleep(1)
                             elif self.current_screen in ['search', 'help', 'settings', 'subreddits', 'profile', 'messages']:
                                 if self.current_screen == 'search':
                                     self.search_screen.clear_query()
@@ -427,45 +446,6 @@ class RedditTUI:
                                 self.active_component = 'sidebar'
                                 self.header.update_title(f"RedditTUI - {self.current_feed.capitalize()} Feed")
                                 self.update_posts_from_reddit()
-                            elif self.current_screen == 'home' and self.active_component == 'post_list':
-                                result = self.post_list.handle_input(key)
-                                if result and not isinstance(result, bool):  # Only open post if result is a post object
-                                    comments = self.load_post_comments(result)
-                                    self.post_view.display_post(result, comments)
-                                    self.post_view.from_search = False
-                                    self.current_screen = 'post'
-                            elif self.current_screen == 'search':
-                                selected_post = self.search_screen.get_selected_post()
-                                if selected_post:
-                                    comments = self.load_post_comments(selected_post)
-                                    self.post_view.display_post(selected_post, comments)
-                                    self.post_view.from_search = True
-                                    self.current_screen = 'post'
-                            elif self.current_screen == 'subreddits':
-                                self.subreddits_screen.scroll_up()
-                            elif self.current_screen == 'settings':
-                                if self.settings_screen.theme_screen_activated != True:
-                                    self.settings_screen.previous_option()
-                                else:
-                                    self.settings_screen.theme_scroll_up()
-                            elif self.current_screen == 'profile':
-                                if self.user_profile_screen.selected_index > 0:
-                                    self.user_profile_screen.selected_index -= 1
-                                else:
-                                    self.user_profile_screen.scroll_up()
-                            elif self.current_screen == 'messages':
-                                if self.messages_screen.compose_mode:
-                                    if self.messages_screen.current_field == "recipient" and self.messages_screen.cursor_pos > 0:
-                                        self.messages_screen.cursor_pos -= 1
-                                    elif self.messages_screen.current_field == "subject" and self.messages_screen.cursor_pos > 0:
-                                        self.messages_screen.cursor_pos -= 1
-                                    elif self.messages_screen.current_field == "message" and self.messages_screen.cursor_pos > 0:
-                                        self.messages_screen.cursor_pos -= 1
-                                else:
-                                    if self.messages_screen.selected_index > 0:
-                                        self.messages_screen.selected_index -= 1
-                                        if self.messages_screen.scroll_offset > 0:
-                                            self.messages_screen.scroll_up()
                         elif key == '\x1b[B':  # Down Arrow
                             self.logger.debug("Down arrow key pressed")
                             if self.current_screen == 'home':
@@ -486,16 +466,21 @@ class RedditTUI:
                                     else:
                                         self.handle_sidebar_option(selected_option)
                             elif self.current_screen == 'post':
-                                self.post_view.scroll_comments_down()
+                                result = self.post_view.handle_input(key)
+                                if result == "back":
+                                    self.current_screen = 'home'
+                                    self.active_component = 'sidebar'
+                                    self.post_view.current_post = None
+                                    self.post_view.comments = []
                             elif self.current_screen == 'search':
                                 self.search_screen.scroll_down()
                             elif self.current_screen == 'subreddits':
                                 self.subreddits_screen.scroll_down()
                             elif self.current_screen == 'settings':
                                 if self.settings_screen.theme_screen_activated != True:
-                                    self.settings_screen.next_option()
+                                    self.settings_screen.previous_option()
                                 else:
-                                    self.settings_screen.theme_scroll_down()
+                                    self.settings_screen.theme_scroll_up()
                             elif self.current_screen == 'profile':
                                 items = self.user_profile_screen.posts if self.user_profile_screen.content_index == 0 else self.user_profile_screen.comments
                                 if self.user_profile_screen.selected_index < min(self.user_profile_screen.visible_results - 1, len(items) - self.user_profile_screen.scroll_offset - 1):
@@ -504,17 +489,17 @@ class RedditTUI:
                                     self.user_profile_screen.scroll_down()
                             elif self.current_screen == 'messages':
                                 if self.messages_screen.compose_mode:
-                                    if self.messages_screen.current_field == "recipient" and self.messages_screen.cursor_pos < len(self.messages_screen.recipient):
-                                        self.messages_screen.cursor_pos += 1
-                                    elif self.messages_screen.current_field == "subject" and self.messages_screen.cursor_pos < len(self.messages_screen.subject):
-                                        self.messages_screen.cursor_pos += 1
-                                    elif self.messages_screen.current_field == "message" and self.messages_screen.cursor_pos < len(self.messages_screen.message_text):
-                                        self.messages_screen.cursor_pos += 1
+                                    if self.messages_screen.current_field == "recipient" and self.messages_screen.cursor_pos > 0:
+                                        self.messages_screen.cursor_pos -= 1
+                                    elif self.messages_screen.current_field == "subject" and self.messages_screen.cursor_pos > 0:
+                                        self.messages_screen.cursor_pos -= 1
+                                    elif self.messages_screen.current_field == "message" and self.messages_screen.cursor_pos > 0:
+                                        self.messages_screen.cursor_pos -= 1
                                 else:
-                                    if self.messages_screen.selected_index < min(self.messages_screen.visible_messages - 1, len(self.messages_screen.messages) - self.messages_screen.scroll_offset - 1):
-                                        self.messages_screen.selected_index += 1
-                                        if self.messages_screen.scroll_offset < len(self.messages_screen.messages) - self.messages_screen.visible_messages:
-                                            self.messages_screen.scroll_down()
+                                    if self.messages_screen.selected_index > 0:
+                                        self.messages_screen.selected_index -= 1
+                                        if self.messages_screen.scroll_offset > 0:
+                                            self.messages_screen.scroll_up()
                         elif key == '\x1b[C':  # Right Arrow
                             self.logger.debug("Right arrow key pressed")
                             if self.current_screen == 'home' and self.active_component == 'sidebar':
@@ -697,7 +682,18 @@ class RedditTUI:
                                     time.sleep(1)
                                 self.render()
                             elif self.current_screen == 'comment_input':
-                                self.current_screen = 'post'
+                                if key == '\x1b':  # Escape
+                                    self.current_screen = 'post'
+                                else:
+                                    result = self.comment_input_view.handle_input(key)
+                                    if result == "submitted":
+                                        self.current_screen = 'post'
+                                        if self.post_view.current_post:
+                                            comments = self.load_post_comments(self.post_view.current_post)
+                                            self.post_view.display_post(self.post_view.current_post, comments)
+                                    elif result and result.startswith("error:"):
+                                        print(self.term.move(self.term.height - 3, 0) + self.term.red(f"Error: {result[6:]}"))
+                                        time.sleep(1)
                             elif self.current_screen in ['search', 'help', 'settings', 'subreddits', 'profile', 'messages']:
                                 if self.current_screen == 'search':
                                     self.search_screen.clear_query()
@@ -767,9 +763,6 @@ class RedditTUI:
                                 self.render()
                             elif self.active_component == 'sidebar':
                                 selected_option = self.sidebar.get_selected_option()
-                                if selected_option == 'messages':
-                                    self.active_component = 'messages'
-                                    self.messages_screen.active = True
                                 if self.handle_sidebar_option(selected_option):
                                     break
                                 else:

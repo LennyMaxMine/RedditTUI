@@ -298,7 +298,7 @@ class PostView:
             metadata_additional_width += 2
         
         metadata_line = "│ " + " | ".join(metadata)
-        output.append(f"{metadata_line}{' ' * (width - len(metadata_line) + 2 + metadata_additional_width)}│")
+        output.append(f"{metadata_line}{' ' * (width - len(metadata_line) + 14 + metadata_additional_width)}│")
         output.append(f"├{'─' * (width-2)}┤")
         
         if hasattr(self.current_post, 'selftext') and self.current_post.selftext:
@@ -482,7 +482,7 @@ class PostView:
         elif key == '\x1b[B':  # Down Arrow
             self.scroll_comments_down()
             return True
-        elif key == '\x1b[D':  # Left Arrow
+        elif key == '\x1b[D' or key == '\x1b':  # Left Arrow or Escape
             return "back"
         elif key == 'k':  # Upvote
             self.upvote_post()
@@ -512,4 +512,19 @@ class PostView:
                         self.comment_lines.extend(self.display_comment(comment, 0, self.content_width))
                 self.comment_scroll_offset = 0
             return True
+        elif key == '\r' or key == '\n' or key == '\x0a' or key == '\x0d':  # Enter
+            if self.comment_mode:
+                self.submit_comment()
+                return True
+            return "back"
+        elif key == '\x7f':  # Backspace
+            if self.comment_mode and self.comment_cursor_pos > 0:
+                self.comment_text = self.comment_text[:self.comment_cursor_pos-1] + self.comment_text[self.comment_cursor_pos:]
+                self.comment_cursor_pos -= 1
+                return True
+        elif len(key) == 1 and key.isprintable():
+            if self.comment_mode:
+                self.comment_text = self.comment_text[:self.comment_cursor_pos] + key + self.comment_text[self.comment_cursor_pos:]
+                self.comment_cursor_pos += 1
+                return True
         return False
