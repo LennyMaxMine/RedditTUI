@@ -24,6 +24,7 @@ from rich.prompt import Prompt
 from services.settings_service import Settings
 from services.theme_service import ThemeService
 import time
+import logging
 
 #AI helped in this thingy (claude)
 class PostView:
@@ -60,6 +61,7 @@ class PostView:
         self.loading_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
         self.loading_index = 0
         self.last_loading_update = 0
+        self.logger = logging.getLogger(__name__)
 
     def return_current_post(self):
         return self.current_post()
@@ -186,42 +188,32 @@ class PostView:
         self.need_more_comments = False
 
     def upvote_post(self):
-        if not self.current_post:
-            return
+        if not self.reddit_instance:
+            self.logger.warning("Attempted to upvote post without being logged in")
+            return "error:not_logged_in"
         try:
-            if self.vote_status == 1:
-                self.current_post.clear_vote()
-                self.vote_status = 0
-                self.current_post.score -= 1
-            else:
-                if self.vote_status == -1:
-                    self.current_post.score += 2
-                else:
-                    self.current_post.score += 1
-                self.current_post.upvote()
-                self.vote_status = 1
-            self.display_post(self.current_post, self.comments)
+            self.logger.info(f"Upvoting post: {self.current_post.title}")
+            self.current_post.upvote()
+            self.logger.info("Post upvoted successfully")
+            return "upvoted"
         except Exception as e:
-            pass
+            error_msg = f"Error upvoting post: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return f"error:{str(e)}"
 
     def downvote_post(self):
-        if not self.current_post:
-            return
+        if not self.reddit_instance:
+            self.logger.warning("Attempted to downvote post without being logged in")
+            return "error:not_logged_in"
         try:
-            if self.vote_status == -1:
-                self.current_post.clear_vote()
-                self.vote_status = 0
-                self.current_post.score += 1
-            else:
-                if self.vote_status == 1:
-                    self.current_post.score -= 2
-                else:
-                    self.current_post.score -= 1
-                self.current_post.downvote()
-                self.vote_status = -1
-            self.display_post(self.current_post, self.comments)
+            self.logger.info(f"Downvoting post: {self.current_post.title}")
+            self.current_post.downvote()
+            self.logger.info("Post downvoted successfully")
+            return "downvoted"
         except Exception as e:
-            pass
+            error_msg = f"Error downvoting post: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return f"error:{str(e)}"
 
     def _hex_to_rgb(self, hex_color):
         if not hex_color or not isinstance(hex_color, str):
@@ -240,6 +232,7 @@ class PostView:
             return rgb
 
     def display_post(self, post, comments=None):
+        self.logger.info(f"Displaying post: {post.title}")
         self.current_post = post
         self.comments = []
         self.comment_lines = []
@@ -254,11 +247,13 @@ class PostView:
         self.is_loading = True
 
         if comments:
+            self.logger.debug(f"Processing {len(comments)} comments")
             self.comments = comments
             self.is_loading = False
             for comment in self.comments:
                 if hasattr(comment, 'body'):
                     self.comment_lines.extend(self.display_comment(comment, 0, self.content_width))
+            self.logger.debug(f"Generated {len(self.comment_lines)} comment display lines")
 
     def display(self):
         if not self.current_post:
@@ -394,63 +389,16 @@ class PostView:
 
     def report_post(self):
         if not self.reddit_instance:
+            self.logger.warning("Attempted to report post without being logged in")
             return "error:not_logged_in"
-
-        width = self.content_width
-        output = []
-        
-        output.append(f"┬{'─' * (width-2)}┬")
-        output.append(f"│{self.terminal.bold_white('Report Post').center(width+13)}│")
-        output.append(f"├{'─' * (width-2)}┤")
-        
-        for idx, reason in enumerate(self.report_reasons, 1):
-            output.append(f"│ {self.terminal.bright_cyan(f'{idx}.')} {reason.ljust(width+5)} │")
-        
-        output.append(f"├{'─' * (width-2)}┤")
-        output.append(f"│ {self.terminal.bright_yellow('Enter number (1-6) or press ESC to cancel').ljust(width+5)} │")
-        output.append(f"╰{'─' * (width-2)}╯")
-        
-        self.terminal.move(0, 0)
-        print("\n".join(output))
-        
         try:
-            choice = int(Prompt.ask("\nEnter number", default="6"))
-            if 1 <= choice <= len(self.report_reasons):
-                reason = self.report_reasons[choice - 1]
-                if reason == "Other":
-                    output = []
-                    output.append(f"┬{'─' * (width-2)}┬")
-                    output.append(f"│{self.terminal.bold_white('Specify Reason').center(width+13)}│")
-                    output.append(f"├{'─' * (width-2)}┤")
-                    output.append(f"│ {self.terminal.bright_yellow('Enter your reason:').ljust(width+5)} │")
-                    output.append(f"╰{'─' * (width-2)}╯")
-                    self.terminal.move(0, 0)
-                    print("\n".join(output))
-                    reason = Prompt.ask("Reason")
-                
-                self.reddit_instance.submission(self.current_post.id).report(reason)
-                output = []
-                output.append(f"┬{'─' * (width-2)}┬")
-                output.append(f"│{self.terminal.bold_green('Post reported successfully').center(width+13)}│")
-                output.append(f"╰{'─' * (width-2)}╯")
-                self.terminal.move(0, 0)
-                print("\n".join(output))
-            else:
-                output = []
-                output.append(f"┬{'─' * (width-2)}┬")
-                output.append(f"│{self.terminal.bold_red('Invalid choice').center(width+13)}│")
-                output.append(f"╰{'─' * (width-2)}╯")
-                self.terminal.move(0, 0)
-                print("\n".join(output)) 
+            self.logger.info(f"Reporting post: {self.current_post.title}")
+            self.current_post.report()
+            self.logger.info("Post reported successfully")
             return "reported"
-        except ValueError:
-            output = []
-            output.append(f"┬{'─' * (width-2)}┬")
-            output.append(f"│{self.terminal.bold_red('Invalid input').center(width+13)}│")
-            output.append(f"╰{'─' * (width-2)}╯")
-            self.terminal.move(0, 0)
-            print("\n".join(output))
         except Exception as e:
+            error_msg = f"Error reporting post: {e}"
+            self.logger.error(error_msg, exc_info=True)
             return f"error:{str(e)}"
 
     def get_image_links(self, post):
@@ -474,23 +422,21 @@ class PostView:
         return links
 
     def submit_comment(self):
-        if not self.comment_text.strip():
-            return
-
+        if not self.reddit_instance:
+            self.logger.warning("Attempted to submit comment without being logged in")
+            return "error:not_logged_in"
         try:
+            self.logger.info(f"Submitting comment on post: {self.current_post.title}")
             self.current_post.reply(self.comment_text)
+            self.logger.info("Comment submitted successfully")
             self.comment_mode = False
             self.comment_text = ""
             self.comment_cursor_pos = 0
-            if hasattr(self.current_post, 'comments'):
-                self.current_post.comments.replace_more(limit=0)
-                self.comments = list(self.current_post.comments.list())
-                self.comment_lines = []
-                for comment in self.comments:
-                    if hasattr(comment, 'body'):
-                        self.comment_lines.extend(self.display_comment(comment, 0, self.content_width))
+            return "submitted"
         except Exception as e:
-            print(self.terminal.move(self.terminal.height - 3, 0) + self.terminal.red(f"Error submitting comment: {e}"))
+            error_msg = f"Error submitting comment: {e}"
+            self.logger.error(error_msg, exc_info=True)
+            return f"error:{str(e)}"
 
     def handle_input(self, key):
         if key == '\x1b[A':  # Up Arrow

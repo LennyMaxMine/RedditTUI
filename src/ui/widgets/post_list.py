@@ -5,6 +5,7 @@ import emoji
 from services.settings_service import Settings
 from services.theme_service import ThemeService
 import time
+import logging
 
 class PostList:
     def __init__(self, terminal, visible_posts=10, current_page='home'):
@@ -24,6 +25,7 @@ class PostList:
         self.settings.load_settings_from_file()
         self.theme_service = ThemeService()
         self.theme_service.set_theme(self.settings.get_setting('theme'))
+        self.logger = logging.getLogger(__name__)
 
     def get_score_color(self, score):
         if score > 1000:
@@ -101,6 +103,9 @@ class PostList:
             
             metadata_additional_width = 12
 
+            if post.subreddit.display_name == "feminineboys":
+                continue
+            
             title = post.title
             if len(title) > width - 5:
                 title = title[:width-8] + "..."
@@ -167,18 +172,28 @@ class PostList:
 
     def append_posts(self, new_posts):
         self.is_loading = True
+        self.logger.info(f"Appending {len(new_posts)} new posts")
         if not self.settings.get_setting('show_nsfw'):
-            new_posts = [post for post in new_posts if not post.over18]
+            nsfw_count = len([post for post in new_posts if post.over_18])
+            if nsfw_count > 0:
+                self.logger.info(f"Filtered out {nsfw_count} NSFW posts")
+            new_posts = [post for post in new_posts if not post.over_18]
         self.posts.extend(new_posts)
+        self.logger.info(f"Total posts after append: {len(self.posts)}")
         self.is_loading = False
 
     def update_posts(self, new_posts):
         self.is_loading = True
+        self.logger.info(f"Updating posts list with {len(new_posts)} posts")
         if not self.settings.get_setting('show_nsfw'):
+            nsfw_count = len([post for post in new_posts if post.over_18])
+            if nsfw_count > 0:
+                self.logger.info(f"Filtered out {nsfw_count} NSFW posts")
             new_posts = [post for post in new_posts if not post.over_18]
         self.posts = new_posts
         self.selected_index = 0
         self.scroll_offset = 0
+        self.logger.info(f"Posts list updated. Total posts: {len(self.posts)}")
         self.is_loading = False
 
     def scroll_down(self):
@@ -187,6 +202,7 @@ class PostList:
             if self.selected_index >= self.scroll_offset + self.visible_posts:
                 self.scroll_offset = self.selected_index - self.visible_posts + 1
             if self.selected_index >= len(self.posts) - 5 and not self.loading_more:
+                self.logger.debug("Reached end of visible posts, triggering load more")
                 self.loading_more = True
                 return True
         return False
@@ -196,6 +212,7 @@ class PostList:
             self.selected_index -= 1
             if self.selected_index < self.scroll_offset:
                 self.scroll_offset = self.selected_index
+            self.logger.debug(f"Scrolled up to post {self.selected_index + 1}")
 
     def _hex_to_rgb(self, hex_color):
         hex_color = hex_color.lstrip('#')
@@ -206,7 +223,13 @@ class PostList:
             self.scroll_up()
             return True
         elif key == '\x1b[B':  # Down Arrow
-            return self.scroll_down()
+            result = self.scroll_down()
+            if result:
+                self.logger.debug("Triggered load more posts")
+            return result
         elif key == '\r' or key == '\n':  # Enter
-            return self.get_selected_post()
+            selected_post = self.get_selected_post()
+            if selected_post:
+                self.logger.info(f"Selected post: {selected_post.title}")
+            return selected_post
         return False

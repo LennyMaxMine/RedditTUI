@@ -50,28 +50,37 @@ class Settings:
         # Convert numeric settings to integers
         if key in ['posts_per_page', 'comment_depth']:
             try:
-                return int(value)
+                int_value = int(value)
+                self.logger.debug(f"Converted {key} to integer: {int_value}")
+                return int_value
             except (ValueError, TypeError):
-                self.logger.warning(f"Invalid {key} value: {value}, using default")
+                self.logger.warning(f"Invalid {key} value: {value}, using default: {self.default_settings[key]}")
                 return int(self.default_settings[key])
         
         # Convert boolean settings
         if key in ['auto_load_comments', 'show_nsfw']:
-            return value.lower() == 'true'
+            bool_value = value.lower() == 'true'
+            self.logger.debug(f"Converted {key} to boolean: {bool_value}")
+            return bool_value
             
         return value
 
     def set_setting(self, key, value):
         self.logger.info(f"Setting {key} to {value}")
+        old_value = self.settings.get(key)
         self.settings[key] = value
+        self.logger.debug(f"Changed {key} from {old_value} to {value}")
         self.save_settings_to_file()
 
     def reset_to_defaults(self):
         self.logger.info("Resetting settings to defaults")
+        self.logger.debug(f"Current settings: {self.settings}")
         self.settings = self.default_settings.copy()
+        self.logger.debug(f"Reset to defaults: {self.settings}")
         self.save_settings_to_file()
 
     def apply_settings(self):
         self.logger.info("Applying settings")
+        self.logger.debug(f"Current settings state: {self.settings}")
         # Add any runtime settings application logic here
         pass

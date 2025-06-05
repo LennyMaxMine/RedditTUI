@@ -83,6 +83,7 @@ class RedditTUI:
     def handle_sidebar_option(self, option):
         self.logger.info(f"Handling sidebar option: {option}")
         if option in ['Home', 'New', 'Top']:
+            self.logger.info(f"Switching to {option.lower()} feed")
             self.current_screen = 'home'
             self.active_component = 'post_list'
             self.current_feed = option.lower()
@@ -162,11 +163,13 @@ class RedditTUI:
     def update_posts_from_reddit(self, load_more=False):
         self.post_list.current_page = self.current_feed
         if self.reddit_instance:
+            self.logger.info(f"Fetching {self.current_feed} posts{' (load more)' if load_more else ''}")
             self.post_list.is_loading = True
             self.render()
             try:
                 posts = []  # Initialize posts variable
                 if load_more and self.last_loaded_post:
+                    self.logger.debug(f"Loading more posts after: {self.last_loaded_post}")
                     if self.current_feed == 'home':
                         posts = list(self.reddit_instance.front.hot(limit=self.settings.get_setting('posts_per_page'), after=self.last_loaded_post))
                     elif self.current_feed == 'new':
@@ -174,6 +177,7 @@ class RedditTUI:
                     elif self.current_feed == 'top':
                         posts = list(self.reddit_instance.front.top(limit=self.settings.get_setting('posts_per_page'), after=self.last_loaded_post))
                 else:
+                    self.logger.debug("Loading initial posts")
                     if self.current_feed == 'home':
                         posts = list(self.reddit_instance.front.hot(limit=self.settings.get_setting('posts_per_page')))
                     elif self.current_feed == 'new':
@@ -182,6 +186,9 @@ class RedditTUI:
                         posts = list(self.reddit_instance.front.top(limit=self.settings.get_setting('posts_per_page')))
                 
                 if not self.settings.get_setting('show_nsfw'):
+                    nsfw_count = len([post for post in posts if post.over_18])
+                    if nsfw_count > 0:
+                        self.logger.info(f"Filtered out {nsfw_count} NSFW posts")
                     posts = [post for post in posts if not post.over_18]
                 
                 if posts:
@@ -208,12 +215,16 @@ class RedditTUI:
 
     def load_post_comments(self, post):
         if not post or not hasattr(post, 'comments'):
+            self.logger.warning("Attempted to load comments for invalid post")
             return []
         try:
+            self.logger.info(f"Loading comments for post: {post.title}")
             if self.settings.get_setting('auto_load_comments'):
                 depth = max(0, min(self.settings.get_setting('comment_depth'), 10))
+                self.logger.debug(f"Loading comments with depth: {depth}")
                 post.comments.replace_more(limit=depth)
             else:
+                self.logger.debug("Loading top-level comments only")
                 post.comments.replace_more(limit=0)
             comments = list(post.comments.list())
             self.logger.info(f"Loaded {len(comments)} comments for post: {post.title}")
@@ -406,6 +417,8 @@ class RedditTUI:
     def run(self):
         print(self.term.enter_fullscreen())
         self.logger.info("Starting RedditTUI")
+        self.logger.info(f"Terminal size: {self.term.width}x{self.term.height}")
+        self.logger.info(f"Current theme: {self.settings.get_setting('theme')}")
         
         try:
             with self.term.cbreak(), self.term.hidden_cursor():
@@ -413,8 +426,7 @@ class RedditTUI:
                     try:
                         self.sidebar.active = self.active_component == 'sidebar'
                         self.post_list.active = self.active_component == 'post_list'
-                        #self.messages_screen.active = self.active_component == 'messages'
-                        print(self.term.move(self.term.height - 2, 0) + f"Active component: {self.active_component}, Messages active: {self.messages_screen.active}")
+                        self.logger.debug(f"Current screen: {self.current_screen}, Active component: {self.active_component}")
                         self.render()
                         key = self.term.inkey()
                         
