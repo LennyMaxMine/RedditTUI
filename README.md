@@ -4,6 +4,10 @@ This project is a terminal user interface (TUI) application for browsing Reddit.
 
 This Project is made for the 2025 Hack Club Neighboorhood in SF!
 
+
+# Major rewrite in progress! Moving from blessed to textual.
+
+
 ## Features
 
 Coming soon!
