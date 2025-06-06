@@ -14,8 +14,9 @@ A Terminal User Interface (TUI) for Reddit built with Textual.
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/reddit-tui.git
+git clone https://github.com/lennymaxmine/RedditTUI
 cd reddit-tui
+cd new-textual
 ```
 
 2. Create a virtual environment and activate it:
