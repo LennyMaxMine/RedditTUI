@@ -3,20 +3,25 @@ from textual.containers import Vertical
 from textual.widget import Widget
 from rich.text import Text
 from datetime import datetime
+from utils.logger import Logger
 
 class PostList(Widget):
     def __init__(self, posts=None, id=None):
+        Logger().info("Initializing PostList widget")
         super().__init__(id=id)
         self.posts = posts or []
         self.selected_index = 0
 
     def compose(self):
+        Logger().info("Composing PostList UI")
         yield Vertical()
 
     def on_mount(self):
+        Logger().info("PostList mounted")
         self.update_posts(self.posts)
 
     def update_posts(self, posts):
+        Logger().info(f"Updating posts in PostList: {len(posts)} posts")
         self.posts = posts
         self.selected_index = 0
         self.refresh()
@@ -61,16 +66,19 @@ class PostList(Widget):
             return f"{diff.seconds}s ago"
 
     def action_cursor_up(self):
+        Logger().debug("Cursor up in PostList")
         if self.selected_index > 0:
             self.selected_index -= 1
             self.refresh()
 
     def action_cursor_down(self):
+        Logger().debug("Cursor down in PostList")
         if self.selected_index < len(self.posts) - 1:
             self.selected_index += 1
             self.refresh()
 
     def get_selected_post(self):
         if 0 <= self.selected_index < len(self.posts):
+            Logger().info(f"Selected post at index {self.selected_index}")
             return self.posts[self.selected_index]
         return None 

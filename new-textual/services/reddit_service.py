@@ -2,19 +2,24 @@ import praw
 import os
 import json
 from pathlib import Path
+from utils.logger import Logger
 
 class RedditService:
     def __init__(self):
         self.reddit = None
+        self.logger = Logger()
         self.config_dir = Path.home() / ".config" / "reddit-tui"
         self.credentials_file = self.config_dir / "sanfrancisco.jhna"
         self._ensure_config_dir()
 
     def _ensure_config_dir(self):
+        self.logger.info(f"Ensuring config dir: {self.config_dir}")
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
     def login(self, client_id: str, client_secret: str, username: str, password: str) -> bool:
+        self.logger.info("RedditService.login called")
         try:
+            self.logger.info("Initializing Reddit instance")
             self.reddit = praw.Reddit(
                 client_id=client_id,
                 client_secret=client_secret,
@@ -22,38 +27,62 @@ class RedditService:
                 password=password,
                 user_agent="RedditTUI/1.0"
             )
-            self.reddit.user.me()
-            self._save_credentials(client_id, client_secret, username, password)
-            return True
+            self.logger.info("Attempting to authenticate with Reddit API...")
+            try:
+                user = self.reddit.user.me()
+                self.logger.info(f"Reddit authentication successful. Logged in as: {user.name}")
+                self.logger.info("Saving credentials...")
+                self._save_credentials(client_id, client_secret, username, password)
+                self.logger.info("Credentials saved successfully.")
+                return True
+            except Exception as e:
+                self.logger.error(f"Reddit API authentication failed: {str(e)}", exc_info=True)
+                return False
         except Exception as e:
-            print(f"Login failed: {e}")
+            self.logger.error(f"Failed to initialize Reddit instance: {str(e)}", exc_info=True)
             return False
 
     def _save_credentials(self, client_id: str, client_secret: str, username: str, password: str):
+        self.logger.info(f"Saving credentials to {self.credentials_file}")
         credentials = {
             "client_id": client_id,
             "client_secret": client_secret,
             "username": username,
             "password": password
         }
-        with open(self.credentials_file, "w") as f:
-            json.dump(credentials, f)
+        try:
+            with open(self.credentials_file, "w") as f:
+                json.dump(credentials, f)
+            self.logger.info("Credentials file written successfully.")
+        except Exception as e:
+            self.logger.error(f"Failed to write credentials file: {e}", exc_info=True)
 
     def load_credentials(self) -> dict:
+        self.logger.info(f"Loading credentials from {self.credentials_file}")
         if self.credentials_file.exists():
-            with open(self.credentials_file, "r") as f:
-                return json.load(f)
+            try:
+                with open(self.credentials_file, "r") as f:
+                    creds = json.load(f)
+                self.logger.info("Credentials loaded.")
+                return creds
+            except Exception as e:
+                self.logger.error(f"Failed to load credentials: {e}", exc_info=True)
+                return {}
+        self.logger.info("Credentials file does not exist.")
         return {}
 
     def auto_login(self) -> bool:
+        self.logger.info("RedditService.auto_login called")
         credentials = self.load_credentials()
         if all(k in credentials for k in ["client_id", "client_secret", "username", "password"]):
+            self.logger.info("Credentials found, attempting auto-login...")
             return self.login(
                 credentials["client_id"],
                 credentials["client_secret"],
                 credentials["username"],
                 credentials["password"]
             )
+        self.logger.info("No valid credentials found for auto-login.")
         return False
 
     def get_hot_posts(self, limit: int = 25):
