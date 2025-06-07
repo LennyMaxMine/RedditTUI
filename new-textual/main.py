@@ -7,6 +7,7 @@ from services.reddit_service import RedditService
 from components.post_list import PostList
 from components.sidebar import Sidebar
 from components.login_screen import LoginScreen
+from components.post_view_screen import PostViewScreen
 from utils.logger import Logger
 
 class RedditTUI(App):
@@ -30,6 +31,7 @@ class RedditTUI(App):
     #content {
         width: 1fr;
         background: $surface;
+        height: 100%;
     }
 
     #post_container {
@@ -75,6 +77,26 @@ class RedditTUI(App):
     Button {
         margin: 1 0;
     }
+
+    #post_title {
+        padding: 1;
+        border-bottom: solid $primary;
+        margin-bottom: 1;
+    }
+
+    #post_metadata {
+        color: $text-muted;
+        padding: 0 1;
+        margin-bottom: 1;
+    }
+
+    #post_content {
+        padding: 1;
+        border: solid $primary;
+        margin: 1;
+        height: 1fr;
+        overflow-y: scroll;
+    }
     """
 
     BINDINGS = [
@@ -91,6 +113,7 @@ class RedditTUI(App):
         self.reddit_service = RedditService()
         self.current_feed = "hot"
         self.active_widget = "sidebar"
+        self.current_posts = []  # Store current posts
 
     def compose(self) -> ComposeResult:
         Logger().info("Composing main UI")
@@ -145,7 +168,9 @@ class RedditTUI(App):
             post = self.query_one(PostList).get_selected_post()
             if post:
                 Logger().info(f"Selected post: {getattr(post, 'title', str(post))}")
-                # TODO: Show post details
+                content = self.query_one("#content")
+                content.remove_children()
+                content.mount(PostViewScreen(post, content, self.current_posts))
 
     def _handle_sidebar_action(self, item: str) -> None:
         Logger().info(f"Handling sidebar action: {item}")
@@ -168,6 +193,7 @@ class RedditTUI(App):
         Logger().info("Action: home feed")
         self.current_feed = "hot"
         posts = self.reddit_service.get_hot_posts()
+        self.current_posts = posts  # Store posts
         self.query_one(PostList).update_posts(posts)
         self.active_widget = "content"
         self.query_one(PostList).focus()
@@ -176,6 +202,7 @@ class RedditTUI(App):
         Logger().info("Action: new feed")
         self.current_feed = "new"
         posts = self.reddit_service.get_new_posts()
+        self.current_posts = posts  # Store posts
         self.query_one(PostList).update_posts(posts)
         self.active_widget = "content"
         self.query_one(PostList).focus()
@@ -184,6 +211,7 @@ class RedditTUI(App):
         Logger().info("Action: top feed")
         self.current_feed = "top"
         posts = self.reddit_service.get_top_posts()
+        self.current_posts = posts  # Store posts
         self.query_one(PostList).update_posts(posts)
         self.active_widget = "content"
         self.query_one(PostList).focus()

@@ -29,6 +29,7 @@ class PostList(Widget):
     def on_mount(self):
         Logger().info("PostList mounted")
         self._post_list_static = self.query_one("#post_list", Static)
+        self._post_container = self.query_one("#post_container", ScrollableContainer)
         self.update_posts(self.posts)
 
     def on_focus(self, event):
@@ -45,7 +46,7 @@ class PostList(Widget):
         self.selected_index = 0
         self.refresh()
 
-    def render(self):#aaaaa
+    def render(self):
         Logger().debug("PostList render called, updating static content")
         if self._post_list_static:
             if not self.posts:
@@ -102,23 +103,39 @@ class PostList(Widget):
         Logger().debug("Cursor up in PostList")
         if self.selected_index > 0:
             self.selected_index -= 1
+            Logger().debug(f"Scrolling to post index {self.selected_index}")
             self.refresh()
-            # Scroll the container to make the selected post visible
             if self._post_container:
-                # Assuming each post block takes approximately 4 lines
+                #Logger().info("Attempting to scroll container")
                 target_y = self.selected_index * 4
-                self._post_container.scroll_to_region(Region(0, target_y, self.size.width, 4))
+                visible_height = self._post_container.size.height
+                if target_y < self._post_container.scroll_offset.y:
+                    self._post_container.scroll_to(target_y)
+                elif target_y >= self._post_container.scroll_offset.y + visible_height - 4:
+                    self._post_container.scroll_to(target_y - visible_height + 8)
+                #Logger().info(f"Scrolled to y={target_y}")
+                return "broken D:, it doesnt automatically scroll up with it"
 
     def action_cursor_down(self):
         Logger().debug("Cursor down in PostList")
         if self.selected_index < len(self.posts) - 1:
             self.selected_index += 1
+            Logger().debug(f"Scrolling to post index {self.selected_index}")
             self.refresh()
-            # Scroll the container to make the selected post visible
             if self._post_container:
-                # Assuming each post block takes approximately 4 lines
+                #Logger().info("Attempting to scroll container")
                 target_y = self.selected_index * 4
-                self._post_container.scroll_to_region(Region(0, target_y, self.size.width, 4))
+                visible_height = self._post_container.size.height
+                if target_y >= self._post_container.scroll_offset.y + visible_height - 4:
+                    self._post_container.scroll_to(target_y - visible_height + 8)
+                elif target_y < self._post_container.scroll_offset.y:
+                    self._post_container.scroll_to(target_y)
+                #Logger().info(f"Scrolled to y={target_y}")
+                return "broken D:, it doesnt automatically scroll down with it"
+
+    def on_scroll(self, event):
+        Logger().info(f"Scroll event received: {event}")
+        super().on_scroll(event)
 
     def get_selected_post(self):
         if 0 <= self.selected_index < len(self.posts):

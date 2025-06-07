@@ -119,7 +119,18 @@ class RedditService:
 
     def get_post_comments(self, post_id: str, limit: int = 100):
         if not self.reddit:
+            self.logger.error("Cannot get comments: Reddit instance not initialized")
             return []
-        post = self.reddit.submission(id=post_id)
-        post.comments.replace_more(limit=0)
-        return list(post.comments.list()[:limit]) 
+        try:
+            if hasattr(post_id, 'id'):
+                post = post_id
+            else:
+                post = self.reddit.submission(id=post_id)
+            self.logger.info(f"Fetching comments for post: {post.title}")
+            post.comments.replace_more(limit=0)
+            comments = list(post.comments.list()[:limit])
+            self.logger.info(f"Found {len(comments)} comments")
+            return comments
+        except Exception as e:
+            self.logger.error(f"Error fetching comments: {str(e)}", exc_info=True)
+            return [] 
