@@ -101,11 +101,14 @@ class RedditTUI(App):
 
     BINDINGS = [
         Binding("q", "quit", "Quit", show=True),
-        Binding("up", "cursor_up", "Up", show=True),
-        Binding("down", "cursor_down", "Down", show=True),
         Binding("enter", "select", "Select", show=True),
-        Binding("tab", "switch_focus", "Switch Focus", show=True),
+        Binding("h", "home", "Home", show=True),
+        Binding("n", "new", "New", show=True),
+        Binding("t", "top", "Top", show=True),
+        Binding("s", "search", "Search", show=True),
         Binding("l", "login", "Login", show=True),
+        Binding("?", "help", "Help", show=True),
+        Binding("c", "settings", "Settings", show=True),
     ]
 
     def __init__(self):
@@ -113,8 +116,8 @@ class RedditTUI(App):
         super().__init__()
         self.reddit_service = RedditService()
         self.current_feed = "hot"
-        self.active_widget = "sidebar"
-        self.current_posts = []  # Store current posts
+        self.current_posts = []
+        Logger().info("Registered bindings: " + str(self.BINDINGS))
 
     def compose(self) -> ComposeResult:
         Logger().info("Composing main UI")
@@ -126,95 +129,53 @@ class RedditTUI(App):
 
     def on_mount(self) -> None:
         Logger().info("App mounted. Attempting auto-login.")
-        self.query_one(Sidebar).focus()
         if self.reddit_service.auto_login():
             self.action_home()
         else:
             self.action_login()
 
     def action_quit(self) -> None:
-        Logger().info("App quitting.")
+        Logger().debug("App quitting.")
         self.exit()
 
-    def action_switch_focus(self) -> None:
-        Logger().debug("Switching focus")
-        if self.active_widget == "sidebar":
-            self.active_widget = "content"
-            self.query_one(PostList).focus()
-        else:
-            self.active_widget = "sidebar"
-            self.query_one(Sidebar).focus()
-
-    def action_cursor_up(self) -> None:
-        Logger().debug("Cursor up action")
-        if self.active_widget == "sidebar":
-            self.query_one(Sidebar).action_cursor_up()
-        else:
-            self.query_one(PostList).action_cursor_up()
-
-    def action_cursor_down(self) -> None:
-        Logger().debug("Cursor down action")
-        if self.active_widget == "sidebar":
-            self.query_one(Sidebar).action_cursor_down()
-        else:
-            self.query_one(PostList).action_cursor_down()
+    def on_key(self, event):
+        Logger().info(f"Key pressed: {event.key}")
+        return event
 
     def action_select(self) -> None:
         Logger().info("Action: select")
-        if self.active_widget == "sidebar":
-            item = self.query_one(Sidebar).get_selected_item()
-            if item:
-                self._handle_sidebar_action(item)
-        else:
-            post = self.query_one(PostList).get_selected_post()
-            if post:
-                Logger().info(f"Selected post: {getattr(post, 'title', str(post))}")
-                content = self.query_one("#content")
-                content.remove_children()
-                content.mount(PostViewScreen(post, content, self.current_posts))
-
-    def _handle_sidebar_action(self, item: str) -> None:
-        Logger().info(f"Handling sidebar action: {item}")
-        if item == "Home":
-            self.action_home()
-        elif item == "New":
-            self.action_new()
-        elif item == "Top":
-            self.action_top()
-        elif item == "Search":
-            self.action_search()
-        elif item == "Login":
-            self.action_login()
-        elif item == "Help":
-            self.action_help()
-        elif item == "Settings":
-            self.action_settings()
+        post = self.query_one(PostList).get_selected_post()
+        if post:
+            Logger().info(f"Selected post: {getattr(post, 'title', str(post))}")
+            content = self.query_one("#content")
+            content.remove_children()
+            content.mount(PostViewScreen(post, content, self.current_posts))
 
     def action_home(self) -> None:
         Logger().info("Action: home feed")
         self.current_feed = "hot"
         posts = self.reddit_service.get_hot_posts()
-        self.current_posts = posts  # Store posts
+        self.current_posts = posts
         self.query_one(PostList).update_posts(posts)
-        self.active_widget = "content"
+        self.query_one(Sidebar).update_status("Home Feed")
         self.query_one(PostList).focus()
 
     def action_new(self) -> None:
         Logger().info("Action: new feed")
         self.current_feed = "new"
         posts = self.reddit_service.get_new_posts()
-        self.current_posts = posts  # Store posts
+        self.current_posts = posts
         self.query_one(PostList).update_posts(posts)
-        self.active_widget = "content"
+        self.query_one(Sidebar).update_status("New Feed")
         self.query_one(PostList).focus()
 
     def action_top(self) -> None:
         Logger().info("Action: top feed")
         self.current_feed = "top"
         posts = self.reddit_service.get_top_posts()
-        self.current_posts = posts  # Store posts
+        self.current_posts = posts
         self.query_one(PostList).update_posts(posts)
-        self.active_widget = "content"
+        self.query_one(Sidebar).update_status("Top Feed")
         self.query_one(PostList).focus()
 
     def action_search(self) -> None:

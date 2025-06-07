@@ -2,12 +2,18 @@ from textual.widgets import Static
 from textual.containers import Vertical, ScrollableContainer
 from textual.widget import Widget
 from textual.reactive import reactive
+from textual.binding import Binding
 from rich.text import Text
 from datetime import datetime
 from utils.logger import Logger
 from textual.geometry import Region
 
 class PostList(Widget):
+    BINDINGS = [
+        Binding("up", "cursor_up", "Up", show=True),
+        Binding("down", "cursor_down", "Down", show=True),
+    ]
+
     selected_index = reactive(0)
 
     def __init__(self, posts=None, id=None):
