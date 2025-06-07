@@ -105,6 +105,7 @@ class RedditTUI(App):
         Binding("down", "cursor_down", "Down", show=True),
         Binding("enter", "select", "Select", show=True),
         Binding("tab", "switch_focus", "Switch Focus", show=True),
+        Binding("l", "login", "Login", show=True),
     ]
 
     def __init__(self):
@@ -236,9 +237,14 @@ class RedditTUI(App):
                 else:
                     Logger().error("Failed to reinitialize RedditService after login")
                     self.notify("Error: Failed to initialize Reddit service", severity="error")
+                    self.action_home()
+            else:
+                Logger().info("Login cancelled or failed, returning to home")
+                self.action_home()
         except Exception as e:
             Logger().error(f"Exception in action_login: {str(e)}", exc_info=True)
             self.notify(f"Error: {str(e)}", severity="error")
+            self.action_home()
 
     def action_help(self) -> None:
         Logger().info("Action: help")
