@@ -21,12 +21,12 @@ cd new-textual
 
 2. Create a virtual environment and activate it:
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+python -m venv venv
+source venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 3. Install dependencies:
-```bash
+```
 pip install -r requirements.txt
 ```
 
@@ -48,7 +48,7 @@ To use this application, you need to create a Reddit application:
 ## Usage
 
 Run the application:
-```bash
+```
 python main.py
 ```
 
@@ -56,14 +56,7 @@ python main.py
 
 - `q`: Quit
 - `h`: Home feed
-- `n`: New posts
-- `t`: Top posts
-- `s`: Search
 - `l`: Login
-- `?`: Help
-- `c`: Settings
-- `↑/↓`: Navigate posts
-- `Enter`: Select post
 
 ## Development
 
