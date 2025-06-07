@@ -18,6 +18,7 @@ Coming soon!
    ```
    git clone https://github.com/LennyMaxMine/RedditTUI
    cd reddittui
+   cd new-textual
    ```
 
 2. Install the required dependencies:
@@ -29,7 +30,7 @@ Coming soon!
 
 To run the application, execute the following command:
 ```
-python src/main.py
+python main.py
 ```
 
 Follow the on-screen instructions to log in and start browsing Reddit.
