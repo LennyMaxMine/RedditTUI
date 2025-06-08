@@ -98,7 +98,7 @@ class SearchScreen(Widget):
         header.append(" | Time: ", style="bold blue")
         header.append(time_display, style="white")
         header.append("\n\n", style="white")
-        header.append("This feature is still in development and may not work yet. Please report any issues to me via slack :D.", style="bold white")
+        header.append("This feature is still in development and may not work yet. Please report any issues to me via slack. :D.", style="bold white")
         return header
 
     def perform_search(self):
