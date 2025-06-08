@@ -11,6 +11,7 @@ class RedditService:
         self.config_dir = Path.home() / ".config" / "reddit-tui"
         self.credentials_file = self.config_dir / "sanfrancisco.jhna"
         self._ensure_config_dir()
+        self.user = None
 
     def _ensure_config_dir(self):
         self.logger.info(f"Ensuring config dir: {self.config_dir}")
@@ -30,6 +31,7 @@ class RedditService:
             self.logger.info("Attempting to authenticate with Reddit API...")
             try:
                 user = self.reddit.user.me()
+                self.user = user.name
                 self.logger.info(f"Reddit authentication successful. Logged in as: {user.name}")
                 self.logger.info("Saving credentials...")
                 self._save_credentials(client_id, client_secret, username, password)
@@ -112,10 +114,20 @@ class RedditService:
             return list(sub.top(limit=limit))
         return list(sub.hot(limit=limit))
 
-    def search_posts(self, query: str, limit: int = 25):
+    def search_posts(self, query: str, sort: str = "relevance", time_filter: str = "all", limit: int = 25):
         if not self.reddit:
             return []
-        return list(self.reddit.subreddit("all").search(query, limit=limit))
+        try:
+            self.logger.info(f"Searching posts with query: {query}, sort: {sort}, time: {time_filter}")
+            return list(self.reddit.subreddit("all").search(
+                query,
+                sort=sort,
+                time_filter=time_filter,
+                limit=limit
+            ))
+        except Exception as e:
+            self.logger.error(f"Error searching posts: {str(e)}", exc_info=True)
+            return []
 
     def get_post_comments(self, post_id: str, limit: int = 100):
         if not self.reddit:

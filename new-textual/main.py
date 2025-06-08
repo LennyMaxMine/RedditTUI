@@ -8,6 +8,7 @@ from components.post_list import PostList
 from components.sidebar import Sidebar
 from components.login_screen import LoginScreen
 from components.post_view_screen import PostViewScreen
+from components.search_screen import SearchScreen
 from utils.logger import Logger
 
 class RedditTUI(App):
@@ -131,6 +132,7 @@ class RedditTUI(App):
         Logger().info("App mounted. Attempting auto-login.")
         if self.reddit_service.auto_login():
             self.action_home()
+            self.query_one(Sidebar).update_sidebar_account(self.reddit_service.user)
         else:
             self.action_login()
 
@@ -178,9 +180,19 @@ class RedditTUI(App):
         self.query_one(Sidebar).update_status("Top Feed")
         self.query_one(PostList).focus()
 
-    def action_search(self) -> None:
+    async def action_search(self) -> None:
         Logger().info("Action: search")
-        pass
+        try:
+            content = self.query_one("#content")
+            content.remove_children()
+            search_screen = SearchScreen(content, self.current_posts)
+            content.mount(search_screen)
+            self.app.active_widget = "content"
+            search_screen.focus()
+            self.query_one(Sidebar).update_status("Search Feed")
+        except Exception as e:
+            Logger().error(f"Error in search action: {str(e)}", exc_info=True)
+            self.notify(f"Error: {str(e)}", severity="error")
 
     async def action_login(self) -> None:
         Logger().info("Action: login")

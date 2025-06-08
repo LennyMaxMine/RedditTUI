@@ -8,6 +8,7 @@ class Sidebar(Widget):
         Logger().info("Initializing Sidebar widget")
         super().__init__(id=id)
         self.status = "Home Feed"
+        self.account = "Unknown"
         self._sidebar_content = None
 
     def compose(self):
@@ -24,10 +25,17 @@ class Sidebar(Widget):
         self.status = status
         self.refresh()
 
+    def update_sidebar_account(self, account: str):
+        Logger().info(f"Updating sidebar account to: {account}")
+        self.account = account
+        self.refresh()
+
     def render(self):
         Logger().debug("Sidebar render called, updating static content")
         if self._sidebar_content:
             content = Text()
+            content.append(f"Logged in as:\n\n", style="bold blue")
+            content.append(f"{self.account}\n\n", style="white")
             content.append("Current View:\n\n", style="bold blue")
             content.append(f"{self.status}\n\n", style="white")
             content.append("Key Bindings:\n\n", style="bold blue")
