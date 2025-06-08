@@ -15,14 +15,14 @@ A Terminal User Interface (TUI) for Reddit built with Textual.
 1. Clone the repository:
 ```bash
 git clone https://github.com/lennymaxmine/RedditTUI
-cd reddit-tui
+cd RedditTUI
 cd new-textual
 ```
 
 2. Create a virtual environment and activate it:
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: .venv\Scripts\activate
+source venv/bin/activate  # On Windows: \venv\Scripts\activate
 ```
 
 3. Install dependencies:
@@ -37,9 +37,9 @@ To use this application, you need to create a Reddit application:
 1. Go to https://www.reddit.com/prefs/apps
 2. Click "create another app..."
 3. Fill in the details:
-   - Name: RedditTUI
+   - Name: TUI
    - Type: script
-   - Description: A TUI client for Reddit
+   - Description: A TUI client
    - About URL: (leave blank)
    - Redirect URI: http://localhost:8080
 4. Click "create app"
