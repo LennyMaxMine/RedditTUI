@@ -1,6 +1,6 @@
 from textual.app import App, ComposeResult
-from textual.containers import Container, Horizontal
-from textual.widgets import Header, Footer, Static
+from textual.containers import Container, Horizontal, Vertical, ScrollableContainer
+from textual.widgets import Header, Footer, Static, Button
 from textual.binding import Binding
 from textual.screen import Screen
 from services.reddit_service import RedditService
@@ -97,6 +97,19 @@ class RedditTUI(App):
         margin: 1;
         height: 1fr;
         overflow-y: scroll;
+    }
+
+    #comments_container {
+        height: 1fr;
+        min-height: 0;
+        overflow-y: scroll;
+        border: solid $primary;
+        margin: 1;
+    }
+
+    #comments_section {
+        padding: 1;
+        width: 100%;
     }
     """
 

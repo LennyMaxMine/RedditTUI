@@ -32,16 +32,16 @@ class PostViewScreen(Widget):
 
     def compose(self):
         self.logger.info("Composing PostViewScreen UI")
-        with ScrollableContainer():
-            with Vertical():
-                yield Static(self._get_title_panel(), id="post_title")
-                yield Static(self._get_metadata(), id="post_metadata")
-                yield Static(self._get_content(), id="post_content")
-                with Horizontal():
-                    yield Button("Back", id="back_button")
-                    yield Button("Comments", id="comments_button")
-                    yield Button("Upvote", id="upvote_button")
-                    yield Button("Downvote", id="downvote_button")
+        with Vertical():
+            yield Static(self._get_title_panel(), id="post_title")
+            yield Static(self._get_metadata(), id="post_metadata")
+            yield Static(self._get_content(), id="post_content")
+            with Horizontal():
+                yield Button("Back", id="back_button")
+                yield Button("Comments", id="comments_button")
+                yield Button("Upvote", id="upvote_button")
+                yield Button("Downvote", id="downvote_button")
+            with ScrollableContainer(id="comments_container"):
                 yield Static(self._get_comments(), id="comments_section")
 
     def on_mount(self):
@@ -60,6 +60,7 @@ class PostViewScreen(Widget):
             self.logger.info(f"Loaded {len(self.comments)} comments")
             if not self.comments:
                 self.logger.warning("No comments found for post")
+            self.query_one("#comments_section").update(self._get_comments())
         except Exception as e:
             self.logger.error(f"Error loading comments: {str(e)}", exc_info=True)
             self.comments = []
@@ -117,27 +118,51 @@ class PostViewScreen(Widget):
             )
 
         try:
-            comment_texts = []
-            for comment in self.comments:
-                if hasattr(comment, 'body'):
-                    try:
-                        author = getattr(comment, 'author', '[deleted]')
-                        if author != '[deleted]':
-                            author = author.name
-                        score = getattr(comment, 'score', 0)
-                        created = getattr(comment, 'created_utc', None)
-                        age = self._get_age(datetime.fromtimestamp(created)) if created else "unknown"
+            def format_comment(comment, depth=0):
+                if not hasattr(comment, 'body') or not comment.body:
+                    return None
+
+                try:
+                    author = getattr(comment, 'author', '[deleted]')
+                    if author != '[deleted]':
+                        author = author.name
+                    score = getattr(comment, 'score', 0)
+                    created = getattr(comment, 'created_utc', None)
+                    age = self._get_age(datetime.fromtimestamp(created)) if created else "unknown"
+                    
+                    indent = "  " * depth
+                    header = Text.assemble(
+                        Text(f"{indent}u/{author} ", style="yellow"),
+                        Text(f"• {score} points ", style="cyan"),
+                        Text(f"• {age}\n", style="blue")
+                    )
+                    
+                    body_lines = comment.body.split('\n')
+                    body_text = Text()
+                    for i, line in enumerate(body_lines):
+                        body_text.append(f"{indent}{line}", style="white")
+                    
+                    return Text.assemble(header, body_text, Text("\n"))
+                except Exception as e:
+                    self.logger.error(f"Error formatting comment: {str(e)}", exc_info=True)
+                    return None
+
+            def process_comments(comments, depth=0):
+                comment_texts = []
+                for comment in comments:
+                    if hasattr(comment, 'body') and comment.body:
+                        comment_text = format_comment(comment, depth)
+                        if comment_text:
+                            comment_texts.append(comment_text)
+                            comment_texts.append(Text("\n"))
                         
-                        comment_text = Text.assemble(
-                            Text(f"u/{author} ", style="yellow"),
-                            Text(f"• {score} points ", style="cyan"),
-                            Text(f"• {age}\n", style="blue"),
-                            Text(comment.body + "\n\n", style="white")
-                        )
-                        comment_texts.append(comment_text)
-                    except Exception as e:
-                        self.logger.error(f"Error formatting comment: {str(e)}", exc_info=True)
-                        continue
+                        if hasattr(comment, 'replies') and comment.replies:
+                            replies = list(comment.replies)
+                            if replies:
+                                comment_texts.extend(process_comments(replies, depth + 1))
+                return comment_texts
+
+            comment_texts = process_comments(self.comments)
 
             if not comment_texts:
                 return Panel(
@@ -148,7 +173,7 @@ class PostViewScreen(Widget):
 
             return Panel(
                 Text.assemble(*comment_texts),
-                title="Comments",
+                title=f"Comments ({len(comment_texts)})",
                 border_style="blue",
                 box=box.ROUNDED
             )

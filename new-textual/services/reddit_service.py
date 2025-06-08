@@ -140,8 +140,8 @@ class RedditService:
                 post = self.reddit.submission(id=post_id)
             self.logger.info(f"Fetching comments for post: {post.title}")
             post.comments.replace_more(limit=0)
-            comments = list(post.comments.list()[:limit])
-            self.logger.info(f"Found {len(comments)} comments")
+            comments = list(post.comments)
+            self.logger.info(f"Found {len(comments)} top-level comments")
             return comments
         except Exception as e:
             self.logger.error(f"Error fetching comments: {str(e)}", exc_info=True)
