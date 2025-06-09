@@ -46,6 +46,7 @@ class Sidebar(Widget):
             content.append("l - Login\n", style="white")
             content.append("? - Help\n", style="white")
             content.append("c - Settings\n", style="white")
+            content.append("e - Edit Theme\n", style="white")
             content.append("q - Quit\n", style="white")
             self._sidebar_content.update(content)
 

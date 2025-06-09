@@ -38,7 +38,7 @@ class PostViewScreen(Widget):
             yield Static(self._get_content(), id="post_content")
             with Horizontal():
                 yield Button("Back", id="back_button")
-                yield Button("Comments", id="comments_button")
+                #yield Button("Comments", id="comments_button")
                 yield Button("Upvote", id="upvote_button")
                 yield Button("Downvote", id="downvote_button")
             with ScrollableContainer(id="comments_container"):

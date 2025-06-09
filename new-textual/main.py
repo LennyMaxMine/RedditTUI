@@ -3,6 +3,7 @@ from textual.containers import Container, Horizontal, Vertical, ScrollableContai
 from textual.widgets import Header, Footer, Static, Button
 from textual.binding import Binding
 from textual.screen import Screen
+from textual.theme import Theme
 from services.reddit_service import RedditService
 from components.post_list import PostList
 from components.sidebar import Sidebar
@@ -82,6 +83,59 @@ class RedditTUI(App):
         padding: 2;
     }
 
+    #theme_container {
+        width: 1fr;
+        height: 100%;
+        align: center middle;
+    }
+
+    #theme_form {
+        width: 50;
+        max-width: 80vw;
+        min-width: 30;
+        margin: 2 2;
+        background: $surface;
+        border: solid $primary;
+        padding: 2;
+    }
+
+    .color_label {
+        width: 14;
+        min-width: 10;
+        text-align: right;
+        padding-right: 1;
+    }
+
+    .color_preview {
+        width: 5;
+        height: 2;
+        border: solid $primary;
+        background: $background;
+        margin-left: 1;
+    }
+
+    #theme_form Horizontal {
+        width: 100%;
+        align: left middle;
+        margin-bottom: 1;
+    }
+
+    #theme_form Input {
+        width: 18;
+        height: 2;
+        margin: 0 1;
+    }
+
+    #theme_form Button {
+        min-width: 10;
+    }
+
+    #button_container {
+        align: center middle;
+        height: auto;
+        margin-top: 2;
+    }
+
     .title {
         text-align: center;
         color: $text;
@@ -100,12 +154,6 @@ class RedditTUI(App):
 
     Button {
         margin: 1 0;
-    }
-
-    #button_container {
-        align: center middle;
-        height: auto;
-        margin-top: 2;
     }
 
     #post_title {
@@ -163,6 +211,30 @@ class RedditTUI(App):
         self.settings = self.load_settings()
         Logger().info("Registered bindings: " + str(self.BINDINGS))
 
+    def on_mount(self) -> None:
+        Logger().info("================================ App mounted ==================================")
+
+        for file in os.listdir("themes"):
+            if file.endswith(".theme"):
+                Logger().info(f"Loading theme: {file}")
+                with open(os.path.join("themes", file), "r") as f:
+                    theme = json.load(f)
+                    self.register_theme(Theme(**theme))
+                    Logger().info(f"Registered theme: {theme['name']}")
+
+        self.theme = self.settings.get("theme", "dark")
+
+        Logger().info(f"Attempting auto-login")
+        if self.reddit_service.auto_login():
+            self.action_home()
+            self.query_one(Sidebar).update_sidebar_account(self.reddit_service.user)
+            Logger().info(f"Auto-login successful")
+        else:
+            Logger().info(f"Auto-login failed, attempting manual login")
+            self.action_login()
+
+        Logger().info("================================ On_mount finished ==================================")
+
     def compose(self) -> ComposeResult:
         Logger().info("Composing main UI")
         yield Header()
@@ -170,14 +242,6 @@ class RedditTUI(App):
             yield Sidebar(id="sidebar")
             yield PostList(id="content")
         yield Footer()
-
-    def on_mount(self) -> None:
-        Logger().info("App mounted. Attempting auto-login.")
-        if self.reddit_service.auto_login():
-            self.action_home()
-            self.query_one(Sidebar).update_sidebar_account(self.reddit_service.user)
-        else:
-            self.action_login()
 
     def action_quit(self) -> None:
         Logger().debug("App quitting.")
@@ -290,7 +354,7 @@ class RedditTUI(App):
             "comment_depth": 3,
             "auto_load_comments": True,
             "show_nsfw": False,
-            "theme": "default",
+            "theme": "dark",
             "sort_comments_by": "best"
         }
 
@@ -322,6 +386,9 @@ class RedditTUI(App):
     def apply_settings(self) -> None:
         Logger().info("Applying settings")
         try:
+            # Apply theme
+            self.theme = self.settings.get("theme", "dark")
+
             # Apply posts per page settings
             if self.current_posts:
                 posts = getattr(self.reddit_service, f"get_{self.current_feed}_posts")(limit=self.settings["posts_per_page"])
