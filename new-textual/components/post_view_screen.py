@@ -124,24 +124,27 @@ class PostViewScreen(Widget):
 
                 try:
                     author = getattr(comment, 'author', '[deleted]')
-                    if author != '[deleted]':
-                        author = author.name
+                    if author is None or author == '[deleted]':
+                        author_str = '[deleted]'
+                    else:
+                        try:
+                            author_str = author.name
+                        except Exception as e:
+                            self.logger.error(f"Error getting author name: {str(e)}", exc_info=True)
+                            author_str = '[unknown]'
                     score = getattr(comment, 'score', 0)
                     created = getattr(comment, 'created_utc', None)
                     age = self._get_age(datetime.fromtimestamp(created)) if created else "unknown"
-                    
                     indent = "  " * depth
                     header = Text.assemble(
-                        Text(f"{indent}u/{author} ", style="yellow"),
+                        Text(f"{indent}u/{author_str} ", style="yellow"),
                         Text(f"• {score} points ", style="cyan"),
                         Text(f"• {age}\n", style="blue")
                     )
-                    
                     body_lines = comment.body.split('\n')
                     body_text = Text()
                     for i, line in enumerate(body_lines):
                         body_text.append(f"{indent}{line}", style="white")
-                    
                     return Text.assemble(header, body_text, Text("\n"))
                 except Exception as e:
                     self.logger.error(f"Error formatting comment: {str(e)}", exc_info=True)

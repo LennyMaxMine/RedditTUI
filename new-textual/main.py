@@ -1,8 +1,8 @@
-from textual.app import App, ComposeResult
+from textual.app import App, ComposeResult, SystemCommand
 from textual.containers import Container, Horizontal, Vertical, ScrollableContainer
 from textual.widgets import Header, Footer, Static, Button
 from textual.binding import Binding
-from textual.screen import Screen
+from textual.screen import Screen, ModalScreen
 from textual.theme import Theme
 from services.reddit_service import RedditService
 from components.post_list import PostList
@@ -15,6 +15,24 @@ from utils.logger import Logger
 import json
 import os
 from pathlib import Path
+
+class ReportReasonScreen(ModalScreen):
+    def __init__(self, reasons):
+        super().__init__()
+        self.reasons = reasons
+
+    def compose(self):
+        yield Static("Select a reason for reporting this post:", classes="title")
+        with Vertical():
+            for idx, reason in enumerate(self.reasons):
+                yield Button(reason, id=f"reason_{idx}")
+            yield Button("Back", id="back_button")
+
+    def on_button_pressed(self, event: Button.Pressed):
+        if event.button.id == "back_button":
+            self.dismiss("back")
+        else:
+            self.dismiss(event.button.label)
 
 class RedditTUI(App):
     CSS = """
@@ -421,6 +439,79 @@ class RedditTUI(App):
         except Exception as e:
             Logger().error(f"Error applying settings: {str(e)}", exc_info=True)
             self.notify("Error applying settings", severity="error")
+
+    def get_system_commands(self, screen):
+        yield from super().get_system_commands(screen)
+        try:
+            content = self.query_one("#content")
+            children = list(content.children)
+            if len(children) == 1 and isinstance(children[0], PostViewScreen):
+                yield SystemCommand("Upvote post", "Upvote the currently viewed post", self.upvote_selected_post)
+                yield SystemCommand("Downvote post", "Downvote the currently viewed post", self.downvote_selected_post)
+                yield SystemCommand("Report post", "Report the currently viewed post", self.report_selected_post)
+                yield SystemCommand("Comment on post", "Comment on the currently viewed post", self.comment_on_selected_post)
+        except Exception as e:
+            Logger().error(f"Error checking for PostViewScreen: {str(e)}", exc_info=True)
+
+    def upvote_selected_post(self):
+        post = self.query_one(PostList).get_selected_post()
+        if post:
+            try:
+                post.upvote()
+                self.notify("Upvoted post!", severity="success")
+                Logger().info(f"Upvoted post: {getattr(post, 'title', str(post))}")
+            except Exception as e:
+                Logger().error(f"Error upvoting post: {str(e)}", exc_info=True)
+                self.notify(f"Error upvoting post: {str(e)}", severity="error")
+        else:
+            self.notify("No post selected", severity="warning")
+
+    def downvote_selected_post(self):
+        post = self.query_one(PostList).get_selected_post()
+        if post:
+            try:
+                post.downvote()
+                self.notify("Downvoted post!", severity="success")
+                Logger().info(f"Downvoted post: {getattr(post, 'title', str(post))}")
+            except Exception as e:
+                Logger().error(f"Error downvoting post: {str(e)}", exc_info=True)
+                self.notify(f"Error downvoting post: {str(e)}", severity="error")
+        else:
+            self.notify("No post selected", severity="warning")
+
+    async def report_selected_post(self):
+        post = self.query_one(PostList).get_selected_post()
+        if not post:
+            self.notify("No post selected", severity="warning")
+            return
+        reasons = [
+            "Spam",
+            "Vote Manipulation",
+            "Personal Information",
+            "Sexualizing Minors",
+            "Breaking Reddit",
+            "Other"
+        ]
+        reason = await self.push_screen(ReportReasonScreen(reasons))
+        if reason and reason != "back":
+            try:
+                post.report(reason)
+                self.notify(f"Reported post for: {reason}", severity="warning")
+                Logger().info(f"Reported post: {getattr(post, 'title', str(post))} for {reason}")
+            except Exception as e:
+                Logger().error(f"Error reporting post: {str(e)}", exc_info=True)
+                self.notify(f"Error reporting post: {str(e)}", severity="error")
+        elif reason == "back":
+            self.notify("Report cancelled", severity="info")
+
+
+    def comment_on_selected_post(self):
+        post = self.query_one(PostList).get_selected_post()
+        if post:
+            self.notify("Comment feature not implemented yet", severity="info")
+            Logger().info(f"Comment command invoked for post: {getattr(post, 'title', str(post))}")
+        else:
+            self.notify("No post selected", severity="warning")
 
 if __name__ == "__main__":
     Logger().info("Starting RedditTUI app")
