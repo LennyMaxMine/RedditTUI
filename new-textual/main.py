@@ -9,7 +9,11 @@ from components.sidebar import Sidebar
 from components.login_screen import LoginScreen
 from components.post_view_screen import PostViewScreen
 from components.search_screen import SearchScreen
+from components.settings_screen import SettingsScreen
 from utils.logger import Logger
+import json
+import os
+from pathlib import Path
 
 class RedditTUI(App):
     CSS = """
@@ -64,11 +68,30 @@ class RedditTUI(App):
         padding: 2;
     }
 
+    #settings_container {
+        width: 100%;
+        height: 100%;
+        align: center middle;
+    }
+
+    #settings_form {
+        width: 50;
+        height: auto;
+        background: $surface;
+        border: solid $primary;
+        padding: 2;
+    }
+
     .title {
         text-align: center;
         color: $text;
         padding: 1;
         text-style: bold;
+    }
+
+    .setting_label {
+        color: $text;
+        padding: 1 0;
     }
 
     Input {
@@ -77,6 +100,12 @@ class RedditTUI(App):
 
     Button {
         margin: 1 0;
+    }
+
+    #button_container {
+        align: center middle;
+        height: auto;
+        margin-top: 2;
     }
 
     #post_title {
@@ -131,6 +160,7 @@ class RedditTUI(App):
         self.reddit_service = RedditService()
         self.current_feed = "hot"
         self.current_posts = []
+        self.settings = self.load_settings()
         Logger().info("Registered bindings: " + str(self.BINDINGS))
 
     def compose(self) -> ComposeResult:
@@ -236,9 +266,94 @@ class RedditTUI(App):
         Logger().info("Action: help")
         pass
 
-    def action_settings(self) -> None:
+    async def action_settings(self) -> None:
         Logger().info("Action: settings")
-        pass
+        try:
+            settings_screen = SettingsScreen()
+            result = await self.push_screen(settings_screen)
+            if result:
+                Logger().info("Settings saved")
+                self.apply_settings()
+            else:
+                Logger().info("Settings cancelled")
+        except Exception as e:
+            Logger().error(f"Error in settings action: {str(e)}", exc_info=True)
+            self.notify(f"Error: {str(e)}", severity="error")
+
+    def load_settings(self) -> dict:
+        Logger().info("Loading settings")
+        config_dir = Path.home() / ".config" / "reddit-tui"
+        settings_file = config_dir / "settings.json"
+        
+        default_settings = {
+            "posts_per_page": 25,
+            "comment_depth": 3,
+            "auto_load_comments": True,
+            "show_nsfw": False,
+            "theme": "default",
+            "sort_comments_by": "best"
+        }
+
+        try:
+            if settings_file.exists():
+                with open(settings_file, "r") as f:
+                    settings = json.load(f)
+                    Logger().info("Settings loaded successfully")
+                    return {**default_settings, **settings}
+        except Exception as e:
+            Logger().error(f"Error loading settings: {str(e)}", exc_info=True)
+        
+        return default_settings
+
+    def save_settings(self) -> None:
+        Logger().info("Saving settings")
+        config_dir = Path.home() / ".config" / "reddit-tui"
+        settings_file = config_dir / "settings.json"
+        
+        try:
+            config_dir.mkdir(parents=True, exist_ok=True)
+            with open(settings_file, "w") as f:
+                json.dump(self.settings, f, indent=4)
+            Logger().info("Settings saved successfully")
+        except Exception as e:
+            Logger().error(f"Error saving settings: {str(e)}", exc_info=True)
+            self.notify("Error saving settings", severity="error")
+
+    def apply_settings(self) -> None:
+        Logger().info("Applying settings")
+        try:
+            # Apply posts per page settings
+            if self.current_posts:
+                posts = getattr(self.reddit_service, f"get_{self.current_feed}_posts")(limit=self.settings["posts_per_page"])
+                self.current_posts = posts
+                self.query_one(PostList).update_posts(posts)
+
+            # Apply comment depth setting
+            if hasattr(self, "current_post") and self.current_post:
+                comments = self.reddit_service.get_post_comments(self.current_post, limit=self.settings["comment_depth"])
+                self.query_one(PostViewScreen).update_comments(comments)
+
+            # Apply NSFW filter
+            if not self.settings["show_nsfw"]:
+                self.current_posts = [post for post in self.current_posts if not getattr(post, "over_18", False)]
+                self.query_one(PostList).update_posts(self.current_posts)
+
+            # Apply comment sort setting
+            if hasattr(self, "current_post") and self.current_post:
+                self.query_one(PostViewScreen).sort_comments(self.settings["sort_comments_by"])
+
+            # Apply auto load comments setting
+            if hasattr(self, "current_post") and self.current_post:
+                if self.settings["auto_load_comments"]:
+                    self.query_one(PostViewScreen).load_comments()
+                else:
+                    self.query_one(PostViewScreen).clear_comments()
+
+            self.refresh()
+            Logger().info("Settings applied successfully")
+        except Exception as e:
+            Logger().error(f"Error applying settings: {str(e)}", exc_info=True)
+            self.notify("Error applying settings", severity="error")
 
 if __name__ == "__main__":
     Logger().info("Starting RedditTUI app")
