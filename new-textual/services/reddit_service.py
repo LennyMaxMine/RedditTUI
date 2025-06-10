@@ -145,4 +145,36 @@ class RedditService:
             return comments
         except Exception as e:
             self.logger.error(f"Error fetching comments: {str(e)}", exc_info=True)
-            return [] 
+            return []
+
+    def get_user_profile(self, username: str):
+        if not self.reddit:
+            self.logger.error("Cannot get user profile: Reddit instance not initialized")
+            return None
+        try:
+            return self.reddit.redditor(username)
+        except Exception as e:
+            self.logger.error(f"Error getting user profile: {str(e)}", exc_info=True)
+            return None
+
+    def get_user_posts(self, username: str, limit: int = 25):
+        if not self.reddit:
+            self.logger.error("Cannot get user posts: Reddit instance not initialized")
+            return []
+        try:
+            user = self.reddit.redditor(username)
+            return list(user.submissions.new(limit=limit))
+        except Exception as e:
+            self.logger.error(f"Error getting user posts: {str(e)}", exc_info=True)
+            return []
+
+    def get_user_comments(self, username: str, limit: int = 25):
+        if not self.reddit:
+            self.logger.error("Cannot get user comments: Reddit instance not initialized")
+            return []
+        try:
+            user = self.reddit.redditor(username)
+            return list(user.comments.new(limit=limit))
+        except Exception as e:
+            self.logger.error(f"Error getting user comments: {str(e)}", exc_info=True)
+            return []

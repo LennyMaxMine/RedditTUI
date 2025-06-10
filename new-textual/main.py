@@ -11,10 +11,12 @@ from components.login_screen import LoginScreen
 from components.post_view_screen import PostViewScreen
 from components.search_screen import SearchScreen
 from components.settings_screen import SettingsScreen
+from components.user_profile_screen import UserProfileScreen
 from utils.logger import Logger
 import json
 import os
 from pathlib import Path
+from datetime import datetime
 
 class ReportReasonScreen(ModalScreen):
     def __init__(self, reasons):
@@ -445,11 +447,19 @@ class RedditTUI(App):
         try:
             content = self.query_one("#content")
             children = list(content.children)
-            if len(children) == 1 and isinstance(children[0], PostViewScreen):
-                yield SystemCommand("Upvote post", "Upvote the currently viewed post", self.upvote_selected_post)
-                yield SystemCommand("Downvote post", "Downvote the currently viewed post", self.downvote_selected_post)
-                yield SystemCommand("Report post", "Report the currently viewed post", self.report_selected_post)
-                yield SystemCommand("Comment on post", "Comment on the currently viewed post", self.comment_on_selected_post)
+            if len(children) == 1:
+                if isinstance(children[0], PostViewScreen):
+                    post = children[0].post
+                    if post and post.author:
+                        yield SystemCommand("View User Profile", f"View profile of {post.author.name}", self.action_view_user)
+                    yield SystemCommand("Upvote post", "Upvote the currently viewed post", self.upvote_selected_post)
+                    yield SystemCommand("Downvote post", "Downvote the currently viewed post", self.downvote_selected_post)
+                    yield SystemCommand("Report post", "Report the currently viewed post", self.report_selected_post)
+                    yield SystemCommand("Comment on post", "Comment on the currently viewed post", self.comment_on_selected_post)
+                elif isinstance(children[0], PostList):
+                    post = children[0].get_selected_post()
+                    if post and post.author:
+                        yield SystemCommand("View User Profile", f"View profile of {post.author.name}", self.action_view_user)
         except Exception as e:
             Logger().error(f"Error checking for PostViewScreen: {str(e)}", exc_info=True)
 
@@ -504,7 +514,6 @@ class RedditTUI(App):
         elif reason == "back":
             self.notify("Report cancelled", severity="info")
 
-
     def comment_on_selected_post(self):
         post = self.query_one(PostList).get_selected_post()
         if post:
@@ -513,8 +522,38 @@ class RedditTUI(App):
         else:
             self.notify("No post selected", severity="warning")
 
+    def action_view_user(self) -> None:
+        Logger().info("Action: view user")
+        try:#a
+            content = self.query_one("#content")
+            children = list(content.children)
+            if len(children) == 1:
+                if isinstance(children[0], PostList):
+                    post = children[0].get_selected_post()
+                elif isinstance(children[0], PostViewScreen):
+                    post = children[0].post
+                else:
+                    self.notify("Please select a post first", severity="warning")
+                    return
+
+                if post and post.author:
+                    username = post.author.name
+                    content.remove_children()
+                    user_screen = UserProfileScreen(username, content, self.current_posts)
+                    content.mount(user_screen)
+                    self.app.active_widget = "content"
+                    user_screen.focus()
+                    self.query_one(Sidebar).update_status(f"User Profile: {username}")
+                else:
+                    self.notify("No user selected", severity="warning")
+            else:
+                self.notify("Please select a post first", severity="warning")
+        except Exception as e:
+            Logger().error(f"Error viewing user profile: {str(e)}", exc_info=True)
+            self.notify(f"Error viewing user profile: {str(e)}", severity="error")
+
 if __name__ == "__main__":
-    Logger().info("Starting RedditTUI app")
+    Logger().info(f"=============================================================== Starting RedditTUI app at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ================================================================")
     app = RedditTUI()
     app.run()
-    Logger().info("RedditTUI app exited")
+    Logger().info(f"=============================================================== RedditTUI app exited at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ================================================================")

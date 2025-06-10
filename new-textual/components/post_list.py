@@ -70,6 +70,9 @@ class PostList(Widget):
                 created = datetime.fromtimestamp(post.created_utc)
                 age = self._get_age(created)
 
+                if post.subreddit.display_name == "feminineboys":
+                    continue
+
                 # Title line
                 title_line = Text()
                 title_line.append(prefix, "bold blue" if i == self.selected_index else "white")
