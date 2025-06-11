@@ -1,0 +1,14 @@
+{
+    "name": "dark",
+    "primary": "#00ffff",
+    "secondary": "#ffff00",
+    "accent": "#ff00ff",
+    "foreground": "#ffffff",
+    "background": "#000000",
+    "success": "#00ff00",
+    "warning": "#ffff00",
+    "error": "#ff0000",
+    "surface": "#1a1a1a",
+    "panel": "#2a2a2a",
+    "dark": true
+}

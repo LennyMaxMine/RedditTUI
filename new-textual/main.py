@@ -13,6 +13,7 @@ from components.search_screen import SearchScreen
 from components.settings_screen import SettingsScreen
 from components.user_profile_screen import UserProfileScreen
 from components.comment_screen import CommentScreen
+from components.qr_screen import QRScreen
 from utils.logger import Logger
 import json
 import os
@@ -21,7 +22,7 @@ from datetime import datetime
 
 class ReportReasonScreen(ModalScreen):
     def __init__(self, reasons):
-        super().__init__()#a
+        super().__init__()
         self.reasons = reasons
 
     def compose(self):
@@ -240,6 +241,7 @@ class RedditTUI(App):
         Binding("l", "login", "Login", show=True),
         Binding("?", "help", "Help", show=True),
         Binding("c", "settings", "Settings", show=True),
+        Binding("u", "my_profile", "My Profile", show=True),
     ]
 
     def __init__(self):
@@ -477,10 +479,19 @@ class RedditTUI(App):
                     yield SystemCommand("Downvote post", "Downvote the currently viewed post", self.downvote_selected_post)
                     yield SystemCommand("Report post", "Report the currently viewed post", self.report_selected_post)
                     yield SystemCommand("Comment on post", "Comment on the currently viewed post", self.comment_on_selected_post)
+                    yield SystemCommand("Copy Post URL", "Copy the post's URL to clipboard", self.copy_post_url)
+                    yield SystemCommand("Copy Post Title", "Copy the post's title to clipboard", self.copy_post_title)
+                    yield SystemCommand("Open in Browser", "Open the post in your default browser", self.open_in_browser)
+                    yield SystemCommand("Show QR Code", "Display QR code for the post URL", self.show_qr_code)
                 elif isinstance(children[0], PostList):
                     post = children[0].get_selected_post()
                     if post and post.author:
                         yield SystemCommand("View User Profile", f"View profile of {post.author.name}", self.action_view_user)
+                    if post:
+                        yield SystemCommand("Copy Post URL", "Copy the post's URL to clipboard", self.copy_post_url)
+                        yield SystemCommand("Copy Post Title", "Copy the post's title to clipboard", self.copy_post_title)
+                        yield SystemCommand("Open in Browser", "Open the post in your default browser", self.open_in_browser)
+                        yield SystemCommand("Show QR Code", "Display QR code for the post URL", self.show_qr_code)
         except Exception as e:
             Logger().error(f"Error checking for PostViewScreen: {str(e)}", exc_info=True)
 
@@ -545,7 +556,7 @@ class RedditTUI(App):
 
     def action_view_user(self) -> None:
         Logger().info("Action: view user")
-        try:#a
+        try:
             content = self.query_one("#content")
             children = list(content.children)
             if len(children) == 1:
@@ -572,6 +583,123 @@ class RedditTUI(App):
         except Exception as e:
             Logger().error(f"Error viewing user profile: {str(e)}", exc_info=True)
             self.notify(f"Error viewing user profile: {str(e)}", severity="error")
+
+    def action_my_profile(self) -> None:
+        Logger().info("Action: my profile")
+        try:
+            if not self.reddit_service or not self.reddit_service.user:
+                self.notify("Please login first", severity="warning")
+                return
+
+            content = self.query_one("#content")
+            content.remove_children()
+            user_screen = UserProfileScreen(self.reddit_service.user, content, self.current_posts)
+            content.mount(user_screen)
+            self.app.active_widget = "content"
+            user_screen.focus()
+            self.query_one(Sidebar).update_status(f"User Profile: {self.reddit_service.user}")
+        except Exception as e:
+            Logger().error(f"Error viewing own profile: {str(e)}", exc_info=True)
+            self.notify(f"Error viewing profile: {str(e)}", severity="error")
+
+    def copy_post_url(self):
+        try:
+            content = self.query_one("#content")
+            children = list(content.children)
+            if len(children) == 1:
+                if isinstance(children[0], PostViewScreen):
+                    post = children[0].post
+                elif isinstance(children[0], PostList):
+                    post = children[0].get_selected_post()
+                else:
+                    self.notify("No post selected", severity="warning")
+                    return
+
+                if post:
+                    import pyperclip
+                    url = f"https://reddit.com{post.permalink}"
+                    pyperclip.copy(url)
+                    self.notify("Post URL copied to clipboard!", severity="success")
+                    Logger().info(f"Copied post URL: {url}")
+                else:
+                    self.notify("No post selected", severity="warning")
+        except Exception as e:
+            Logger().error(f"Error copying post URL: {str(e)}", exc_info=True)
+            self.notify(f"Error copying URL: {str(e)}", severity="error")
+
+    def copy_post_title(self):
+        try:
+            content = self.query_one("#content")
+            children = list(content.children)
+            if len(children) == 1:
+                if isinstance(children[0], PostViewScreen):
+                    post = children[0].post
+                elif isinstance(children[0], PostList):
+                    post = children[0].get_selected_post()
+                else:
+                    self.notify("No post selected", severity="warning")
+                    return
+
+                if post:
+                    import pyperclip
+                    title = post.title
+                    pyperclip.copy(title)
+                    self.notify("Post title copied to clipboard!", severity="success")
+                    Logger().info(f"Copied post title: {title}")
+                else:
+                    self.notify("No post selected", severity="warning")
+        except Exception as e:
+            Logger().error(f"Error copying post title: {str(e)}", exc_info=True)
+            self.notify(f"Error copying title: {str(e)}", severity="error")
+
+    def open_in_browser(self):
+        try:
+            content = self.query_one("#content")
+            children = list(content.children)
+            if len(children) == 1:
+                if isinstance(children[0], PostViewScreen):
+                    post = children[0].post
+                elif isinstance(children[0], PostList):
+                    post = children[0].get_selected_post()
+                else:
+                    self.notify("No post selected", severity="warning")
+                    return
+
+                if post:
+                    import webbrowser
+                    url = f"https://reddit.com{post.permalink}"
+                    webbrowser.open(url)
+                    self.notify("Opening post in browser...", severity="info")
+                    Logger().info(f"Opening post in browser: {url}")
+                else:
+                    self.notify("No post selected", severity="warning")
+        except Exception as e:
+            Logger().error(f"Error opening post in browser: {str(e)}", exc_info=True)
+            self.notify(f"Error opening in browser: {str(e)}", severity="error")
+
+    async def show_qr_code(self):
+        try:
+            content = self.query_one("#content")
+            children = list(content.children)
+            if len(children) == 1:
+                if isinstance(children[0], PostViewScreen):
+                    post = children[0].post
+                elif isinstance(children[0], PostList):
+                    post = children[0].get_selected_post()
+                else:
+                    self.notify("No post selected", severity="warning")
+                    return
+
+                if post:
+                    url = f"https://reddit.com{post.permalink}"
+                    qr_screen = QRScreen(url)
+                    await self.push_screen(qr_screen)
+                    Logger().info(f"Showing QR code for URL: {url}")
+                else:
+                    self.notify("No post selected", severity="warning")
+        except Exception as e:
+            Logger().error(f"Error showing QR code: {str(e)}", exc_info=True)
+            self.notify(f"Error showing QR code: {str(e)}", severity="error")
 
 if __name__ == "__main__":
     Logger().info(f"=============================================================== Starting RedditTUI app at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ================================================================")

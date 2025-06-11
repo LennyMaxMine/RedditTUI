@@ -1,0 +1,14 @@
+{
+    "name": "light",
+    "primary": "#0000ff",
+    "secondary": "#800080",
+    "accent": "#ff0000",
+    "foreground": "#000000",
+    "background": "#ffffff",
+    "success": "#008000",
+    "warning": "#800080",
+    "error": "#ff0000",
+    "surface": "#f0f0f0",
+    "panel": "#e0e0e0",
+    "dark": false
+}
