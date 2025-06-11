@@ -178,3 +178,16 @@ class RedditService:
         except Exception as e:
             self.logger.error(f"Error getting user comments: {str(e)}", exc_info=True)
             return []
+
+    def submit_comment(self, post, body: str) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot submit comment: Reddit instance not initialized")
+            return False
+        try:
+            self.logger.info(f"Submitting comment to post: {post.title}")
+            comment = post.reply(body)
+            self.logger.info(f"Comment submitted successfully: {comment.id}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error submitting comment: {str(e)}", exc_info=True)
+            return False

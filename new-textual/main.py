@@ -12,6 +12,7 @@ from components.post_view_screen import PostViewScreen
 from components.search_screen import SearchScreen
 from components.settings_screen import SettingsScreen
 from components.user_profile_screen import UserProfileScreen
+from components.comment_screen import CommentScreen
 from utils.logger import Logger
 import json
 import os
@@ -20,7 +21,7 @@ from datetime import datetime
 
 class ReportReasonScreen(ModalScreen):
     def __init__(self, reasons):
-        super().__init__()
+        super().__init__()#a
         self.reasons = reasons
 
     def compose(self):
@@ -101,6 +102,25 @@ class RedditTUI(App):
         background: $surface;
         border: solid $primary;
         padding: 2;
+    }
+
+    #comment_container {
+        width: 100%;
+        height: 100%;
+        align: center middle;
+    }
+
+    #comment_form {
+        width: 50;
+        height: auto;
+        background: $surface;
+        border: solid $primary;
+        padding: 2;
+    }
+
+    #comment_input {
+        height: 10;
+        margin: 1 0;
     }
 
     #theme_container {
@@ -229,6 +249,7 @@ class RedditTUI(App):
         self.current_feed = "hot"
         self.current_posts = []
         self.settings = self.load_settings()
+        self.logger = Logger()
         Logger().info("Registered bindings: " + str(self.BINDINGS))
 
     def on_mount(self) -> None:
@@ -517,8 +538,8 @@ class RedditTUI(App):
     def comment_on_selected_post(self):
         post = self.query_one(PostList).get_selected_post()
         if post:
-            self.notify("Comment feature not implemented yet", severity="info")
-            Logger().info(f"Comment command invoked for post: {getattr(post, 'title', str(post))}")
+            self.logger.info(f"Opening comment screen for post: {getattr(post, 'title', str(post))}")
+            self.push_screen(CommentScreen(post))
         else:
             self.notify("No post selected", severity="warning")
 
