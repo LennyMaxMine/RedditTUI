@@ -242,6 +242,8 @@ class RedditTUI(App):
         Binding("?", "help", "Help", show=True),
         Binding("c", "settings", "Settings", show=True),
         Binding("u", "my_profile", "My Profile", show=True),
+        Binding("b", "saved_posts", "Saved Posts", show=True),
+        Binding("r", "subscribed_subreddits", "Subscribed Subreddits", show=True),
     ]
 
     def __init__(self):
@@ -475,6 +477,9 @@ class RedditTUI(App):
                     post = children[0].post
                     if post and post.author:
                         yield SystemCommand("View User Profile", f"View profile of {post.author.name}", self.action_view_user)
+                    yield SystemCommand("Save Post", "Save the currently viewed post", self.save_selected_post)
+                    yield SystemCommand("Hide Post", "Hide the currently viewed post", self.hide_selected_post)
+                    yield SystemCommand("Subscribe to Subreddit", f"Subscribe to r/{post.subreddit.display_name}", self.subscribe_to_subreddit)
                     yield SystemCommand("Upvote post", "Upvote the currently viewed post", self.upvote_selected_post)
                     yield SystemCommand("Downvote post", "Downvote the currently viewed post", self.downvote_selected_post)
                     yield SystemCommand("Report post", "Report the currently viewed post", self.report_selected_post)
@@ -488,12 +493,143 @@ class RedditTUI(App):
                     if post and post.author:
                         yield SystemCommand("View User Profile", f"View profile of {post.author.name}", self.action_view_user)
                     if post:
+                        yield SystemCommand("Save Post", "Save the selected post", self.save_selected_post)
+                        yield SystemCommand("Hide Post", "Hide the selected post", self.hide_selected_post)
+                        yield SystemCommand("Subscribe to Subreddit", f"Subscribe to r/{post.subreddit.display_name}", self.subscribe_to_subreddit)
                         yield SystemCommand("Copy Post URL", "Copy the post's URL to clipboard", self.copy_post_url)
                         yield SystemCommand("Copy Post Title", "Copy the post's title to clipboard", self.copy_post_title)
                         yield SystemCommand("Open in Browser", "Open the post in your default browser", self.open_in_browser)
                         yield SystemCommand("Show QR Code", "Display QR code for the post URL", self.show_qr_code)
         except Exception as e:
             Logger().error(f"Error checking for PostViewScreen: {str(e)}", exc_info=True)
+
+    def save_selected_post(self):
+        try:
+            content = self.query_one("#content")
+            children = list(content.children)
+            if len(children) == 1:
+                if isinstance(children[0], PostViewScreen):
+                    post = children[0].post
+                elif isinstance(children[0], PostList):
+                    post = children[0].get_selected_post()
+                else:
+                    self.notify("No post selected", severity="warning")
+                    return
+
+                if post:
+                    if self.reddit_service.save_post(post):
+                        self.notify("Post saved successfully!", severity="success")
+                        Logger().info(f"Saved post: {post.title}")
+                        # Refresh the current view
+                        if self.query_one(Sidebar).status == "Saved Posts":
+                            posts = self.reddit_service.get_saved_posts()
+                            self.current_posts = posts
+                            self.query_one(PostList).update_posts(posts)
+                    else:
+                        self.notify("Failed to save post", severity="error")
+                else:
+                    self.notify("No post selected", severity="warning")
+        except Exception as e:
+            Logger().error(f"Error saving post: {str(e)}", exc_info=True)
+            self.notify(f"Error saving post: {str(e)}", severity="error")
+
+    def hide_selected_post(self):
+        try:
+            content = self.query_one("#content")
+            children = list(content.children)
+            if len(children) == 1:
+                if isinstance(children[0], PostViewScreen):
+                    post = children[0].post
+                elif isinstance(children[0], PostList):
+                    post = children[0].get_selected_post()
+                else:
+                    self.notify("No post selected", severity="warning")
+                    return
+
+                if post:
+                    if self.reddit_service.hide_post(post):
+                        self.notify("Post hidden successfully!", severity="success")
+                        Logger().info(f"Hidden post: {post.title}")
+                        # Remove the post from the current list and refresh
+                        if isinstance(children[0], PostList):
+                            self.current_posts = [p for p in self.current_posts if p.id != post.id]
+                            children[0].update_posts(self.current_posts)
+                            current_status = self.query_one(Sidebar).status
+                            if current_status == "Home Feed":
+                                posts = self.reddit_service.get_hot_posts()
+                                self.current_posts = posts
+                                self.query_one(PostList).update_posts(posts)
+                            elif current_status == "New Feed":
+                                posts = self.reddit_service.get_new_posts()
+                                self.current_posts = posts
+                                self.query_one(PostList).update_posts(posts)
+                            elif current_status == "Top Feed":
+                                posts = self.reddit_service.get_top_posts()
+                                self.current_posts = posts
+                                self.query_one(PostList).update_posts(posts)
+                    else:
+                        self.notify("Failed to hide post", severity="error")
+                else:
+                    self.notify("No post selected", severity="warning")
+        except Exception as e:
+            Logger().error(f"Error hiding post: {str(e)}", exc_info=True)
+            self.notify(f"Error hiding post: {str(e)}", severity="error")
+
+    def subscribe_to_subreddit(self):
+        try:
+            content = self.query_one("#content")
+            children = list(content.children)
+            if len(children) == 1:
+                if isinstance(children[0], PostViewScreen):
+                    post = children[0].post
+                elif isinstance(children[0], PostList):
+                    post = children[0].get_selected_post()
+                else:
+                    self.notify("No post selected", severity="warning")
+                    return
+
+                if post:
+                    subreddit_name = post.subreddit.display_name
+                    if self.reddit_service.subscribe_subreddit(subreddit_name):
+                        self.notify(f"Subscribed to r/{subreddit_name}!", severity="success")
+                        Logger().info(f"Subscribed to subreddit: {subreddit_name}")
+                    else:
+                        self.notify(f"Failed to subscribe to r/{subreddit_name}", severity="error")
+                else:
+                    self.notify("No post selected", severity="warning")
+        except Exception as e:
+            Logger().error(f"Error subscribing to subreddit: {str(e)}", exc_info=True)
+            self.notify(f"Error subscribing to subreddit: {str(e)}", severity="error")
+
+    def action_saved_posts(self) -> None:
+        Logger().info("Action: saved posts")
+        try:
+            if not self.reddit_service or not self.reddit_service.user:
+                self.notify("Please login first", severity="warning")
+                return
+
+            posts = self.reddit_service.get_saved_posts()
+            self.current_posts = posts
+            self.query_one(PostList).update_posts(posts)
+            self.query_one(Sidebar).update_status("Saved Posts")
+            self.query_one(PostList).focus()
+        except Exception as e:
+            Logger().error(f"Error loading saved posts: {str(e)}", exc_info=True)
+            self.notify(f"Error loading saved posts: {str(e)}", severity="error")
+
+    def action_subscribed_subreddits(self) -> None:
+        Logger().info("Action: subscribed subreddits")
+        try:
+            if not self.reddit_service or not self.reddit_service.user:
+                self.notify("Please login first", severity="warning")
+                return
+
+            subreddits = self.reddit_service.get_subscribed_subreddits()
+            # TODO: Create a SubredditList component to display subreddits
+            self.notify(f"Found {len(subreddits)} subscribed subreddits", severity="info")
+        except Exception as e:
+            Logger().error(f"Error loading subscribed subreddits: {str(e)}", exc_info=True)
+            self.notify(f"Error loading subscribed subreddits: {str(e)}", severity="error")
 
     def upvote_selected_post(self):
         post = self.query_one(PostList).get_selected_post()

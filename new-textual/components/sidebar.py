@@ -43,6 +43,8 @@ class Sidebar(Widget):
             content.append("n - New Feed\n", style="white")
             content.append("t - Top Feed\n", style="white")
             content.append("s - Search\n", style="white")
+            content.append("b - Saved Posts\n", style="white")
+            content.append("r - Subscribed Subreddits\n", style="white")
             content.append("l - Login\n", style="white")
             content.append("? - Help\n", style="white")
             content.append("c - Settings\n", style="white")

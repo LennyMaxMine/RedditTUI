@@ -191,3 +191,103 @@ class RedditService:
         except Exception as e:
             self.logger.error(f"Error submitting comment: {str(e)}", exc_info=True)
             return False
+
+    def save_post(self, post) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot save post: Reddit instance not initialized")
+            return False
+        try:
+            self.logger.info(f"Saving post: {post.title}")
+            post.save()
+            self.logger.info("Post saved successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error saving post: {str(e)}", exc_info=True)
+            return False
+
+    def unsave_post(self, post) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot unsave post: Reddit instance not initialized")
+            return False
+        try:
+            self.logger.info(f"Unsaving post: {post.title}")
+            post.unsave()
+            self.logger.info("Post unsaved successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error unsaving post: {str(e)}", exc_info=True)
+            return False
+
+    def hide_post(self, post) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot hide post: Reddit instance not initialized")
+            return False
+        try:
+            self.logger.info(f"Hiding post: {post.title}")
+            post.hide()
+            self.logger.info("Post hidden successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error hiding post: {str(e)}", exc_info=True)
+            return False
+
+    def unhide_post(self, post) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot unhide post: Reddit instance not initialized")
+            return False
+        try:
+            self.logger.info(f"Unhiding post: {post.title}")
+            post.unhide()
+            self.logger.info("Post unhidden successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error unhiding post: {str(e)}", exc_info=True)
+            return False
+
+    def subscribe_subreddit(self, subreddit_name: str) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot subscribe: Reddit instance not initialized")
+            return False
+        try:
+            self.logger.info(f"Subscribing to subreddit: {subreddit_name}")
+            self.reddit.subreddit(subreddit_name).subscribe()
+            self.logger.info("Subscribed successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error subscribing to subreddit: {str(e)}", exc_info=True)
+            return False
+
+    def unsubscribe_subreddit(self, subreddit_name: str) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot unsubscribe: Reddit instance not initialized")
+            return False
+        try:
+            self.logger.info(f"Unsubscribing from subreddit: {subreddit_name}")
+            self.reddit.subreddit(subreddit_name).unsubscribe()
+            self.logger.info("Unsubscribed successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error unsubscribing from subreddit: {str(e)}", exc_info=True)
+            return False
+
+    def get_saved_posts(self, limit: int = 25):
+        if not self.reddit:
+            self.logger.error("Cannot get saved posts: Reddit instance not initialized")
+            return []
+        try:
+            self.logger.info("Fetching saved posts")
+            return list(self.reddit.user.me().saved(limit=limit))
+        except Exception as e:
+            self.logger.error(f"Error fetching saved posts: {str(e)}", exc_info=True)
+            return []
+
+    def get_subscribed_subreddits(self):
+        if not self.reddit:
+            self.logger.error("Cannot get subscribed subreddits: Reddit instance not initialized")
+            return []
+        try:
+            self.logger.info("Fetching subscribed subreddits")
+            return list(self.reddit.user.subreddits())
+        except Exception as e:
+            self.logger.error(f"Error fetching subscribed subreddits: {str(e)}", exc_info=True)
+            return []
