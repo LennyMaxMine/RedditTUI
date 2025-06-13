@@ -61,6 +61,7 @@ class PostList(Widget):
 
             content = []
             for i, post in enumerate(self.posts):
+
                 prefix = "▶ " if i == self.selected_index else "  "
                 title = post.title
                 subreddit = post.subreddit.display_name

@@ -9,7 +9,6 @@ from components.post_list import PostList
 from components.sidebar import Sidebar
 from components.login_screen import LoginScreen
 from components.post_view_screen import PostViewScreen
-from components.search_screen import SearchScreen
 from components.settings_screen import SettingsScreen
 from components.user_profile_screen import UserProfileScreen
 from components.comment_screen import CommentScreen
@@ -229,6 +228,96 @@ class RedditTUI(App):
         padding: 1;
         width: 100%;
     }
+
+    #search_container {
+        width: 100%;
+        height: 100%;
+        align: center middle;
+    }
+
+    #search_form {
+        width: 60;
+        height: auto;
+        background: $surface;
+        border: solid $primary;
+        padding: 2;
+    }
+
+    .section_title {
+        color: $text;
+        padding: 1 0;
+        text-style: bold;
+        border-bottom: solid $primary;
+        margin: 1 0;
+    }
+
+    .filter_label {
+        color: $text;
+        padding: 1 0;
+    }
+
+    #main_filters {
+        width: 100%;
+        align: left middle;
+        margin: 1 0;
+    }
+
+    #main_filters Select {
+        width: 1fr;
+        margin: 0 1;
+    }
+
+    #additional_options {
+        width: 100%;
+        align: left middle;
+        margin: 1 0;
+    }
+
+    #additional_options Switch {
+        margin: 0 1;
+    }
+
+    .switch_label {
+        color: $text;
+        padding: 0 1;
+        text-align: right;
+        width: 15;
+    }
+
+    #search_form .wide_input {
+        width: 1fr;
+        min-width: 20;
+        max-width: 100%;
+        margin: 0 1 1 0;
+        height: 6;
+    }
+    #search_form .wide_select {
+        width: 1fr;
+        min-width: 16;
+        max-width: 100%;
+        margin: 0 1 1 0;
+    }
+    .distinct_title {
+        text-style: bold;
+        color: $primary;
+        border-bottom: solid $primary;
+        margin-bottom: 1;
+        margin-top: 2;
+    }
+    #filter_row1, #filter_row2 {
+        width: 100%;
+        align: left middle;
+        margin: 1 0 1 0;
+    }
+    .adv_switch {
+        margin: 0 2 0 0;
+        min-width: 8;
+        align: center middle;
+    }
+    .search_btn {
+        min-width: 12;
+        margin: 1 2 1 2;
+    }
     """
 
     BINDINGS = [
@@ -237,7 +326,7 @@ class RedditTUI(App):
         Binding("h", "home", "Home", show=True),
         Binding("n", "new", "New", show=True),
         Binding("t", "top", "Top", show=True),
-        Binding("s", "search", "Search", show=True),
+        Binding("s", "advanced_search", "Advanced Search", show=True),
         Binding("l", "login", "Login", show=True),
         Binding("?", "help", "Help", show=True),
         Binding("c", "settings", "Settings", show=True),
@@ -335,12 +424,8 @@ class RedditTUI(App):
     async def action_search(self) -> None:
         Logger().info("Action: search")
         try:
-            content = self.query_one("#content")
-            content.remove_children()
-            search_screen = SearchScreen(content, self.current_posts)
-            content.mount(search_screen)
-            self.app.active_widget = "content"
-            search_screen.focus()
+            screen = AdvancedSearchScreen(self.query_one("#content"), self.current_posts)
+            await self.push_screen(screen)
             self.query_one(Sidebar).update_status("Search Feed")
         except Exception as e:
             Logger().error(f"Error in search action: {str(e)}", exc_info=True)
@@ -836,6 +921,12 @@ class RedditTUI(App):
         except Exception as e:
             Logger().error(f"Error showing QR code: {str(e)}", exc_info=True)
             self.notify(f"Error showing QR code: {str(e)}", severity="error")
+
+    async def action_advanced_search(self) -> None:
+        self.logger.info("Action: advanced search")
+        from components.advanced_search_screen import AdvancedSearchScreen
+        screen = AdvancedSearchScreen(self.query_one("#content"), self.current_posts)
+        await self.push_screen(screen)
 
 if __name__ == "__main__":
     Logger().info(f"=============================================================== Starting RedditTUI app at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ================================================================")
