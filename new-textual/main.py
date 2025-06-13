@@ -20,6 +20,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 
+# I tried implementing analytics, but it's not working as I wanted to, so I ended up deleting it. Thats the reason why this commit is empty
 class ReportReasonScreen(ModalScreen):
     def __init__(self, reasons):
         super().__init__()
