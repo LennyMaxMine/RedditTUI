@@ -13,6 +13,7 @@ from components.settings_screen import SettingsScreen
 from components.user_profile_screen import UserProfileScreen
 from components.comment_screen import CommentScreen
 from components.qr_screen import QRScreen
+from components.subreddit_screen import SubredditScreen
 from utils.logger import Logger
 import json
 import os
@@ -709,9 +710,13 @@ class RedditTUI(App):
                 self.notify("Please login first", severity="warning")
                 return
 
-            subreddits = self.reddit_service.get_subscribed_subreddits()
-            # TODO: Create a SubredditList component to display subreddits
-            self.notify(f"Found {len(subreddits)} subscribed subreddits", severity="info")
+            content = self.query_one("#content")
+            content.remove_children()
+            subreddit_screen = SubredditScreen(content, self.current_posts)
+            content.mount(subreddit_screen)
+            self.app.active_widget = "content"
+            subreddit_screen.focus()
+            self.query_one(Sidebar).update_status("Subscribed Subreddits")
         except Exception as e:
             Logger().error(f"Error loading subscribed subreddits: {str(e)}", exc_info=True)
             self.notify(f"Error loading subscribed subreddits: {str(e)}", severity="error")
