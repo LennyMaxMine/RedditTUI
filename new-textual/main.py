@@ -15,13 +15,13 @@ from components.comment_screen import CommentScreen
 from components.qr_screen import QRScreen
 from components.subreddit_screen import SubredditScreen
 from components.post_creation_screen import PostCreationScreen
+from components.credits_screen import CreditsScreen
 from utils.logger import Logger
 import json
 import os
 from pathlib import Path
 from datetime import datetime
 
-# I tried implementing analytics, but it's not working as I wanted to, so I ended up deleting it. Thats the reason why this commit is empty
 class ReportReasonScreen(ModalScreen):
     def __init__(self, reasons):
         super().__init__()
@@ -384,6 +384,30 @@ class RedditTUI(App):
         width: 20;
         margin: 0 1;
     }
+
+    #credits_container {
+        width: 100%;
+        height: 100%;
+        align: center middle;
+    }
+
+    #credits_form {
+        width: 60;
+        height: auto;
+        max-height: 80vh;
+        background: $surface;
+        border: solid $primary;
+        padding: 2;
+    }
+
+    #credits_container ScrollableContainer {
+        height: 1fr;
+        margin: 1 0;
+    }
+
+    #credits_content {
+        padding: 1;
+    }
     """
 
     BINDINGS = [
@@ -400,6 +424,7 @@ class RedditTUI(App):
         Binding("b", "saved_posts", "Saved Posts", show=True),
         Binding("r", "subscribed_subreddits", "Subscribed Subreddits", show=True),
         Binding("p", "create_post", "Create Post", show=True),
+        Binding("i", "credits", "Credits", show=True),
     ]
 
     def __init__(self):
@@ -1060,6 +1085,11 @@ class RedditTUI(App):
         except Exception as e:
             self.logger.error(f"Error creating post: {str(e)}", exc_info=True)
             self.notify(f"Error creating post: {str(e)}", severity="error")
+
+    async def action_credits(self) -> None:
+        """Show credits screen."""
+        Logger().info("Action: credits")
+        await self.push_screen(CreditsScreen())
 
 if __name__ == "__main__":
     print("Before starting RedditTUI, we need to set up the logger.")
