@@ -1,5 +1,5 @@
 from textual.widget import Widget
-from textual.widgets import Static, Button
+from textual.widgets import Static, Button, Select
 from textual.containers import Vertical, Horizontal, ScrollableContainer
 from utils.logger import Logger
 from datetime import datetime
@@ -27,7 +27,14 @@ class PostViewScreen(Widget):
         self.comment_cursor_pos = 0
         self.comment_sort_mode = "best"
         self.comment_sort_index = 0
-        self.comment_sort_options = ["best", "top", "new", "controversial"]
+        self.comment_sort_options = [
+            ("Best", "best"),
+            ("Top", "top"),
+            ("New", "new"),
+            ("Controversial", "controversial"),
+            ("Old", "old"),
+            ("Q&A", "qa")
+        ]
         self.reddit_service = None
 
     def compose(self):
@@ -36,12 +43,7 @@ class PostViewScreen(Widget):
             yield Static(self._get_title_panel(), id="post_title")
             yield Static(self._get_metadata(), id="post_metadata")
             yield Static(self._get_content(), id="post_content")
-            with Horizontal():
-                yield Button("Back", id="back_button")
-                #yield Button("Comments", id="comments_button")
-                yield Button("Upvote", id="upvote_button")
-                yield Button("Downvote", id="downvote_button")
-            with ScrollableContainer(id="comments_container"):
+            with ScrollableContainer(id="comments_container", classes="expand"):
                 yield Static(self._get_comments(), id="comments_section")
 
     def on_mount(self):
@@ -56,7 +58,7 @@ class PostViewScreen(Widget):
                 self.logger.error("RedditService not initialized")
                 return
             self.logger.info(f"Loading comments for post: {self.post.title}")
-            self.comments = self.reddit_service.get_post_comments(self.post)
+            self.comments = self.reddit_service.get_post_comments(self.post, sort=self.comment_sort_mode)
             self.logger.info(f"Loaded {len(self.comments)} comments")
             if not self.comments:
                 self.logger.warning("No comments found for post")
@@ -97,8 +99,9 @@ class PostViewScreen(Widget):
                 box=box.ROUNDED
             )
         elif hasattr(self.post, 'url'):
+            link_text = Text(f"{self.post.url}", style="blue underline")
             return Panel(
-                Text(f"Link: {self.post.url}"),
+                Text.assemble("Link: ", link_text),
                 border_style="blue",
                 box=box.ROUNDED
             )
@@ -135,17 +138,26 @@ class PostViewScreen(Widget):
                     score = getattr(comment, 'score', 0)
                     created = getattr(comment, 'created_utc', None)
                     age = self._get_age(datetime.fromtimestamp(created)) if created else "unknown"
+                    
+                    # Create indentation based on depth
                     indent = "  " * depth
+                    thread_line = "└─ " if depth > 0 else ""
+                    
+                    # Format comment header with threading visualization
                     header = Text.assemble(
-                        Text(f"{indent}u/{author_str} ", style="yellow"),
+                        Text(f"{indent}{thread_line}", style="blue"),
+                        Text(f"u/{author_str} ", style="yellow"),
                         Text(f"• {score} points ", style="cyan"),
                         Text(f"• {age}\n", style="blue")
                     )
+                    
+                    # Format comment body with proper indentation
                     body_lines = comment.body.split('\n')
                     body_text = Text()
                     for i, line in enumerate(body_lines):
-                        body_text.append(f"{indent}{line}", style="white")
-                    return Text.assemble(header, body_text, Text("\n"))
+                        body_text.append(f"{indent}  {line}\n", style="white")
+                    
+                    return Text.assemble(header, body_text)
                 except Exception as e:
                     self.logger.error(f"Error formatting comment: {str(e)}", exc_info=True)
                     return None
@@ -176,7 +188,7 @@ class PostViewScreen(Widget):
 
             return Panel(
                 Text.assemble(*comment_texts),
-                title=f"Comments ({len(comment_texts)})",
+                title=f"Comments ({len(comment_texts)}) - Sorted by {self.comment_sort_mode.title()}",
                 border_style="blue",
                 box=box.ROUNDED
             )
@@ -209,15 +221,23 @@ class PostViewScreen(Widget):
                 self.parent_content.mount(post_list)
                 self.app.active_widget = "content"
                 post_list.focus()
-            elif event.button.id == "comments_button":
-                self.logger.info("Comments button pressed")
-                self.load_comments()
-                self.refresh()
             elif event.button.id == "upvote_button":
                 self.logger.info("Upvote button pressed")
                 # TODO: Implement upvote
             elif event.button.id == "downvote_button":
                 self.logger.info("Downvote button pressed")
                 # TODO: Implement downvote
+            elif event.button.id == "copy_link_button":
+                import pyperclip
+                pyperclip.copy(self.post.url)
+                self.notify("Link copied to clipboard!", severity="success")
+            elif event.button.id == "open_link_button":
+                import webbrowser
+                webbrowser.open(self.post.url)
+                self.notify("Opening link in browser...", severity="info")
         except Exception as e:
-            self.logger.error(f"Error handling button press: {str(e)}", exc_info=True) 
+            self.logger.error(f"Error handling button press: {str(e)}", exc_info=True)
+
+    def sort_comments(self, sort_mode):
+        self.comment_sort_mode = sort_mode
+        self.load_comments() 

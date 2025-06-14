@@ -219,7 +219,7 @@ class RedditTUI(App):
     }
 
     #comments_container {
-        height: 1fr;
+        height: 100%;
         min-height: 0;
         overflow-y: scroll;
         border: solid $primary;
@@ -229,6 +229,23 @@ class RedditTUI(App):
     #comments_section {
         padding: 1;
         width: 100%;
+    }
+
+    #comments_section Panel {
+        border: solid $primary;
+        padding: 1;
+    }
+
+    #comments_section .thread-line {
+        color: $primary;
+    }
+
+    #comments_section .comment-header {
+        margin-bottom: 1;
+    }
+
+    #comments_section .comment-body {
+        margin-left: 2;
     }
 
     #search_container {
@@ -319,6 +336,18 @@ class RedditTUI(App):
     .search_btn {
         min-width: 12;
         margin: 1 2 1 2;
+    }
+
+    .sort_label {
+        color: $text;
+        padding: 1 0;
+        text-align: right;
+        width: 15;
+    }
+
+    #comment_sort {
+        width: 20;
+        margin: 0 1;
     }
     """
 
@@ -563,6 +592,7 @@ class RedditTUI(App):
             if len(children) == 1:
                 if isinstance(children[0], PostViewScreen):
                     post = children[0].post
+                    yield SystemCommand("Back", "Return to post list", self.action_back)
                     if post and post.author:
                         yield SystemCommand("View User Profile", f"View profile of {post.author.name}", self.action_view_user)
                     yield SystemCommand("Save Post", "Save the currently viewed post", self.save_selected_post)
@@ -576,6 +606,12 @@ class RedditTUI(App):
                     yield SystemCommand("Copy Post Title", "Copy the post's title to clipboard", self.copy_post_title)
                     yield SystemCommand("Open in Browser", "Open the post in your default browser", self.open_in_browser)
                     yield SystemCommand("Show QR Code", "Display QR code for the post URL", self.show_qr_code)
+                    yield SystemCommand("Sort Comments: Best", "Sort comments by best", lambda: self.sort_comments("best"))
+                    yield SystemCommand("Sort Comments: Top", "Sort comments by top", lambda: self.sort_comments("top"))
+                    yield SystemCommand("Sort Comments: New", "Sort comments by new", lambda: self.sort_comments("new"))
+                    yield SystemCommand("Sort Comments: Controversial", "Sort comments by controversial", lambda: self.sort_comments("controversial"))
+                    yield SystemCommand("Sort Comments: Old", "Sort comments by old", lambda: self.sort_comments("old"))
+                    yield SystemCommand("Sort Comments: Q&A", "Sort comments by Q&A", lambda: self.sort_comments("qa"))
                 elif isinstance(children[0], PostList):
                     post = children[0].get_selected_post()
                     if post and post.author:
@@ -935,8 +971,37 @@ class RedditTUI(App):
         screen = AdvancedSearchScreen(self.query_one("#content"), self.current_posts)
         await self.push_screen(screen)
 
+    def sort_comments(self, sort_mode):
+        try:
+            content = self.query_one("#content")
+            children = list(content.children)
+            if len(children) == 1 and isinstance(children[0], PostViewScreen):
+                children[0].sort_comments(sort_mode)
+                self.notify(f"Comments sorted by {sort_mode}", severity="info")
+        except Exception as e:
+            Logger().error(f"Error sorting comments: {str(e)}", exc_info=True)
+            self.notify(f"Error sorting comments: {str(e)}", severity="error")
+
+    def action_back(self):
+        try:
+            content = self.query_one("#content")
+            children = list(content.children)
+            if len(children) == 1 and isinstance(children[0], PostViewScreen):
+                content.remove_children()
+                post_list = PostList(posts=self.current_posts, id="content")
+                content.mount(post_list)
+                self.app.active_widget = "content"
+                post_list.focus()
+                Logger().info("Returned to post list")
+        except Exception as e:
+            Logger().error(f"Error returning to post list: {str(e)}", exc_info=True)
+            self.notify(f"Error returning to post list: {str(e)}", severity="error")
+
 if __name__ == "__main__":
-    a = input("RedditTUI will log to a file. Do you want to send the logs anonimously to the developer for debugging purposes? (y/n): ")
+    print("Before starting RedditTUI, we need to set up the logger.")
+    print("RedditTUI will always log to a file.")
+    print("Any Crash or Exception will be logged and anonimously sent to the developer for debugging purposes.")
+    a = input("Do you also want to send every other log anonimously to the developer for debugging purposes? (y/n): ")
     if a.lower() == "y":
         Logger().send_logs_to_developer = True
     else:
@@ -945,6 +1010,10 @@ if __name__ == "__main__":
     app = RedditTUI()
     try:
         app.run()
+    except Exception as e:
+        Logger().error("Unhandled exception occurred", exc_info=True)
+        Logger().send_crash_report(type(e), e, e.__traceback__)
+        raise
     finally:
         Logger().send_logs()
         Logger().info(f"=============================================================== RedditTUI app exited at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ================================================================")

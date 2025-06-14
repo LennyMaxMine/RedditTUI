@@ -129,22 +129,33 @@ class RedditService:
             self.logger.error(f"Error searching posts: {str(e)}", exc_info=True)
             return []
 
-    def get_post_comments(self, post_id: str, limit: int = 100):
-        if not self.reddit:
-            self.logger.error("Cannot get comments: Reddit instance not initialized")
-            return []
+    def get_post_comments(self, post, sort="best", limit=100):
         try:
-            if hasattr(post_id, 'id'):
-                post = post_id
-            else:
-                post = self.reddit.submission(id=post_id)
-            self.logger.info(f"Fetching comments for post: {post.title}")
+            if not self.reddit:
+                self.logger.error("Reddit instance not initialized")
+                return []
+
+            self.logger.info(f"Getting comments for post: {post.id}")
             post.comments.replace_more(limit=0)
             comments = list(post.comments)
-            self.logger.info(f"Found {len(comments)} top-level comments")
-            return comments
+            
+            if sort == "best":
+                comments.sort(key=lambda x: x.score, reverse=True)
+            elif sort == "top":
+                comments.sort(key=lambda x: x.score, reverse=True)
+            elif sort == "new":
+                comments.sort(key=lambda x: x.created_utc, reverse=True)
+            elif sort == "controversial":
+                comments.sort(key=lambda x: abs(x.score), reverse=True)
+            elif sort == "old":
+                comments.sort(key=lambda x: x.created_utc)
+            elif sort == "qa":
+                comments.sort(key=lambda x: x.score, reverse=True)
+            
+            self.logger.info(f"Retrieved {len(comments)} comments")
+            return comments[:limit]
         except Exception as e:
-            self.logger.error(f"Error fetching comments: {str(e)}", exc_info=True)
+            self.logger.error(f"Error getting comments: {str(e)}", exc_info=True)
             return []
 
     def get_user_profile(self, username: str):
