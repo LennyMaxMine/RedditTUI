@@ -302,3 +302,31 @@ class RedditService:
         except Exception as e:
             self.logger.error(f"Error fetching subscribed subreddits: {str(e)}", exc_info=True)
             return []
+
+    def submit_text_post(self, subreddit: str, title: str, content: str) -> bool:
+        try:
+            self.logger.info(f"Submitting text post to r/{subreddit}")
+            subreddit_instance = self.reddit.subreddit(subreddit)
+            submission = subreddit_instance.submit(
+                title=title,
+                selftext=content
+            )
+            self.logger.info(f"Text post submitted successfully: {submission.id}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error submitting text post: {str(e)}", exc_info=True)
+            return False
+
+    def submit_link_post(self, subreddit: str, title: str, url: str) -> bool:
+        try:
+            self.logger.info(f"Submitting link post to r/{subreddit}")
+            subreddit_instance = self.reddit.subreddit(subreddit)
+            submission = subreddit_instance.submit(
+                title=title,
+                url=url
+            )
+            self.logger.info(f"Link post submitted successfully: {submission.id}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error submitting link post: {str(e)}", exc_info=True)
+            return False

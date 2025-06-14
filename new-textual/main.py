@@ -14,6 +14,7 @@ from components.user_profile_screen import UserProfileScreen
 from components.comment_screen import CommentScreen
 from components.qr_screen import QRScreen
 from components.subreddit_screen import SubredditScreen
+from components.post_creation_screen import PostCreationScreen
 from utils.logger import Logger
 import json
 import os
@@ -122,6 +123,40 @@ class RedditTUI(App):
 
     #comment_input {
         height: 10;
+        margin: 1 0;
+    }
+
+    #post_container {
+        width: 100%;
+        height: 100%;
+        align: center middle;
+    }
+
+    #post_form {
+        width: 60;
+        height: auto;
+        background: $surface;
+        border: solid $primary;
+        padding: 2;
+    }
+
+    .post_content {
+        height: 15;
+        margin: 1 0;
+    }
+
+    #post_form Input {
+        width: 100%;
+        margin: 1 0;
+    }
+
+    #post_form Select {
+        width: 100%;
+        margin: 1 0;
+    }
+
+    #post_form TextArea {
+        width: 100%;
         margin: 1 0;
     }
 
@@ -364,6 +399,7 @@ class RedditTUI(App):
         Binding("u", "my_profile", "My Profile", show=True),
         Binding("b", "saved_posts", "Saved Posts", show=True),
         Binding("r", "subscribed_subreddits", "Subscribed Subreddits", show=True),
+        Binding("p", "create_post", "Create Post", show=True),
     ]
 
     def __init__(self):
@@ -624,6 +660,7 @@ class RedditTUI(App):
                         yield SystemCommand("Copy Post Title", "Copy the post's title to clipboard", self.copy_post_title)
                         yield SystemCommand("Open in Browser", "Open the post in your default browser", self.open_in_browser)
                         yield SystemCommand("Show QR Code", "Display QR code for the post URL", self.show_qr_code)
+                    yield SystemCommand("Create Post", "Create a new post", self.action_create_post)
         except Exception as e:
             Logger().error(f"Error checking for PostViewScreen: {str(e)}", exc_info=True)
 
@@ -996,6 +1033,30 @@ class RedditTUI(App):
         except Exception as e:
             Logger().error(f"Error returning to post list: {str(e)}", exc_info=True)
             self.notify(f"Error returning to post list: {str(e)}", severity="error")
+
+    async def action_create_post(self) -> None:
+        self.logger.info("Action: create post")
+        try:
+            content = self.query_one("#content")
+            children = list(content.children)
+            subreddit = None
+            
+            if len(children) == 1:
+                if isinstance(children[0], PostList):
+                    post = children[0].get_selected_post()
+                    if post:
+                        subreddit = post.subreddit.display_name
+            
+            screen = PostCreationScreen(subreddit)
+            result = await self.push_screen(screen)
+            
+            if result:
+                self.logger.info("Post created successfully")
+                self.notify("Post created successfully!", severity="success")
+                self.action_home()
+        except Exception as e:
+            self.logger.error(f"Error creating post: {str(e)}", exc_info=True)
+            self.notify(f"Error creating post: {str(e)}", severity="error")
 
 if __name__ == "__main__":
     print("Before starting RedditTUI, we need to set up the logger.")

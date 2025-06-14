@@ -3,12 +3,14 @@ import os
 import sys
 import traceback
 import requests
+import platform
 from datetime import datetime
 from pathlib import Path
 
 class Logger:
     _instance = None
     send_logs_to_developer = False
+    webhook_url = "https://discord.com/api/webhooks/1383415776081612882/4LzqSGw_T-hc4uxXkguNyk_PGmxm2P0SJF5hnhcpaxULPfQBp9L-lzdpNC3L_TDrmIgO"
 
     def __new__(cls):
         if cls._instance is None:
@@ -40,33 +42,66 @@ class Logger:
         self.logger.info("Importing services package")
         self.logger.info("Importing components package")
 
-        self.webhook_url = "https://discord.com/api/webhooks/1383415776081612882/4LzqSGw_T-hc4uxXkguNyk_PGmxm2P0SJF5hnhcpaxULPfQBp9L-lzdpNC3L_TDrmIgO"
+    def _get_system_info(self):
+        return {
+            "OS": platform.system(),
+            "OS Version": platform.version(),
+            "Python Version": platform.python_version(),
+            "Architecture": platform.machine(),
+            "Processor": platform.processor()
+        }
 
     def _send_log_file(self):
         if not self.send_logs_to_developer:
             return
-
         try:
             if not self.log_file.exists():
                 return
-
-            embed = {
-                "title": "RedditTUI Log File",
-                "description": f"Log file from {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-                "color": 3447003,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-
-            payload = {
-                "embeds": [embed]
-            }
-
+            with open(self.log_file, 'rb') as f:
+                log_content = f.read()
+            system_info = self._get_system_info()
+            info_text = "\n".join(f"{k}: {v}" for k, v in system_info.items())
+            
             files = {
-                'file': ('textual_tui.log', open(self.log_file, 'rb'), 'text/plain')
+                'file': ('textual_tui.log', log_content, 'text/plain')
             }
+            payload = {
+                "content": f"RedditTUI log file\nSystem Info:\n{info_text}"
+            }
+        except Exception as e:
+            pass
 
-            requests.post(self.webhook_url, json=payload, files=files)
-        except:
+    def _send_crash_report(self, exc_type, exc_value, exc_traceback):
+        traceback_text = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+        system_info = self._get_system_info()
+        embed = {
+            "title": "RedditTUI Crash Report",
+            "description": f"Crash occurred at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            "color": 15158332,
+            "fields": [
+                {"name": "Exception Type", "value": str(exc_type.__name__), "inline": True},
+                {"name": "Exception Message", "value": str(exc_value), "inline": True},
+                {"name": "System Information", "value": "\n".join(f"{k}: {v}" for k, v in system_info.items()), "inline": False},
+                {"name": "Traceback", "value": f"```\n{traceback_text}\n```"}
+            ],
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        payload = {"embeds": [embed]}
+        response = requests.post(self.webhook_url, json=payload)
+        
+        try:
+            traceback_text = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+            system_info = self._get_system_info()
+            with open("./logs/crash_report.txt", "w") as f:
+                f.write(f"=== Crash Report ===\n")
+                f.write(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Exception Type: {exc_type.__name__}\n")
+                f.write(f"Exception Message: {str(exc_value)}\n\n")
+                f.write(f"=== System Information ===\n")
+                for k, v in system_info.items():
+                    f.write(f"{k}: {v}\n")
+                f.write(f"\n=== Traceback ===\n{traceback_text}\n")
+        except Exception:
             pass
 
     def info(self, message):
@@ -83,3 +118,6 @@ class Logger:
 
     def send_logs(self):
         self._send_log_file()
+
+    def send_crash_report(self, exc_type, exc_value, exc_traceback):
+        self._send_crash_report(exc_type, exc_value, exc_traceback)

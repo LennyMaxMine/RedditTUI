@@ -45,6 +45,7 @@ class Sidebar(Widget):
             content.append("s - Search\n", style="white")
             content.append("b - Saved Posts\n", style="white")
             content.append("r - Subscribed Subreddits\n", style="white")
+            content.append("p - Create Post\n", style="white")
             content.append("l - Login\n", style="white")
             content.append("? - Help\n", style="white")
             content.append("c - Settings\n", style="white")
