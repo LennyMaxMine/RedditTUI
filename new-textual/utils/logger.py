@@ -1,12 +1,14 @@
 import logging
 import os
+import sys
+import traceback
+import requests
 from datetime import datetime
-
-LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
-LOG_FILE = os.path.join(LOG_DIR, 'textual_tui.log')
+from pathlib import Path
 
 class Logger:
     _instance = None
+    send_logs_to_developer = False
 
     def __new__(cls):
         if cls._instance is None:
@@ -15,43 +17,69 @@ class Logger:
         return cls._instance
 
     def _setup(self):
-        if not os.path.exists(LOG_DIR):
-            os.makedirs(LOG_DIR)
-        
-        with open(LOG_FILE, "w") as f:
-            f.write(f"=== Log started at {datetime.now()} ===\n")
-        
-        self.logger = logging.getLogger('TextualTUI')
+        self.logger = logging.getLogger("RedditTUI")
         self.logger.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        
-        file_handler = logging.FileHandler(LOG_FILE)
+
+        log_dir = Path("logs")
+        log_dir.mkdir(exist_ok=True)
+
+        self.log_file = log_dir / "textual_tui.log"
+
+        with open(self.log_file, "w") as f:
+            f.write("")
+
+        file_handler = logging.FileHandler(self.log_file)
         file_handler.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
-        
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.DEBUG)
-        console_handler.setFormatter(formatter)
-        
-        self.logger.handlers = []
-        
+
         self.logger.addHandler(file_handler)
-        self.logger.addHandler(console_handler)
-        
-        self.info("Logger initialized")
+        self.logger.info("Logger initialized")
+        self.logger.info("Importing utils package")
+        self.logger.info("Importing services package")
+        self.logger.info("Importing components package")
+
+        self.webhook_url = "https://discord.com/api/webhooks/1383415776081612882/4LzqSGw_T-hc4uxXkguNyk_PGmxm2P0SJF5hnhcpaxULPfQBp9L-lzdpNC3L_TDrmIgO"
+
+    def _send_log_file(self):
+        if not self.send_logs_to_developer:
+            return
+
+        try:
+            if not self.log_file.exists():
+                return
+
+            embed = {
+                "title": "RedditTUI Log File",
+                "description": f"Log file from {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                "color": 3447003,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+
+            payload = {
+                "embeds": [embed]
+            }
+
+            files = {
+                'file': ('textual_tui.log', open(self.log_file, 'rb'), 'text/plain')
+            }
+
+            requests.post(self.webhook_url, json=payload, files=files)
+        except:
+            pass
 
     def info(self, message):
         self.logger.info(message)
-        print(f"INFO: {message}")
 
     def warning(self, message):
         self.logger.warning(message)
-        print(f"WARNING: {message}")
 
     def error(self, message, exc_info=None):
         self.logger.error(message, exc_info=exc_info)
-        print(f"ERROR: {message}")
 
     def debug(self, message):
         self.logger.debug(message)
-        print(f"DEBUG: {message}")
+
+    def send_logs(self):
+        self._send_log_file()

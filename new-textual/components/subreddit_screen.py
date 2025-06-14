@@ -37,6 +37,10 @@ class SubredditList(Widget):
             return Text("No subreddits found")
         content = []
         for i, subreddit in enumerate(self.subreddits):
+
+            if subreddit.display_name == "feminineboys":
+                continue
+
             prefix = "▶ " if i == self.selected_index else "  "
             name = f"r/{subreddit.display_name}"
             subs = f"👥 {subreddit.subscribers:,}"

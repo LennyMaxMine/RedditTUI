@@ -381,6 +381,7 @@ class RedditTUI(App):
 
     def action_quit(self) -> None:
         Logger().debug("App quitting.")
+        Logger().send_logs()
         self.exit()
 
     def on_key(self, event):
@@ -935,7 +936,15 @@ class RedditTUI(App):
         await self.push_screen(screen)
 
 if __name__ == "__main__":
+    a = input("RedditTUI will log to a file. Do you want to send the logs anonimously to the developer for debugging purposes? (y/n): ")
+    if a.lower() == "y":
+        Logger().send_logs_to_developer = True
+    else:
+        Logger().info("Logs will not be sent to the developer.")
     Logger().info(f"=============================================================== Starting RedditTUI app at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ================================================================")
     app = RedditTUI()
-    app.run()
-    Logger().info(f"=============================================================== RedditTUI app exited at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ================================================================")
+    try:
+        app.run()
+    finally:
+        Logger().send_logs()
+        Logger().info(f"=============================================================== RedditTUI app exited at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ================================================================")
