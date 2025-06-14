@@ -405,7 +405,7 @@ class RedditTUI(App):
     def __init__(self):
         Logger().info("RedditTUI app initializing")
         super().__init__()
-        self.reddit_service = RedditService()
+        self.reddit_service = None
         self.current_feed = "hot"
         self.current_posts = []
         self.settings = self.load_settings()
@@ -426,6 +426,12 @@ class RedditTUI(App):
         self.theme = self.settings.get("theme", "dark")
 
         Logger().info(f"Attempting auto-login")
+        if self.reddit_service is None:
+            self.reddit_service = RedditService(
+                client_id="",
+                client_secret="",
+                user_agent="RedditTUI/1.0"
+            )
         if self.reddit_service.auto_login():
             self.action_home()
             self.query_one(Sidebar).update_sidebar_account(self.reddit_service.user)
@@ -1040,20 +1046,17 @@ class RedditTUI(App):
             content = self.query_one("#content")
             children = list(content.children)
             subreddit = None
-            
             if len(children) == 1:
                 if isinstance(children[0], PostList):
                     post = children[0].get_selected_post()
                     if post:
                         subreddit = post.subreddit.display_name
-            
+            content.remove_children()
             screen = PostCreationScreen(subreddit)
-            result = await self.push_screen(screen)
-            
-            if result:
-                self.logger.info("Post created successfully")
-                self.notify("Post created successfully!", severity="success")
-                self.action_home()
+            content.mount(screen)
+            self.app.active_widget = "content"
+            screen.focus()
+            self.query_one(Sidebar).update_status("Create Post")
         except Exception as e:
             self.logger.error(f"Error creating post: {str(e)}", exc_info=True)
             self.notify(f"Error creating post: {str(e)}", severity="error")

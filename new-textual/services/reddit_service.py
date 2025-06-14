@@ -3,15 +3,29 @@ import os
 import json
 from pathlib import Path
 from utils.logger import Logger
+from praw import Reddit
+from praw.models import Submission
 
 class RedditService:
-    def __init__(self):
-        self.reddit = None
+    def __init__(self, client_id, client_secret, user_agent, username=None, password=None):
         self.logger = Logger()
         self.config_dir = Path.home() / ".config" / "reddit-tui"
         self.credentials_file = self.config_dir / "sanfrancisco.jhna"
         self._ensure_config_dir()
         self.user = None
+        
+        if client_id and client_secret:
+            self.reddit = Reddit(
+                client_id=client_id,
+                client_secret=client_secret,
+                user_agent=user_agent,
+                username=username,
+                password=password
+            )
+            self.logger.info("RedditService initialized with provided credentials")
+        else:
+            self.reddit = None
+            self.logger.info("RedditService initialized without credentials")
 
     def _ensure_config_dir(self):
         self.logger.info(f"Ensuring config dir: {self.config_dir}")
@@ -303,30 +317,59 @@ class RedditService:
             self.logger.error(f"Error fetching subscribed subreddits: {str(e)}", exc_info=True)
             return []
 
-    def submit_text_post(self, subreddit: str, title: str, content: str) -> bool:
+    def submit_text_post(self, subreddit, title, content, flair_id=None, nsfw=False, spoiler=False):
         try:
-            self.logger.info(f"Submitting text post to r/{subreddit}")
             subreddit_instance = self.reddit.subreddit(subreddit)
             submission = subreddit_instance.submit(
                 title=title,
-                selftext=content
+                selftext=content,
+                flair_id=flair_id,
+                nsfw=nsfw,
+                spoiler=spoiler
             )
-            self.logger.info(f"Text post submitted successfully: {submission.id}")
+            self.logger.info(f"Text post submitted successfully to r/{subreddit}")
             return True
         except Exception as e:
             self.logger.error(f"Error submitting text post: {str(e)}", exc_info=True)
             return False
 
-    def submit_link_post(self, subreddit: str, title: str, url: str) -> bool:
+    def submit_link_post(self, subreddit, title, url, flair_id=None, nsfw=False, spoiler=False):
         try:
-            self.logger.info(f"Submitting link post to r/{subreddit}")
             subreddit_instance = self.reddit.subreddit(subreddit)
             submission = subreddit_instance.submit(
                 title=title,
-                url=url
+                url=url,
+                flair_id=flair_id,
+                nsfw=nsfw,
+                spoiler=spoiler
             )
-            self.logger.info(f"Link post submitted successfully: {submission.id}")
+            self.logger.info(f"Link post submitted successfully to r/{subreddit}")
             return True
         except Exception as e:
             self.logger.error(f"Error submitting link post: {str(e)}", exc_info=True)
             return False
+
+    def submit_image_post(self, subreddit, title, image_path, flair_id=None, nsfw=False, spoiler=False):
+        try:
+            subreddit_instance = self.reddit.subreddit(subreddit)
+            with open(image_path, 'rb') as image:
+                submission = subreddit_instance.submit_image(
+                    title=title,
+                    image_path=image_path,
+                    flair_id=flair_id,
+                    nsfw=nsfw,
+                    spoiler=spoiler
+                )
+            self.logger.info(f"Image post submitted successfully to r/{subreddit}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error submitting image post: {str(e)}", exc_info=True)
+            return False
+
+    def get_subreddit_flairs(self, subreddit):
+        try:
+            subreddit_instance = self.reddit.subreddit(subreddit)
+            return list(subreddit_instance.flair.link_templates)
+        except Exception as e:
+            self.logger.error(f"Error getting subreddit flairs: {str(e)}", exc_info=True)
+            return []
