@@ -16,6 +16,7 @@ from components.qr_screen import QRScreen
 from components.subreddit_screen import SubredditScreen
 from components.post_creation_screen import PostCreationScreen
 from components.credits_screen import CreditsScreen
+from components.rate_limit_screen import RateLimitScreen
 from utils.logger import Logger
 import json
 import os
@@ -408,6 +409,53 @@ class RedditTUI(App):
     #credits_content {
         padding: 1;
     }
+
+    #rate_limit_container {
+        width: 100%;
+        height: 100%;
+        align: center middle;
+    }
+
+    #rate_limit_content {
+        width: 60;
+        height: auto;
+        background: $surface;
+        border: solid $primary;
+        padding: 2;
+    }
+
+    .rate_section {
+        margin: 1 0;
+        padding: 1;
+        border-bottom: solid $primary;
+    }
+
+    .rate_title {
+        text-style: bold;
+        color: $primary;
+        margin-bottom: 1;
+    }
+
+    .rate_value {
+        color: $text;
+        margin-left: 2;
+    }
+
+    .rate_warning {
+        color: $warning;
+    }
+
+    .rate_critical {
+        color: $error;
+    }
+
+    .rate_good {
+        color: $success;
+    }
+
+    #refresh_button {
+        margin-top: 2;
+    }
     """
 
     BINDINGS = [
@@ -425,6 +473,7 @@ class RedditTUI(App):
         Binding("r", "subscribed_subreddits", "Subscribed Subreddits", show=True),
         Binding("p", "create_post", "Create Post", show=True),
         Binding("i", "credits", "Credits", show=True),
+        Binding("z", "rate_limit", "Rate Limit Info", show=True),
     ]
 
     def __init__(self):
@@ -1090,6 +1139,24 @@ class RedditTUI(App):
         """Show credits screen."""
         Logger().info("Action: credits")
         await self.push_screen(CreditsScreen())
+
+    async def action_rate_limit(self) -> None:
+        Logger().info("Action: rate limit info")
+        try:
+            if not self.reddit_service or not self.reddit_service.reddit:
+                self.notify("Please login first", severity="warning")
+                return
+
+            content = self.query_one("#content")
+            content.remove_children()
+            rate_limit_screen = RateLimitScreen(self.reddit_service)
+            content.mount(rate_limit_screen)
+            self.app.active_widget = "content"
+            rate_limit_screen.focus()
+            self.query_one(Sidebar).update_status("Rate Limit Information")
+        except Exception as e:
+            Logger().error(f"Error showing rate limit screen: {str(e)}", exc_info=True)
+            self.notify(f"Error showing rate limit info: {str(e)}", severity="error")
 
 if __name__ == "__main__":
     print("Before starting RedditTUI, we need to set up the logger.")

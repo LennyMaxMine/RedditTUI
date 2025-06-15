@@ -48,6 +48,7 @@ class Sidebar(Widget):
             content.append("p - Create Post\n", style="white")
             content.append("l - Login\n", style="white")
             content.append("i - Credits\n", style="white")
+            content.append("z - Rate Limit Info\n", style="white")
             content.append("? - Help\n", style="white")
             content.append("c - Settings\n", style="white")
             content.append("u - My Profile\n", style="white")

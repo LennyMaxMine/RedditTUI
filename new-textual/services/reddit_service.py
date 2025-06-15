@@ -1,6 +1,7 @@
 import praw
 import os
 import json
+import time
 from pathlib import Path
 from utils.logger import Logger
 from praw import Reddit
@@ -13,6 +14,10 @@ class RedditService:
         self.credentials_file = self.config_dir / "sanfrancisco.jhna"
         self._ensure_config_dir()
         self.user = None
+        self.rate_limit_remaining = 600
+        self.rate_limit_reset = 0
+        self.rate_limit_used = 0
+        self.last_request_time = 0
         
         if client_id and client_secret:
             self.reddit = Reddit(
@@ -104,41 +109,78 @@ class RedditService:
     def get_hot_posts(self, limit: int = 25):
         if not self.reddit:
             return []
-        return list(self.reddit.front.hot(limit=limit))
+        try:
+            self._check_rate_limit()
+            response = self.reddit.front.hot(limit=limit)
+            posts = list(response)
+            self._update_rate_limit(response)
+            return posts
+        except Exception as e:
+            self.logger.error(f"Error getting hot posts: {str(e)}", exc_info=True)
+            return []
 
     def get_new_posts(self, limit: int = 25):
         if not self.reddit:
             return []
-        return list(self.reddit.front.new(limit=limit))
+        try:
+            self._check_rate_limit()
+            response = self.reddit.front.new(limit=limit)
+            posts = list(response)
+            self._update_rate_limit(response)
+            return posts
+        except Exception as e:
+            self.logger.error(f"Error getting new posts: {str(e)}", exc_info=True)
+            return []
 
     def get_top_posts(self, limit: int = 25):
         if not self.reddit:
             return []
-        return list(self.reddit.front.top(limit=limit))
+        try:
+            self._check_rate_limit()
+            response = self.reddit.front.top(limit=limit)
+            posts = list(response)
+            self._update_rate_limit(response)
+            return posts
+        except Exception as e:
+            self.logger.error(f"Error getting top posts: {str(e)}", exc_info=True)
+            return []
 
     def get_subreddit_posts(self, subreddit: str, sort: str = "hot", limit: int = 25):
         if not self.reddit:
             return []
-        sub = self.reddit.subreddit(subreddit)
-        if sort == "hot":
-            return list(sub.hot(limit=limit))
-        elif sort == "new":
-            return list(sub.new(limit=limit))
-        elif sort == "top":
-            return list(sub.top(limit=limit))
-        return list(sub.hot(limit=limit))
+        try:
+            self._check_rate_limit()
+            sub = self.reddit.subreddit(subreddit)
+            if sort == "hot":
+                response = sub.hot(limit=limit)
+            elif sort == "new":
+                response = sub.new(limit=limit)
+            elif sort == "top":
+                response = sub.top(limit=limit)
+            else:
+                response = sub.hot(limit=limit)
+            posts = list(response)
+            self._update_rate_limit(response)
+            return posts
+        except Exception as e:
+            self.logger.error(f"Error getting subreddit posts: {str(e)}", exc_info=True)
+            return []
 
     def search_posts(self, query: str, sort: str = "relevance", time_filter: str = "all", limit: int = 25):
         if not self.reddit:
             return []
         try:
+            self._check_rate_limit()
             self.logger.info(f"Searching posts with query: {query}, sort: {sort}, time: {time_filter}")
-            return list(self.reddit.subreddit("all").search(
+            response = self.reddit.subreddit("all").search(
                 query,
                 sort=sort,
                 time_filter=time_filter,
                 limit=limit
-            ))
+            )
+            posts = list(response)
+            self._update_rate_limit(response)
+            return posts
         except Exception as e:
             self.logger.error(f"Error searching posts: {str(e)}", exc_info=True)
             return []
@@ -149,9 +191,11 @@ class RedditService:
                 self.logger.error("Reddit instance not initialized")
                 return []
 
+            self._check_rate_limit()
             self.logger.info(f"Getting comments for post: {post.id}")
             post.comments.replace_more(limit=0)
             comments = list(post.comments)
+            self._update_rate_limit(post.comments)
             
             if sort == "best":
                 comments.sort(key=lambda x: x.score, reverse=True)
@@ -177,7 +221,10 @@ class RedditService:
             self.logger.error("Cannot get user profile: Reddit instance not initialized")
             return None
         try:
-            return self.reddit.redditor(username)
+            self._check_rate_limit()
+            response = self.reddit.redditor(username)
+            self._update_rate_limit(response)
+            return response
         except Exception as e:
             self.logger.error(f"Error getting user profile: {str(e)}", exc_info=True)
             return None
@@ -187,8 +234,12 @@ class RedditService:
             self.logger.error("Cannot get user posts: Reddit instance not initialized")
             return []
         try:
+            self._check_rate_limit()
             user = self.reddit.redditor(username)
-            return list(user.submissions.new(limit=limit))
+            response = user.submissions.new(limit=limit)
+            posts = list(response)
+            self._update_rate_limit(response)
+            return posts
         except Exception as e:
             self.logger.error(f"Error getting user posts: {str(e)}", exc_info=True)
             return []
@@ -198,8 +249,12 @@ class RedditService:
             self.logger.error("Cannot get user comments: Reddit instance not initialized")
             return []
         try:
+            self._check_rate_limit()
             user = self.reddit.redditor(username)
-            return list(user.comments.new(limit=limit))
+            response = user.comments.new(limit=limit)
+            comments = list(response)
+            self._update_rate_limit(response)
+            return comments
         except Exception as e:
             self.logger.error(f"Error getting user comments: {str(e)}", exc_info=True)
             return []
@@ -209,9 +264,11 @@ class RedditService:
             self.logger.error("Cannot submit comment: Reddit instance not initialized")
             return False
         try:
+            self._check_rate_limit()
             self.logger.info(f"Submitting comment to post: {post.title}")
-            comment = post.reply(body)
-            self.logger.info(f"Comment submitted successfully: {comment.id}")
+            response = post.reply(body)
+            self._update_rate_limit(response)
+            self.logger.info(f"Comment submitted successfully: {response.id}")
             return True
         except Exception as e:
             self.logger.error(f"Error submitting comment: {str(e)}", exc_info=True)
@@ -222,8 +279,10 @@ class RedditService:
             self.logger.error("Cannot save post: Reddit instance not initialized")
             return False
         try:
+            self._check_rate_limit()
             self.logger.info(f"Saving post: {post.title}")
-            post.save()
+            response = post.save()
+            self._update_rate_limit(response)
             self.logger.info("Post saved successfully")
             return True
         except Exception as e:
@@ -235,8 +294,10 @@ class RedditService:
             self.logger.error("Cannot unsave post: Reddit instance not initialized")
             return False
         try:
+            self._check_rate_limit()
             self.logger.info(f"Unsaving post: {post.title}")
-            post.unsave()
+            response = post.unsave()
+            self._update_rate_limit(response)
             self.logger.info("Post unsaved successfully")
             return True
         except Exception as e:
@@ -248,8 +309,10 @@ class RedditService:
             self.logger.error("Cannot hide post: Reddit instance not initialized")
             return False
         try:
+            self._check_rate_limit()
             self.logger.info(f"Hiding post: {post.title}")
-            post.hide()
+            response = post.hide()
+            self._update_rate_limit(response)
             self.logger.info("Post hidden successfully")
             return True
         except Exception as e:
@@ -261,8 +324,10 @@ class RedditService:
             self.logger.error("Cannot unhide post: Reddit instance not initialized")
             return False
         try:
+            self._check_rate_limit()
             self.logger.info(f"Unhiding post: {post.title}")
-            post.unhide()
+            response = post.unhide()
+            self._update_rate_limit(response)
             self.logger.info("Post unhidden successfully")
             return True
         except Exception as e:
@@ -274,8 +339,11 @@ class RedditService:
             self.logger.error("Cannot subscribe: Reddit instance not initialized")
             return False
         try:
+            self._check_rate_limit()
             self.logger.info(f"Subscribing to subreddit: {subreddit_name}")
-            self.reddit.subreddit(subreddit_name).subscribe()
+            subreddit = self.reddit.subreddit(subreddit_name)
+            response = subreddit.subscribe()
+            self._update_rate_limit(response)
             self.logger.info("Subscribed successfully")
             return True
         except Exception as e:
@@ -287,8 +355,11 @@ class RedditService:
             self.logger.error("Cannot unsubscribe: Reddit instance not initialized")
             return False
         try:
+            self._check_rate_limit()
             self.logger.info(f"Unsubscribing from subreddit: {subreddit_name}")
-            self.reddit.subreddit(subreddit_name).unsubscribe()
+            subreddit = self.reddit.subreddit(subreddit_name)
+            response = subreddit.unsubscribe()
+            self._update_rate_limit(response)
             self.logger.info("Unsubscribed successfully")
             return True
         except Exception as e:
@@ -300,8 +371,12 @@ class RedditService:
             self.logger.error("Cannot get saved posts: Reddit instance not initialized")
             return []
         try:
+            self._check_rate_limit()
             self.logger.info("Fetching saved posts")
-            return list(self.reddit.user.me().saved(limit=limit))
+            response = self.reddit.user.me().saved(limit=limit)
+            posts = list(response)
+            self._update_rate_limit(response)
+            return posts
         except Exception as e:
             self.logger.error(f"Error fetching saved posts: {str(e)}", exc_info=True)
             return []
@@ -311,22 +386,28 @@ class RedditService:
             self.logger.error("Cannot get subscribed subreddits: Reddit instance not initialized")
             return []
         try:
+            self._check_rate_limit()
             self.logger.info("Fetching subscribed subreddits")
-            return list(self.reddit.user.subreddits())
+            response = self.reddit.user.subreddits()
+            subs = list(response)
+            self._update_rate_limit(response)
+            return subs
         except Exception as e:
             self.logger.error(f"Error fetching subscribed subreddits: {str(e)}", exc_info=True)
             return []
 
     def submit_text_post(self, subreddit, title, content, flair_id=None, nsfw=False, spoiler=False):
         try:
+            self._check_rate_limit()
             subreddit_instance = self.reddit.subreddit(subreddit)
-            submission = subreddit_instance.submit(
+            response = subreddit_instance.submit(
                 title=title,
                 selftext=content,
                 flair_id=flair_id,
                 nsfw=nsfw,
                 spoiler=spoiler
             )
+            self._update_rate_limit(response)
             self.logger.info(f"Text post submitted successfully to r/{subreddit}")
             return True
         except Exception as e:
@@ -335,14 +416,16 @@ class RedditService:
 
     def submit_link_post(self, subreddit, title, url, flair_id=None, nsfw=False, spoiler=False):
         try:
+            self._check_rate_limit()
             subreddit_instance = self.reddit.subreddit(subreddit)
-            submission = subreddit_instance.submit(
+            response = subreddit_instance.submit(
                 title=title,
                 url=url,
                 flair_id=flair_id,
                 nsfw=nsfw,
                 spoiler=spoiler
             )
+            self._update_rate_limit(response)
             self.logger.info(f"Link post submitted successfully to r/{subreddit}")
             return True
         except Exception as e:
@@ -351,15 +434,16 @@ class RedditService:
 
     def submit_image_post(self, subreddit, title, image_path, flair_id=None, nsfw=False, spoiler=False):
         try:
+            self._check_rate_limit()
             subreddit_instance = self.reddit.subreddit(subreddit)
-            with open(image_path, 'rb') as image:
-                submission = subreddit_instance.submit_image(
-                    title=title,
-                    image_path=image_path,
-                    flair_id=flair_id,
-                    nsfw=nsfw,
-                    spoiler=spoiler
-                )
+            response = subreddit_instance.submit_image(
+                title=title,
+                image_path=image_path,
+                flair_id=flair_id,
+                nsfw=nsfw,
+                spoiler=spoiler
+            )
+            self._update_rate_limit(response)
             self.logger.info(f"Image post submitted successfully to r/{subreddit}")
             return True
         except Exception as e:
@@ -367,9 +451,56 @@ class RedditService:
             return False
 
     def get_subreddit_flairs(self, subreddit):
+        if not self.reddit:
+            self.logger.error("Cannot get subreddit flairs: Reddit instance not initialized")
+            return []
         try:
+            self._check_rate_limit()
             subreddit_instance = self.reddit.subreddit(subreddit)
-            return list(subreddit_instance.flair.link_templates)
+            response = subreddit_instance.flair.link_templates
+            self._update_rate_limit(response)
+            return list(response)
         except Exception as e:
             self.logger.error(f"Error getting subreddit flairs: {str(e)}", exc_info=True)
             return []
+
+    def _update_rate_limit(self, response):
+        try:
+            if hasattr(response, '_response'):
+                headers = response._response.headers
+                self.logger.info(f"Rate limit headers: {headers}")
+                self.rate_limit_remaining = int(float(headers.get('x-ratelimit-remaining', self.rate_limit_remaining)))
+                self.rate_limit_reset = int(float(headers.get('x-ratelimit-reset', self.rate_limit_reset)))
+                self.rate_limit_used = int(float(headers.get('x-ratelimit-used', self.rate_limit_used)))
+                self.last_request_time = time.time()
+                self.logger.info(f"Rate limit updated - Remaining: {self.rate_limit_remaining}, Reset: {self.rate_limit_reset}, Used: {self.rate_limit_used}")
+        except Exception as e:
+            self.logger.error(f"Error updating rate limit: {str(e)}", exc_info=True)
+
+    def get_rate_limit_info(self):
+        try:
+            current_time = time.time()
+            time_since_last_request = current_time - self.last_request_time
+            time_until_reset = max(0, self.rate_limit_reset - time_since_last_request)
+            
+            return {
+                'remaining': self.rate_limit_remaining,
+                'used': self.rate_limit_used,
+                'time_until_reset': time_until_reset,
+                'last_request': self.last_request_time
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting rate limit info: {str(e)}", exc_info=True)
+            return {
+                'remaining': 0,
+                'used': 0,
+                'time_until_reset': 0,
+                'last_request': 0
+            }
+
+    def _check_rate_limit(self):
+        if self.rate_limit_remaining <= 0:
+            current_time = time.time()
+            time_since_last_request = current_time - self.last_request_time
+            if time_since_last_request < self.rate_limit_reset:
+                raise Exception(f"Rate limit exceeded. Please wait {int(self.rate_limit_reset - time_since_last_request)} seconds.")
