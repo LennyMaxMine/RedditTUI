@@ -17,6 +17,7 @@ from components.subreddit_screen import SubredditScreen
 from components.post_creation_screen import PostCreationScreen
 from components.credits_screen import CreditsScreen
 from components.rate_limit_screen import RateLimitScreen
+from components.theme_creation_screen import ThemeCreationScreen
 from utils.logger import Logger
 import json
 import os
@@ -474,6 +475,7 @@ class RedditTUI(App):
         Binding("p", "create_post", "Create Post", show=True),
         Binding("i", "credits", "Credits", show=True),
         Binding("z", "rate_limit", "Rate Limit Info", show=True),
+        Binding("x", "create_theme", "Create Theme", show=True),
     ]
 
     def __init__(self):
@@ -1157,6 +1159,20 @@ class RedditTUI(App):
         except Exception as e:
             Logger().error(f"Error showing rate limit screen: {str(e)}", exc_info=True)
             self.notify(f"Error showing rate limit info: {str(e)}", severity="error")
+
+    async def action_create_theme(self) -> None:
+        Logger().info("Action: create theme")
+        try:
+            content = self.query_one("#content")
+            content.remove_children()
+            screen = ThemeCreationScreen(content, self.current_posts)
+            content.mount(screen)
+            self.app.active_widget = "content"
+            screen.focus()
+            self.query_one(Sidebar).update_status("Create Theme")
+        except Exception as e:
+            Logger().error(f"Error creating theme: {str(e)}", exc_info=True)
+            self.notify(f"Error creating theme: {str(e)}", severity="error")
 
 if __name__ == "__main__":
     print("Before starting RedditTUI, we need to set up the logger.")
