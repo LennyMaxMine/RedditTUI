@@ -504,3 +504,143 @@ class RedditService:
             time_since_last_request = current_time - self.last_request_time
             if time_since_last_request < self.rate_limit_reset:
                 raise Exception(f"Rate limit exceeded. Please wait {int(self.rate_limit_reset - time_since_last_request)} seconds.")
+
+    def block_user(self, username: str) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot block user: Reddit instance not initialized")
+            return False
+        try:
+            self._check_rate_limit()
+            self.logger.info(f"Blocking user: {username}")
+            self.reddit.redditor(username).block()
+            self.logger.info("User blocked successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error blocking user: {str(e)}", exc_info=True)
+            return False
+
+    def unblock_user(self, username: str) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot unblock user: Reddit instance not initialized")
+            return False
+        try:
+            self._check_rate_limit()
+            self.logger.info(f"Unblocking user: {username}")
+            self.reddit.redditor(username).unblock()
+            self.logger.info("User unblocked successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error unblocking user: {str(e)}", exc_info=True)
+            return False
+
+    def follow_user(self, username: str) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot follow user: Reddit instance not initialized")
+            return False
+        try:
+            self._check_rate_limit()
+            self.logger.info(f"Following user: {username}")
+            self.reddit.redditor(username).friend()
+            self.logger.info("User followed successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error following user: {str(e)}", exc_info=True)
+            return False
+
+    def unfollow_user(self, username: str) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot unfollow user: Reddit instance not initialized")
+            return False
+        try:
+            self._check_rate_limit()
+            self.logger.info(f"Unfollowing user: {username}")
+            self.reddit.redditor(username).unfriend()
+            self.logger.info("User unfollowed successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error unfollowing user: {str(e)}", exc_info=True)
+            return False
+
+    def get_followed_users(self):
+        if not self.reddit:
+            self.logger.error("Cannot get followed users: Reddit instance not initialized")
+            return []
+        try:
+            self._check_rate_limit()
+            self.logger.info("Fetching followed users")
+            friends = list(self.reddit.user.friends())
+            self._update_rate_limit(friends)
+            return friends
+        except Exception as e:
+            self.logger.error(f"Error fetching followed users: {str(e)}", exc_info=True)
+            return []
+
+    def get_blocked_users(self):
+        if not self.reddit:
+            self.logger.error("Cannot get blocked users: Reddit instance not initialized")
+            return []
+        try:
+            self._check_rate_limit()
+            self.logger.info("Fetching blocked users")
+            blocked = list(self.reddit.user.blocked())
+            self._update_rate_limit(blocked)
+            return blocked
+        except Exception as e:
+            self.logger.error(f"Error fetching blocked users: {str(e)}", exc_info=True)
+            return []
+
+    def get_messages(self, limit: int = 25):
+        if not self.reddit:
+            self.logger.error("Cannot get messages: Reddit instance not initialized")
+            return []
+        try:
+            self._check_rate_limit()
+            self.logger.info("Fetching messages")
+            messages = list(self.reddit.inbox.messages(limit=limit))
+            self._update_rate_limit(messages)
+            return messages
+        except Exception as e:
+            self.logger.error(f"Error fetching messages: {str(e)}", exc_info=True)
+            return []
+
+    def send_message(self, username: str, subject: str, message: str) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot send message: Reddit instance not initialized")
+            return False
+        try:
+            self._check_rate_limit()
+            self.logger.info(f"Sending message to {username}")
+            self.reddit.redditor(username).message(subject, message)
+            self.logger.info("Message sent successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error sending message: {str(e)}", exc_info=True)
+            return False
+
+    def mark_message_read(self, message) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot mark message as read: Reddit instance not initialized")
+            return False
+        try:
+            self._check_rate_limit()
+            self.logger.info(f"Marking message as read: {message.id}")
+            message.mark_read()
+            self.logger.info("Message marked as read successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error marking message as read: {str(e)}", exc_info=True)
+            return False
+
+    def mark_message_unread(self, message) -> bool:
+        if not self.reddit:
+            self.logger.error("Cannot mark message as unread: Reddit instance not initialized")
+            return False
+        try:
+            self._check_rate_limit()
+            self.logger.info(f"Marking message as unread: {message.id}")
+            message.mark_unread()
+            self.logger.info("Message marked as unread successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error marking message as unread: {str(e)}", exc_info=True)
+            return False

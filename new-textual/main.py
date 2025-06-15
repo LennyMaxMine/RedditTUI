@@ -18,6 +18,7 @@ from components.post_creation_screen import PostCreationScreen
 from components.credits_screen import CreditsScreen
 from components.rate_limit_screen import RateLimitScreen
 from components.theme_creation_screen import ThemeCreationScreen
+from components.messages_screen import MessagesScreen
 from utils.logger import Logger
 import json
 import os
@@ -457,6 +458,75 @@ class RedditTUI(App):
     #refresh_button {
         margin-top: 2;
     }
+
+    #messages_container {
+        width: 100%;
+        height: 1fr;
+        overflow-y: scroll;
+        padding: 2 0;
+        align: center top;
+    }
+
+    #messages_content {
+        width: 60;
+        max-width: 90vw;
+        min-width: 30;
+        margin: 0 2;
+        padding: 1 2;
+        align: center top;
+    }
+
+    #messages_content .message {
+        border: solid $primary;
+        padding: 1;
+        margin: 2 0;
+        background: $panel;
+        width: 100%;
+        max-width: 60;
+        min-width: 28;
+        align: center top;
+    }
+
+    #messages_content .message-header {
+        color: $text-muted;
+        margin-bottom: 1;
+    }
+
+    #messages_content .message-body {
+        margin: 1 0;
+    }
+
+    #messages_content .compose-form {
+        border: solid $primary;
+        padding: 2;
+        margin: 2 0;
+        background: $panel;
+        width: 100%;
+        max-width: 60;
+        min-width: 28;
+        align: center top;
+    }
+
+    #messages_content .compose-form Input {
+        width: 100%;
+        min-width: 20;
+        max-width: 100%;
+        margin: 1 0;
+    }
+
+    #messages_content .compose-form TextArea {
+        width: 100%;
+        min-width: 20;
+        max-width: 100%;
+        height: 8;
+        margin: 1 0;
+    }
+
+    #messages_content .compose-form Button {
+        margin: 1 0;
+        min-width: 10;
+        align: center middle;
+    }
     """
 
     BINDINGS = [
@@ -476,6 +546,7 @@ class RedditTUI(App):
         Binding("i", "credits", "Credits", show=True),
         Binding("z", "rate_limit", "Rate Limit Info", show=True),
         Binding("x", "create_theme", "Create Theme", show=True),
+        Binding("m", "messages", "Messages", show=True),
     ]
 
     def __init__(self):
@@ -1174,15 +1245,58 @@ class RedditTUI(App):
             Logger().error(f"Error creating theme: {str(e)}", exc_info=True)
             self.notify(f"Error creating theme: {str(e)}", severity="error")
 
+    async def action_messages(self) -> None:
+        Logger().info("Action: messages")
+        try:
+            if not self.reddit_service or not self.reddit_service.user:
+                self.notify("Please login first", severity="warning")
+                return
+
+            content = self.query_one("#content")
+            parent = content.parent
+            content.remove()
+            self.call_later(self._mount_messages_screen, parent)
+            self.app.active_widget = "content"
+            self.query_one(Sidebar).update_status("Messages")
+        except Exception as e:
+            Logger().error(f"Error showing messages screen: {str(e)}", exc_info=True)
+            self.notify(f"Error showing messages: {str(e)}", severity="error")
+
+    async def _mount_messages_screen(self, parent):
+        from textual.containers import Container
+        from components.messages_screen import MessagesScreen
+        new_content = Container(id="content")
+        parent.mount(new_content)
+        new_content.mount(MessagesScreen(self.reddit_service))
+
 if __name__ == "__main__":
-    print("Before starting RedditTUI, we need to set up the logger.")
-    print("RedditTUI will always log to a file.")
-    print("Any Crash or Exception will be logged and anonimously sent to the developer for debugging purposes.")
-    a = input("Do you also want to send every other log anonimously to the developer for debugging purposes? (y/n): ")
-    if a.lower() == "y":
-        Logger().send_logs_to_developer = True
+    if os.path.exists("log_sending.permission.jhna"):
+        with open("log_sending.permission.jhna", "r") as f:
+            data = json.load(f)
+            if data["log_sending"] == "true":
+                Logger().send_logs_to_developer = True
+            else:
+                Logger().info("Logs will not be sent to the developer.")
     else:
-        Logger().info("Logs will not be sent to the developer.")
+        print("Before starting RedditTUI, we need to set up the logger.")
+        print("RedditTUI will always log to a file.")
+        print("Any Crash or Exception will be logged and anonimously sent to the developer for debugging purposes.")
+
+        a = input("Do you also want to send every other log anonimously to the developer for debugging purposes? (y/n): ")
+        if a.lower() == "y":
+            Logger().send_logs_to_developer = True
+            soption = True
+        else:
+            Logger().info("Logs will not be sent to the developer.")
+            soption = False
+        if soption:
+            a = input("Remember choice? (y/n): ")
+            if a.lower() == "y":
+                with open("log_sending.permission.jhna", "w") as f:
+                    if soption == True:
+                        f.write('{"log_sending": true}')
+                    else:
+                        f.write('{"log_sending": false}')
     Logger().info(f"=============================================================== Starting RedditTUI app at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ================================================================")
     app = RedditTUI()
     try:

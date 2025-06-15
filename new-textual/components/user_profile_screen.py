@@ -31,6 +31,9 @@ class UserProfileScreen(Widget):
             with Horizontal():
                 yield Button("Posts", id="posts_button")
                 yield Button("Comments", id="comments_button")
+                yield Button("Message", id="message_button")
+                yield Button("Follow", id="follow_button")
+                yield Button("Block", id="block_button")
                 yield Button("Back", id="back_button")
             with ScrollableContainer(id="content_container"):
                 yield Static(id="user_content")
@@ -39,6 +42,7 @@ class UserProfileScreen(Widget):
         self.logger.info("UserProfileScreen mounted")
         self.reddit_service = self.app.reddit_service
         self.load_user_data()
+        self.update_social_buttons()
 
     def load_user_data(self):
         self.logger.info(f"Loading user data for: {self.username}")
@@ -114,17 +118,139 @@ class UserProfileScreen(Widget):
         else:
             return f"{diff.seconds}s ago"
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "back_button":
-            self.logger.info("Back button pressed")
-            self.parent_content.remove_children()
-            post_list = PostList(posts=self.posts, id="content")
-            self.parent_content.mount(post_list)
-            self.app.active_widget = "content"
-            post_list.focus()
-        elif event.button.id == "posts_button":
-            self.logger.info("Posts button pressed")
+    def update_social_buttons(self):
+        try:
+            if not self.reddit_service or not self.reddit_service.user:
+                return
+
+            follow_button = self.query_one("#follow_button")
+            block_button = self.query_one("#block_button")
+            message_button = self.query_one("#message_button")
+
+            if self.username == self.reddit_service.user:
+                follow_button.disabled = True
+                block_button.disabled = True
+                message_button.disabled = True
+            else:
+                follow_button.disabled = False
+                block_button.disabled = False
+                message_button.disabled = False
+
+                followed_users = self.reddit_service.get_followed_users()
+                blocked_users = self.reddit_service.get_blocked_users()
+
+                if self.username in [user.name for user in followed_users]:
+                    follow_button.label = "Unfollow"
+                else:
+                    follow_button.label = "Follow"
+
+                if self.username in [user.name for user in blocked_users]:
+                    block_button.label = "Unblock"
+                else:
+                    block_button.label = "Block"
+
+        except Exception as e:
+            self.logger.error(f"Error updating social buttons: {str(e)}", exc_info=True)
+
+    def on_button_pressed(self, event: Button.Pressed):
+        if event.button.id == "posts_button":
+            self.current_view = "posts"
             self.show_posts()
         elif event.button.id == "comments_button":
-            self.logger.info("Comments button pressed")
+            self.current_view = "comments"
             self.show_comments()
+        elif event.button.id == "message_button":
+            self.action_message_user()
+        elif event.button.id == "follow_button":
+            self.action_follow_user()
+        elif event.button.id == "block_button":
+            self.action_block_user()
+        elif event.button.id == "back_button":
+            self.parent_content.remove_children()
+            self.parent_content.mount(PostList(posts=self.posts, id="content"))
+            self.app.active_widget = "content"
+            self.query_one(PostList).focus()
+
+    def action_message_user(self):
+        try:
+            if not self.reddit_service or not self.reddit_service.user:
+                self.notify("Please login first", severity="warning")
+                return
+
+            if self.username == self.reddit_service.user:
+                self.notify("Cannot message yourself", severity="warning")
+                return
+
+            from components.messages_screen import MessagesScreen
+            content = self.query_one("#content")
+            content.remove_children()
+            messages_screen = MessagesScreen(content, self.posts, self.reddit_service)
+            content.mount(messages_screen)
+            self.app.active_widget = "content"
+            messages_screen.focus()
+            messages_screen.recipient = self.username
+            messages_screen.update_messages_display()
+
+        except Exception as e:
+            self.logger.error(f"Error opening message screen: {str(e)}", exc_info=True)
+            self.notify(f"Error: {str(e)}", severity="error")
+
+    def action_follow_user(self):
+        try:
+            if not self.reddit_service or not self.reddit_service.user:
+                self.notify("Please login first", severity="warning")
+                return
+
+            if self.username == self.reddit_service.user:
+                self.notify("Cannot follow yourself", severity="warning")
+                return
+
+            followed_users = self.reddit_service.get_followed_users()
+            is_following = self.username in [user.name for user in followed_users]
+
+            if is_following:
+                if self.reddit_service.unfollow_user(self.username):
+                    self.notify(f"Unfollowed u/{self.username}", severity="success")
+                else:
+                    self.notify("Failed to unfollow user", severity="error")
+            else:
+                if self.reddit_service.follow_user(self.username):
+                    self.notify(f"Following u/{self.username}", severity="success")
+                else:
+                    self.notify("Failed to follow user", severity="error")
+
+            self.update_social_buttons()
+
+        except Exception as e:
+            self.logger.error(f"Error following/unfollowing user: {str(e)}", exc_info=True)
+            self.notify(f"Error: {str(e)}", severity="error")
+
+    def action_block_user(self):
+        try:
+            if not self.reddit_service or not self.reddit_service.user:
+                self.notify("Please login first", severity="warning")
+                return
+
+            if self.username == self.reddit_service.user:
+                self.notify("Cannot block yourself", severity="warning")
+                return
+
+            blocked_users = self.reddit_service.get_blocked_users()
+            is_blocked = self.username in [user.name for user in blocked_users]
+
+            if is_blocked:
+                if self.reddit_service.unblock_user(self.username):
+                    self.notify(f"Unblocked u/{self.username}", severity="success")
+                else:
+                    self.notify("Failed to unblock user", severity="error")
+            else:
+                if self.reddit_service.block_user(self.username):
+                    self.notify(f"Blocked u/{self.username}", severity="success")
+                else:
+                    self.notify("Failed to block user", severity="error")
+
+            self.update_social_buttons()
+
+        except Exception as e:
+            self.logger.error(f"Error blocking/unblocking user: {str(e)}", exc_info=True)
+            self.notify(f"Error: {str(e)}", severity="error")
