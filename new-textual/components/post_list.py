@@ -70,7 +70,6 @@ class PostList(Widget):
                 comments = post.num_comments
                 created = datetime.fromtimestamp(post.created_utc)
                 age = self._get_age(created)
-                
 
                 # Title line
                 title_line = Text()
@@ -143,10 +142,9 @@ class PostList(Widget):
 
     def on_scroll(self, event):
         Logger().info(f"Scroll event received: {event}")
-        super().on_scroll(event)
 
     def get_selected_post(self):
         if 0 <= self.selected_index < len(self.posts):
             Logger().info(f"Selected post at index {self.selected_index}")
             return self.posts[self.selected_index]
-        return None 
+        return None #a

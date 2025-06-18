@@ -568,6 +568,45 @@ class RedditTUI(App):
         align: left middle;
         margin-bottom: 1;
     }
+    #messages_panel {
+        width: 1fr;
+        height: 100%;
+        background: $surface;
+        padding: 1;
+    }
+
+    #messages_panel Button {
+        margin: 1 0;
+        min-width: 15;
+    }
+
+    #conversations_panel Button {
+        margin: 1 0;
+        min-width: 15;
+    }
+
+    #messages_container {
+        width: 100%;
+        height: 1fr;
+        overflow-y: scroll;
+        padding: 2 0;
+        align: center top;
+    }
+
+    .message-actions {
+        width: 100%;
+        align: center middle;
+        margin-top: 1;
+    }
+
+    .message-actions Button {
+        margin: 0 1;
+        min-width: 8;
+    }
+
+    .message-header-container {
+        margin-bottom: 1;
+    }
 
     #conversations_panel {
         width: 30;
@@ -624,114 +663,6 @@ class RedditTUI(App):
         text-style: bold;
         margin-top: 1;
     }
-
-    #messages_panel {
-        width: 1fr;
-        height: 100%;
-        background: $surface;
-        padding: 1;
-    }
-
-    #messages_container {
-        width: 100%;
-        height: 1fr;
-        overflow-y: scroll;
-        padding: 2 0;
-        align: center top;
-    }
-
-    #messages_content {
-        width: 60;
-        max-width: 90vw;
-        min-width: 30;
-        margin: 0 2;
-        padding: 1 2;
-        align: center top;
-    }
-
-    #messages_content .message {
-        border: solid $primary;
-        padding: 1;
-        margin: 2 0;
-        background: $panel;
-        width: 100%;
-        max-width: 60;
-        min-width: 28;
-        align: center top;
-        transition: background 0.2s;
-    }
-
-    #messages_content .message.unread {
-        background: $boost;
-        border-left: solid $primary;
-    }
-
-    #messages_content .message-header {
-        color: $text-muted;
-        margin-bottom: 1;
-    }
-
-    #messages_content .message-body {
-        margin: 1 0;
-        padding: 1;
-        background: $surface;
-        border: solid $primary-lighten-2;
-    }
-
-    #messages_content .compose-form {
-        border: solid $primary;
-        padding: 2;
-        margin: 2 0;
-        background: $panel;
-        width: 100%;
-        max-width: 60;
-        min-width: 28;
-        align: center top;
-    }
-
-    #messages_content .compose-form Input {
-        width: 100%;
-        min-width: 20;
-        max-width: 100%;
-        margin: 1 0;
-    }
-
-    #messages_content .compose-form TextArea {
-        width: 100%;
-        min-width: 20;
-        max-width: 100%;
-        height: 8;
-        margin: 1 0;
-    }
-
-    #messages_content .compose-form Button {
-        margin: 1 0;
-        min-width: 10;
-        align: center middle;
-    }
-
-    #messages_content .button-container {
-        width: 100%;
-        align: center middle;
-        margin-top: 1;
-    }
-
-    #messages_content #search_input {
-        width: 20;
-        margin: 0 1;
-    }
-
-    #messages_content #sort_select,
-    #messages_content #filter_select {
-        width: 12;
-        margin: 0 1;
-    }
-
-    #messages_content Horizontal {
-        width: 100%;
-        align: left middle;
-        margin-bottom: 1;
-    }
     """
 
     BINDINGS = [
@@ -743,7 +674,7 @@ class RedditTUI(App):
         Binding("s", "advanced_search", "Advanced Search", show=True),
         Binding("l", "login", "Login", show=True),
         Binding("?", "help", "Help", show=True),
-        Binding("c", "settings", "Settings", show=True),
+        Binding("c", "settings", "Settings", show=True),a
         Binding("u", "my_profile", "My Profile", show=True),
         Binding("b", "saved_posts", "Saved Posts", show=True),
         Binding("r", "subscribed_subreddits", "Subscribed Subreddits", show=True),
