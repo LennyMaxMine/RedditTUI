@@ -674,7 +674,7 @@ class RedditTUI(App):
         Binding("s", "advanced_search", "Advanced Search", show=True),
         Binding("l", "login", "Login", show=True),
         Binding("?", "help", "Help", show=True),
-        Binding("c", "settings", "Settings", show=True),a
+        Binding("c", "settings", "Settings", show=True),
         Binding("u", "my_profile", "My Profile", show=True),
         Binding("b", "saved_posts", "Saved Posts", show=True),
         Binding("r", "subscribed_subreddits", "Subscribed Subreddits", show=True),
