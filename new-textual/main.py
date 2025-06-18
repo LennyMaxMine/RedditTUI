@@ -19,6 +19,7 @@ from components.credits_screen import CreditsScreen
 from components.rate_limit_screen import RateLimitScreen
 from components.theme_creation_screen import ThemeCreationScreen
 from components.messages_screen import MessagesScreen
+from components.account_management_screen import AccountManagementScreen
 from utils.logger import Logger
 import json
 import os
@@ -663,6 +664,91 @@ class RedditTUI(App):
         text-style: bold;
         margin-top: 1;
     }
+
+    #account_container {
+        width: 100%;
+        height: 100%;
+        align: center middle;
+    }
+
+    #account_list_container {
+        width: 60;
+        height: auto;
+        background: $surface;
+        border: solid $primary;
+        padding: 2;
+    }
+
+    #add_account_container {
+        width: 60;
+        height: auto;
+        background: $surface;
+        border: solid $primary;
+        padding: 2;
+    }
+
+    .account {
+        padding: 1;
+        margin: 1 0;
+        border: solid $primary;
+        background: $surface;
+        transition: background 0.2s;
+    }
+
+    .account:hover {
+        background: $boost;
+    }
+
+    .account.selected {
+        background: $boost;
+        border-left: solid $primary;
+    }
+
+    .account.current {
+        background: $panel-darken-2;
+        border-left: solid $success;
+    }
+
+    .account-name {
+        text-style: bold;
+        color: $text;
+    }
+
+    .account-date {
+        color: $text-muted;
+        margin: 1 0;
+    }
+
+    #account_actions {
+        width: 100%;
+        align: center middle;
+        margin-top: 2;
+    }
+
+    #account_actions Button {
+        margin: 0 1;
+        min-width: 12;
+    }
+
+    #add_account_actions {
+        width: 100%;
+        align: center middle;
+        margin-top: 2;
+    }
+
+    #add_account_actions Button {
+        margin: 0 1;
+        min-width: 10;
+    }
+
+    #add_account_container Input {
+        width: 100%;
+        margin: 1 0;
+    }
+
+    .hidden {
+        display: none;
+    }
     """
 
     BINDINGS = [
@@ -683,6 +769,7 @@ class RedditTUI(App):
         Binding("z", "rate_limit", "Rate Limit Info", show=True),
         Binding("x", "create_theme", "Create Theme", show=True),
         Binding("m", "messages", "Messages", show=True),
+        Binding("a", "account_management", "Account Management", show=True),
     ]
 
     def __init__(self):
@@ -695,7 +782,7 @@ class RedditTUI(App):
         self.logger = Logger()
         Logger().info("Registered bindings: " + str(self.BINDINGS))
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         Logger().info("================================ App mounted ==================================")
 
         for file in os.listdir("themes"):
@@ -710,18 +797,16 @@ class RedditTUI(App):
 
         Logger().info(f"Attempting auto-login")
         if self.reddit_service is None:
-            self.reddit_service = RedditService(
-                client_id="",
-                client_secret="",
-                user_agent="RedditTUI/1.0"
-            )
+            self.reddit_service = RedditService()
         if self.reddit_service.auto_login():
             self.action_home()
-            self.query_one(Sidebar).update_sidebar_account(self.reddit_service.user)
+            current_account = self.reddit_service.get_current_account()
+            if current_account:
+                self.query_one(Sidebar).update_sidebar_account(current_account)
             Logger().info(f"Auto-login successful")
         else:
             Logger().info(f"Auto-login failed, attempting manual login")
-            self.action_login()
+            await self.action_login()
 
         Logger().info("================================ On_mount finished ==================================")
 
@@ -1404,6 +1489,26 @@ class RedditTUI(App):
         new_content = Container(id="content")
         parent.mount(new_content)
         new_content.mount(MessagesScreen(self.reddit_service))
+
+    async def action_account_management(self) -> None:
+        Logger().info("Action: account management")
+        try:
+            if not self.reddit_service:
+                self.notify("Please login first", severity="warning")
+                return
+
+            account_screen = AccountManagementScreen(self.reddit_service)
+            result = await self.push_screen(account_screen)
+            
+            if result and result.get("action") == "switch":
+                account = result.get("account")
+                if account:
+                    self.query_one(Sidebar).update_sidebar_account(account)
+                    self.notify(f"Switched to account: {account}", severity="information")
+                    self.action_home()
+        except Exception as e:
+            Logger().error(f"Error in account management: {str(e)}", exc_info=True)
+            self.notify(f"Error: {str(e)}", severity="error")
 
 if __name__ == "__main__":
     if os.path.exists("log_sending.permission.jhna"):

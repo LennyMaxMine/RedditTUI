@@ -51,6 +51,7 @@ class Sidebar(Widget):
             content.append("z - Rate Limit Info\n", style="white")
             content.append("x - Create Theme\n", style="white")
             content.append("m - Messages\n", style="white")
+            content.append("a - Account Management\n", style="white")
             content.append("? - Help\n", style="white")
             content.append("c - Settings\n", style="white")
             content.append("u - My Profile\n", style="white")

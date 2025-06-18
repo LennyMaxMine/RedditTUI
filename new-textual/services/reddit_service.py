@@ -8,10 +8,12 @@ from praw import Reddit
 from praw.models import Submission
 
 class RedditService:
-    def __init__(self, client_id, client_secret, user_agent, username=None, password=None):
+    def __init__(self, client_id="", client_secret="", user_agent="RedditTUI/1.0", username=None, password=None):
         self.logger = Logger()
         self.config_dir = Path.home() / ".config" / "reddit-tui"
-        self.credentials_file = self.config_dir / "sanfrancisco.jhna"
+        self.accounts_file = self.config_dir / "accounts.json"
+        self.current_account = None
+        self.accounts = {}
         self._ensure_config_dir()
         self.user = None
         self.rate_limit_remaining = 600
@@ -36,6 +38,103 @@ class RedditService:
         self.logger.info(f"Ensuring config dir: {self.config_dir}")
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
+    def load_accounts(self) -> dict:
+        self.logger.info(f"Loading accounts from {self.accounts_file}")
+        if self.accounts_file.exists():
+            try:
+                with open(self.accounts_file, "r") as f:
+                    accounts = json.load(f)
+                self.logger.info(f"Loaded {len(accounts)} accounts")
+                return accounts
+            except Exception as e:
+                self.logger.error(f"Failed to load accounts: {e}", exc_info=True)
+                return {}
+        self.logger.info("Accounts file does not exist.")
+        return {}
+
+    def save_accounts(self):
+        self.logger.info(f"Saving accounts to {self.accounts_file}")
+        try:
+            with open(self.accounts_file, "w") as f:
+                json.dump(self.accounts, f, indent=4)
+            self.logger.info("Accounts saved successfully.")
+        except Exception as e:
+            self.logger.error(f"Failed to save accounts: {e}", exc_info=True)
+
+    def add_account(self, username: str, client_id: str, client_secret: str, password: str) -> bool:
+        self.logger.info(f"Adding account: {username}")
+        try:
+            temp_reddit = praw.Reddit(
+                client_id=client_id,
+                client_secret=client_secret,
+                username=username,
+                password=password,
+                user_agent="RedditTUI/1.0"
+            )
+            user = temp_reddit.user.me()
+            if user.name != username:
+                self.logger.error(f"Username mismatch: expected {username}, got {user.name}")
+                return False
+            
+            self.accounts[username] = {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "password": password,
+                "added_date": time.time(),
+                "last_used": time.time()
+            }
+            self.save_accounts()
+            self.logger.info(f"Account {username} added successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to add account {username}: {str(e)}", exc_info=True)
+            return False
+
+    def remove_account(self, username: str) -> bool:
+        self.logger.info(f"Removing account: {username}")
+        if username in self.accounts:
+            del self.accounts[username]
+            self.save_accounts()
+            if self.current_account == username:
+                self.current_account = None
+                self.reddit = None
+                self.user = None
+            self.logger.info(f"Account {username} removed successfully")
+            return True
+        return False
+
+    def get_accounts(self) -> list:
+        return list(self.accounts.keys())
+
+    def switch_account(self, username: str) -> bool:
+        self.logger.info(f"Switching to account: {username}")
+        if username not in self.accounts:
+            self.logger.error(f"Account {username} not found")
+            return False
+        
+        account_data = self.accounts[username]
+        try:
+            self.reddit = praw.Reddit(
+                client_id=account_data["client_id"],
+                client_secret=account_data["client_secret"],
+                username=username,
+                password=account_data["password"],
+                user_agent="RedditTUI/1.0"
+            )
+            user = self.reddit.user.me()
+            self.user = user.name
+            self.current_account = username
+            self.accounts[username]["last_used"] = time.time()
+            self.save_accounts()
+            self.logger.info(f"Switched to account: {username}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to switch to account {username}: {str(e)}", exc_info=True)
+            return False
+
+    def get_current_account(self) -> str:
+        return self.current_account
+
     def login(self, client_id: str, client_secret: str, username: str, password: str) -> bool:
         self.logger.info("RedditService.login called")
         try:
@@ -51,6 +150,7 @@ class RedditService:
             try:
                 user = self.reddit.user.me()
                 self.user = user.name
+                self.current_account = user.name
                 self.logger.info(f"Reddit authentication successful. Logged in as: {user.name}")
                 self.logger.info("Saving credentials...")
                 self._save_credentials(client_id, client_secret, username, password)
@@ -64,47 +164,33 @@ class RedditService:
             return False
 
     def _save_credentials(self, client_id: str, client_secret: str, username: str, password: str):
-        self.logger.info(f"Saving credentials to {self.credentials_file}")
-        credentials = {
+        self.logger.info(f"Saving credentials for {username}")
+        self.accounts[username] = {
             "client_id": client_id,
             "client_secret": client_secret,
-            "username": username,
-            "password": password
+            "password": password,
+            "added_date": time.time(),
+            "last_used": time.time()
         }
-        try:
-            with open(self.credentials_file, "w") as f:
-                json.dump(credentials, f)
-            self.logger.info("Credentials file written successfully.")
-        except Exception as e:
-            self.logger.error(f"Failed to write credentials file: {e}", exc_info=True)
+        self.save_accounts()
 
     def load_credentials(self) -> dict:
-        self.logger.info(f"Loading credentials from {self.credentials_file}")
-        if self.credentials_file.exists():
-            try:
-                with open(self.credentials_file, "r") as f:
-                    creds = json.load(f)
-                self.logger.info("Credentials loaded.")
-                return creds
-            except Exception as e:
-                self.logger.error(f"Failed to load credentials: {e}", exc_info=True)
-                return {}
-        self.logger.info("Credentials file does not exist.")
+        self.logger.info("Loading credentials (legacy method)")
+        if self.accounts:
+            most_recent = max(self.accounts.keys(), key=lambda k: self.accounts[k].get("last_used", 0))
+            return self.accounts[most_recent]
         return {}
 
     def auto_login(self) -> bool:
         self.logger.info("RedditService.auto_login called")
-        credentials = self.load_credentials()
-        if all(k in credentials for k in ["client_id", "client_secret", "username", "password"]):
-            self.logger.info("Credentials found, attempting auto-login...")
-            return self.login(
-                credentials["client_id"],
-                credentials["client_secret"],
-                credentials["username"],
-                credentials["password"]
-            )
-        self.logger.info("No valid credentials found for auto-login.")
-        return False
+        self.accounts = self.load_accounts()
+        if not self.accounts:
+            self.logger.info("No accounts found for auto-login.")
+            return False
+        
+        most_recent = max(self.accounts.keys(), key=lambda k: self.accounts[k].get("last_used", 0))
+        self.logger.info(f"Attempting auto-login with most recent account: {most_recent}")
+        return self.switch_account(most_recent)
 
     def get_hot_posts(self, limit: int = 25):
         if not self.reddit:

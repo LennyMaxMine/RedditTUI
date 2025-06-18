@@ -8,6 +8,7 @@ A Terminal User Interface (TUI) for Reddit built with Textual.
 - View post details and comments
 - Search functionality
 - User authentication
+- **Multi-account support** - Switch between multiple Reddit accounts
 - Customizable settings
 
 ## Installation
@@ -57,6 +58,18 @@ python main.py
 - `q`: Quit
 - `h`: Home feed
 - `l`: Login
+- `a`: Account Management (add/remove/switch accounts)
+
+### Multi-Account Support
+
+RedditTUI now supports multiple Reddit accounts:
+
+1. **Add Account**: Press `a` to open Account Management, then "Add Account"
+2. **Switch Account**: Press `a` and select an account to switch to
+3. **Remove Account**: Press `a` and select an account to remove
+4. **Auto-login**: The app will automatically log in with your most recently used account
+
+Each account's credentials are securely stored locally and the app remembers which account you last used.
 
 ## Development
 
