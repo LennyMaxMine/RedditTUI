@@ -11,7 +11,7 @@ class RedditService:
     def __init__(self, client_id="", client_secret="", user_agent="RedditTUI/1.0", username=None, password=None):
         self.logger = Logger()
         self.config_dir = Path.home() / ".config" / "reddit-tui"
-        self.accounts_file = self.config_dir / "accounts.json"
+        self.accounts_file = self.config_dir / "accounts.jhna"
         self.current_account = None
         self.accounts = {}
         self._ensure_config_dir()
@@ -20,6 +20,8 @@ class RedditService:
         self.rate_limit_reset = 0
         self.rate_limit_used = 0
         self.last_request_time = 0
+        
+        self.accounts = self.load_accounts()
         
         if client_id and client_secret:
             self.reddit = Reddit(
@@ -183,7 +185,6 @@ class RedditService:
 
     def auto_login(self) -> bool:
         self.logger.info("RedditService.auto_login called")
-        self.accounts = self.load_accounts()
         if not self.accounts:
             self.logger.info("No accounts found for auto-login.")
             return False
@@ -194,11 +195,20 @@ class RedditService:
 
     def get_hot_posts(self, limit: int = 25):
         if not self.reddit:
+            self.logger.error("Cannot get hot posts: Reddit instance not initialized")
             return []
         try:
+            self.logger.info(f"Fetching {limit} hot posts from Reddit front page")
+            self.logger.info(f"Reddit instance: {self.reddit}")
+            self.logger.info(f"Current user: {self.user}")
             self._check_rate_limit()
-            response = self.reddit.front.hot(limit=limit)
+            response = self.reddit.subreddit("all").hot(limit=limit)
+            self.logger.info(f"Reddit API response type: {type(response)}")
+            self.logger.info("Reddit API call completed, converting to list")
             posts = list(response)
+            self.logger.info(f"Retrieved {len(posts)} hot posts")
+            if len(posts) == 0:
+                self.logger.warning("No posts retrieved - this might indicate an API issue")
             self._update_rate_limit(response)
             return posts
         except Exception as e:
@@ -207,11 +217,15 @@ class RedditService:
 
     def get_new_posts(self, limit: int = 25):
         if not self.reddit:
+            self.logger.error("Cannot get new posts: Reddit instance not initialized")
             return []
         try:
+            self.logger.info(f"Fetching {limit} new posts from Reddit front page")
             self._check_rate_limit()
-            response = self.reddit.front.new(limit=limit)
+            response = self.reddit.subreddit("all").new(limit=limit)
+            self.logger.info("Reddit API call completed, converting to list")
             posts = list(response)
+            self.logger.info(f"Retrieved {len(posts)} new posts")
             self._update_rate_limit(response)
             return posts
         except Exception as e:
@@ -220,11 +234,15 @@ class RedditService:
 
     def get_top_posts(self, limit: int = 25):
         if not self.reddit:
+            self.logger.error("Cannot get top posts: Reddit instance not initialized")
             return []
         try:
+            self.logger.info(f"Fetching {limit} top posts from Reddit front page")
             self._check_rate_limit()
-            response = self.reddit.front.top(limit=limit)
+            response = self.reddit.subreddit("all").top(limit=limit)
+            self.logger.info("Reddit API call completed, converting to list")
             posts = list(response)
+            self.logger.info(f"Retrieved {len(posts)} top posts")
             self._update_rate_limit(response)
             return posts
         except Exception as e:

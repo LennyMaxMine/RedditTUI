@@ -709,9 +709,18 @@ class RedditTUI(App):
         border-left: solid $success;
     }
 
+    .account.selected.current {
+        background: $boost;
+        border-left: solid $success;
+    }
+
     .account-name {
         text-style: bold;
         color: $text;
+    }
+
+    .account.selected .account-name {
+        color: $primary;
     }
 
     .account-date {
@@ -748,6 +757,60 @@ class RedditTUI(App):
 
     .hidden {
         display: none;
+    }
+
+    #startup_account_container {
+        width: 100%;
+        height: 100%;
+        align: center middle;
+    }
+
+    #account_selection_container {
+        width: 60;
+        height: auto;
+        background: $surface;
+        border: solid $primary;
+        padding: 2;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: $text-muted;
+        padding: 1;
+        margin-bottom: 2;
+    }
+
+    #startup_accounts_list {
+        height: 20;
+        margin: 1 0;
+    }
+
+    #startup_account_actions {
+        width: 100%;
+        align: center middle;
+        margin-top: 2;
+    }
+
+    #startup_account_actions Button {
+        margin: 0 1;
+        min-width: 12;
+    }
+
+    #startup_account_container .account {
+        padding: 1;
+        margin: 1 0;
+        border: solid $primary;
+        background: $surface;
+        transition: background 0.2s;
+    }
+
+    #startup_account_container .account:hover {
+        background: $boost;
+    }
+
+    #startup_account_container .account.selected {
+        background: $boost;
+        border-left: solid $primary;
     }
     """
 
@@ -798,14 +861,20 @@ class RedditTUI(App):
         Logger().info(f"Attempting auto-login")
         if self.reddit_service is None:
             self.reddit_service = RedditService()
-        if self.reddit_service.auto_login():
-            self.action_home()
-            current_account = self.reddit_service.get_current_account()
-            if current_account:
-                self.query_one(Sidebar).update_sidebar_account(current_account)
-            Logger().info(f"Auto-login successful")
+        
+        if len(self.reddit_service.accounts) > 0:
+            Logger().info(f"Found {len(self.reddit_service.accounts)} accounts, attempting auto-login")
+            if self.reddit_service.auto_login():
+                self.action_home()
+                current_account = self.reddit_service.get_current_account()
+                if current_account:
+                    self.query_one(Sidebar).update_sidebar_account(current_account)
+                Logger().info(f"Auto-login successful")
+            else:
+                Logger().info(f"Auto-login failed, attempting manual login")
+                await self.action_login()
         else:
-            Logger().info(f"Auto-login failed, attempting manual login")
+            Logger().info("No accounts found, attempting manual login")
             await self.action_login()
 
         Logger().info("================================ On_mount finished ==================================")
@@ -838,6 +907,9 @@ class RedditTUI(App):
 
     def action_home(self) -> None:
         Logger().info("Action: home feed")
+        if not self.reddit_service:
+            self.notify("Reddit service not initialized", severity="error")
+            return
         self.current_feed = "hot"
         posts = self.reddit_service.get_hot_posts()
         self.current_posts = posts
@@ -847,6 +919,9 @@ class RedditTUI(App):
 
     def action_new(self) -> None:
         Logger().info("Action: new feed")
+        if not self.reddit_service:
+            self.notify("Reddit service not initialized", severity="error")
+            return
         self.current_feed = "new"
         posts = self.reddit_service.get_new_posts()
         self.current_posts = posts
@@ -856,6 +931,9 @@ class RedditTUI(App):
 
     def action_top(self) -> None:
         Logger().info("Action: top feed")
+        if not self.reddit_service:
+            self.notify("Reddit service not initialized", severity="error")
+            return
         self.current_feed = "top"
         posts = self.reddit_service.get_top_posts()
         self.current_posts = posts
@@ -881,13 +959,12 @@ class RedditTUI(App):
             result = await self.push_screen(login_screen)
             Logger().info(f"Login screen result: {result}")
             if result:
-                Logger().info("Login successful, reinitializing RedditService")
-                self.reddit_service = RedditService()
-                if self.reddit_service.auto_login():
+                Logger().info("Login successful, attempting auto-login")
+                if self.reddit_service and self.reddit_service.auto_login():
                     Logger().info("Auto-login successful after manual login")
                     self.action_home()
                 else:
-                    Logger().error("Failed to reinitialize RedditService after login")
+                    Logger().error("Failed to auto-login after manual login")
                     self.notify("Error: Failed to initialize Reddit service", severity="error")
                     self.action_home()
             else:
@@ -1040,6 +1117,10 @@ class RedditTUI(App):
 
     def save_selected_post(self):
         try:
+            if not self.reddit_service:
+                self.notify("Reddit service not initialized", severity="error")
+                return
+                
             content = self.query_one("#content")
             children = list(content.children)
             if len(children) == 1:
@@ -1053,7 +1134,7 @@ class RedditTUI(App):
 
                 if post:
                     if self.reddit_service.save_post(post):
-                        self.notify("Post saved successfully!", severity="success")
+                        self.notify("Post saved successfully!", severity="information")
                         Logger().info(f"Saved post: {post.title}")
                         # Refresh the current view
                         if self.query_one(Sidebar).status == "Saved Posts":
@@ -1070,6 +1151,10 @@ class RedditTUI(App):
 
     def hide_selected_post(self):
         try:
+            if not self.reddit_service:
+                self.notify("Reddit service not initialized", severity="error")
+                return
+                
             content = self.query_one("#content")
             children = list(content.children)
             if len(children) == 1:
@@ -1083,7 +1168,7 @@ class RedditTUI(App):
 
                 if post:
                     if self.reddit_service.hide_post(post):
-                        self.notify("Post hidden successfully!", severity="success")
+                        self.notify("Post hidden successfully!", severity="information")
                         Logger().info(f"Hidden post: {post.title}")
                         # Remove the post from the current list and refresh
                         if isinstance(children[0], PostList):
@@ -1112,6 +1197,10 @@ class RedditTUI(App):
 
     def subscribe_to_subreddit(self):
         try:
+            if not self.reddit_service:
+                self.notify("Reddit service not initialized", severity="error")
+                return
+                
             content = self.query_one("#content")
             children = list(content.children)
             if len(children) == 1:
@@ -1126,7 +1215,7 @@ class RedditTUI(App):
                 if post:
                     subreddit_name = post.subreddit.display_name
                     if self.reddit_service.subscribe_subreddit(subreddit_name):
-                        self.notify(f"Subscribed to r/{subreddit_name}!", severity="success")
+                        self.notify(f"Subscribed to r/{subreddit_name}!", severity="information")
                         Logger().info(f"Subscribed to subreddit: {subreddit_name}")
                     else:
                         self.notify(f"Failed to subscribe to r/{subreddit_name}", severity="error")
@@ -1500,12 +1589,14 @@ class RedditTUI(App):
             account_screen = AccountManagementScreen(self.reddit_service)
             result = await self.push_screen(account_screen)
             
-            if result and result.get("action") == "switch":
+            if result and result.get("action") == "restart":
                 account = result.get("account")
                 if account:
-                    self.query_one(Sidebar).update_sidebar_account(account)
-                    self.notify(f"Switched to account: {account}", severity="information")
-                    self.action_home()
+                    self.notify(f"Restarting app with account: {account}", severity="information")
+                    Logger().info(f"Restarting app with account: {account}")
+                    import sys
+                    import os
+                    os.execl(sys.executable, sys.executable, *sys.argv)
         except Exception as e:
             Logger().error(f"Error in account management: {str(e)}", exc_info=True)
             self.notify(f"Error: {str(e)}", severity="error")

@@ -4,6 +4,20 @@ from textual.screen import ModalScreen
 from textual.events import Click
 from datetime import datetime
 from utils.logger import Logger
+from components.sidebar import Sidebar
+
+class ClickableAccountContainer(Container):
+    def __init__(self, username, account_data, is_current, is_selected, **kwargs):
+        super().__init__(**kwargs)
+        self.username = username
+        self.account_data = account_data
+        self.is_current = is_current
+        self.is_selected = is_selected
+
+    def on_click(self, event: Click):
+        screen = self.screen
+        if isinstance(screen, AccountManagementScreen):
+            screen.switch_to_account(self.username)
 
 class AccountManagementScreen(ModalScreen):
     def __init__(self, reddit_service):
@@ -51,7 +65,9 @@ class AccountManagementScreen(ModalScreen):
 
     def refresh_accounts_list(self):
         accounts_list = self.query_one("#accounts_list")
-        accounts_list.remove_children()
+        
+        for child in list(accounts_list.children):
+            child.remove()
         
         if not self.accounts:
             accounts_list.mount(Static("No accounts found. Add your first account!", classes="message-body"))
@@ -65,16 +81,27 @@ class AccountManagementScreen(ModalScreen):
             last_used = datetime.fromtimestamp(account_data.get("last_used", 0)).strftime("%Y-%m-%d %H:%M")
             
             is_current = username == current_account
+            is_selected = i == self.selected_index
             status_text = " (Current)" if is_current else ""
+            cursor_indicator = "▶ " if is_selected else "  "
             
-            account_box = Container(
-                Static(f"{username}{status_text}", classes="account-name"),
-                Static(f"Added: {added_date}", classes="account-date"),
-                Static(f"Last used: {last_used}", classes="account-date"),
-                classes=f"account {'current' if is_current else ''} {'selected' if i == self.selected_index else ''}",
+            account_box = ClickableAccountContainer(
+                username=username,
+                account_data=account_data,
+                is_current=is_current,
+                is_selected=is_selected,
+                classes=f"account {'current' if is_current else ''} {'selected' if is_selected else ''}",
                 id=f"account_{username}"
             )
+            
+            name_widget = Static(f"{cursor_indicator}{username}{status_text}", classes="account-name")
+            added_widget = Static(f"Added: {added_date}", classes="account-date")
+            last_used_widget = Static(f"Last used: {last_used}", classes="account-date")
+            
             accounts_list.mount(account_box)
+            account_box.mount(name_widget)
+            account_box.mount(added_widget)
+            account_box.mount(last_used_widget)
 
     def on_key(self, event):
         if self.mode == "list":
@@ -104,6 +131,10 @@ class AccountManagementScreen(ModalScreen):
     def switch_to_account(self, username):
         self.logger.info(f"Switching to account: {username}")
         if self.reddit_service.switch_account(username):
+            current_account = self.reddit_service.get_current_account()
+            if current_account:
+                sidebar = self.app.query_one(Sidebar)
+                sidebar.update_sidebar_account(current_account)
             self.notify(f"Switched to account: {username}", severity="information")
             self.dismiss({"action": "switch", "account": username})
         else:
@@ -140,10 +171,15 @@ class AccountManagementScreen(ModalScreen):
         self.refresh_accounts_list()
 
     def add_account(self):
-        username = self.query_one("#username_input").value.strip()
-        client_id = self.query_one("#client_id_input").value.strip()
-        client_secret = self.query_one("#client_secret_input").value.strip()
-        password = self.query_one("#password_input").value.strip()
+        username_input = self.query_one("#username_input", Input)
+        client_id_input = self.query_one("#client_id_input", Input)
+        client_secret_input = self.query_one("#client_secret_input", Input)
+        password_input = self.query_one("#password_input", Input)
+        
+        username = username_input.value.strip()
+        client_id = client_id_input.value.strip()
+        client_secret = client_secret_input.value.strip()
+        password = password_input.value.strip()
         
         if not all([username, client_id, client_secret, password]):
             self.notify("Please fill in all fields", severity="warning")
@@ -174,7 +210,12 @@ class AccountManagementScreen(ModalScreen):
             self.notify(f"Failed to remove account {username}", severity="error")
 
     def clear_form(self):
-        self.query_one("#username_input").value = ""
-        self.query_one("#client_id_input").value = ""
-        self.query_one("#client_secret_input").value = ""
-        self.query_one("#password_input").value = "" 
+        username_input = self.query_one("#username_input", Input)
+        client_id_input = self.query_one("#client_id_input", Input)
+        client_secret_input = self.query_one("#client_secret_input", Input)
+        password_input = self.query_one("#password_input", Input)
+        
+        username_input.value = ""
+        client_id_input.value = ""
+        client_secret_input.value = ""
+        password_input.value = "" 
