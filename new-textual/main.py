@@ -20,6 +20,8 @@ from components.rate_limit_screen import RateLimitScreen
 from components.theme_creation_screen import ThemeCreationScreen
 from components.messages_screen import MessagesScreen
 from components.account_management_screen import AccountManagementScreen
+from components.advanced_search_screen import AdvancedSearchScreen
+from components.subreddit_management_screen import SubredditManagementScreen
 from utils.logger import Logger
 import json
 import os
@@ -812,6 +814,92 @@ class RedditTUI(App):
         background: $boost;
         border-left: solid $primary;
     }
+
+    #subreddit_management_container {
+        width: 100%;
+        height: 100%;
+        align: center middle;
+    }
+
+    #subreddit_container {
+        width: 80;
+        height: auto;
+        max-height: 80vh;
+        background: $surface;
+        border: solid $primary;
+        padding: 2;
+    }
+
+    #controls {
+        width: 100%;
+        align: left middle;
+        margin-bottom: 1;
+    }
+
+    #controls Select {
+        width: 20;
+        margin: 0 1;
+    }
+
+    #controls Input {
+        width: 30;
+        margin: 0 1;
+    }
+
+    #controls Button {
+        min-width: 10;
+    }
+
+    #subreddits_table {
+        height: 20;
+        margin: 1 0;
+    }
+
+    #actions {
+        width: 100%;
+        align: center middle;
+        margin-top: 1;
+    }
+
+    .action_btn {
+        margin: 0 1;
+        min-width: 12;
+    }
+
+    #help_screen_container {
+        width: 100%;
+        height: 100%;
+        align: center middle;
+    }
+
+    #help_scroll_container {
+        width: 80;
+        height: auto;
+        max-height: 80vh;
+        background: $surface;
+        border: solid $primary;
+        padding: 2;
+    }
+
+    #help_container {
+        width: 100%;
+        height: auto;
+    }
+
+    .help_content {
+        padding: 1;
+        min-height: 1.2;
+    }
+
+    #help_actions {
+        width: 100%;
+        align: center middle;
+        margin-top: 1;
+    }
+
+    .help_btn {
+        min-width: 10;
+    }
     """
 
     BINDINGS = [
@@ -833,6 +921,9 @@ class RedditTUI(App):
         Binding("x", "create_theme", "Create Theme", show=True),
         Binding("m", "messages", "Messages", show=True),
         Binding("a", "account_management", "Account Management", show=True),
+        Binding("v", "subreddit_management", "Subreddit Management", show=True),
+        Binding("f", "search_subreddits", "Search Subreddits", show=True),
+        Binding("g", "search_users", "Search Users", show=True),
     ]
 
     def __init__(self):
@@ -1044,26 +1135,10 @@ class RedditTUI(App):
                 self.current_posts = posts
                 self.query_one(PostList).update_posts(posts)
 
-            # Apply comment depth setting
-            if hasattr(self, "current_post") and self.current_post:
-                comments = self.reddit_service.get_post_comments(self.current_post, limit=self.settings["comment_depth"])
-                self.query_one(PostViewScreen).update_comments(comments)
-
             # Apply NSFW filter
             if not self.settings["show_nsfw"]:
                 self.current_posts = [post for post in self.current_posts if not getattr(post, "over_18", False)]
                 self.query_one(PostList).update_posts(self.current_posts)
-
-            # Apply comment sort setting
-            if hasattr(self, "current_post") and self.current_post:
-                self.query_one(PostViewScreen).sort_comments(self.settings["sort_comments_by"])
-
-            # Apply auto load comments setting
-            if hasattr(self, "current_post") and self.current_post:
-                if self.settings["auto_load_comments"]:
-                    self.query_one(PostViewScreen).load_comments()
-                else:
-                    self.query_one(PostViewScreen).clear_comments()
 
             self.refresh()
             Logger().info("Settings applied successfully")
@@ -1252,7 +1327,6 @@ class RedditTUI(App):
             content.remove_children()
             subreddit_screen = SubredditScreen(content, self.current_posts)
             content.mount(subreddit_screen)
-            self.app.active_widget = "content"
             subreddit_screen.focus()
             self.query_one(Sidebar).update_status("Subscribed Subreddits")
         except Exception as e:
@@ -1264,7 +1338,7 @@ class RedditTUI(App):
         if post:
             try:
                 post.upvote()
-                self.notify("Upvoted post!", severity="success")
+                self.notify("Upvoted post!", severity="information")
                 Logger().info(f"Upvoted post: {getattr(post, 'title', str(post))}")
             except Exception as e:
                 Logger().error(f"Error upvoting post: {str(e)}", exc_info=True)
@@ -1277,7 +1351,7 @@ class RedditTUI(App):
         if post:
             try:
                 post.downvote()
-                self.notify("Downvoted post!", severity="success")
+                self.notify("Downvoted post!", severity="information")
                 Logger().info(f"Downvoted post: {getattr(post, 'title', str(post))}")
             except Exception as e:
                 Logger().error(f"Error downvoting post: {str(e)}", exc_info=True)
@@ -1308,7 +1382,7 @@ class RedditTUI(App):
                 Logger().error(f"Error reporting post: {str(e)}", exc_info=True)
                 self.notify(f"Error reporting post: {str(e)}", severity="error")
         elif reason == "back":
-            self.notify("Report cancelled", severity="info")
+            self.notify("Report cancelled", severity="information")
 
     def comment_on_selected_post(self):
         post = self.query_one(PostList).get_selected_post()
@@ -1337,7 +1411,6 @@ class RedditTUI(App):
                     content.remove_children()
                     user_screen = UserProfileScreen(username, content, self.current_posts)
                     content.mount(user_screen)
-                    self.app.active_widget = "content"
                     user_screen.focus()
                     self.query_one(Sidebar).update_status(f"User Profile: {username}")
                 else:
@@ -1359,7 +1432,6 @@ class RedditTUI(App):
             content.remove_children()
             user_screen = UserProfileScreen(self.reddit_service.user, content, self.current_posts)
             content.mount(user_screen)
-            self.app.active_widget = "content"
             user_screen.focus()
             self.query_one(Sidebar).update_status(f"User Profile: {self.reddit_service.user}")
         except Exception as e:
@@ -1383,7 +1455,7 @@ class RedditTUI(App):
                     import pyperclip
                     url = f"https://reddit.com{post.permalink}"
                     pyperclip.copy(url)
-                    self.notify("Post URL copied to clipboard!", severity="success")
+                    self.notify("Post URL copied to clipboard!", severity="information")
                     Logger().info(f"Copied post URL: {url}")
                 else:
                     self.notify("No post selected", severity="warning")
@@ -1408,7 +1480,7 @@ class RedditTUI(App):
                     import pyperclip
                     title = post.title
                     pyperclip.copy(title)
-                    self.notify("Post title copied to clipboard!", severity="success")
+                    self.notify("Post title copied to clipboard!", severity="information")
                     Logger().info(f"Copied post title: {title}")
                 else:
                     self.notify("No post selected", severity="warning")
@@ -1433,7 +1505,7 @@ class RedditTUI(App):
                     import webbrowser
                     url = f"https://reddit.com{post.permalink}"
                     webbrowser.open(url)
-                    self.notify("Opening post in browser...", severity="info")
+                    self.notify("Opening post in browser...", severity="information")
                     Logger().info(f"Opening post in browser: {url}")
                 else:
                     self.notify("No post selected", severity="warning")
@@ -1467,7 +1539,6 @@ class RedditTUI(App):
 
     async def action_advanced_search(self) -> None:
         self.logger.info("Action: advanced search")
-        from components.advanced_search_screen import AdvancedSearchScreen
         screen = AdvancedSearchScreen(self.query_one("#content"), self.current_posts)
         await self.push_screen(screen)
 
@@ -1477,7 +1548,7 @@ class RedditTUI(App):
             children = list(content.children)
             if len(children) == 1 and isinstance(children[0], PostViewScreen):
                 children[0].sort_comments(sort_mode)
-                self.notify(f"Comments sorted by {sort_mode}", severity="info")
+                self.notify(f"Comments sorted by {sort_mode}", severity="information")
         except Exception as e:
             Logger().error(f"Error sorting comments: {str(e)}", exc_info=True)
             self.notify(f"Error sorting comments: {str(e)}", severity="error")
@@ -1490,7 +1561,6 @@ class RedditTUI(App):
                 content.remove_children()
                 post_list = PostList(posts=self.current_posts, id="content")
                 content.mount(post_list)
-                self.app.active_widget = "content"
                 post_list.focus()
                 Logger().info("Returned to post list")
         except Exception as e:
@@ -1510,8 +1580,6 @@ class RedditTUI(App):
                         subreddit = post.subreddit.display_name
             content.remove_children()
             screen = PostCreationScreen(subreddit)
-            content.mount(screen)
-            self.app.active_widget = "content"
             screen.focus()
             self.query_one(Sidebar).update_status("Create Post")
         except Exception as e:
@@ -1534,7 +1602,6 @@ class RedditTUI(App):
             content.remove_children()
             rate_limit_screen = RateLimitScreen(self.reddit_service)
             content.mount(rate_limit_screen)
-            self.app.active_widget = "content"
             rate_limit_screen.focus()
             self.query_one(Sidebar).update_status("Rate Limit Information")
         except Exception as e:
@@ -1548,7 +1615,6 @@ class RedditTUI(App):
             content.remove_children()
             screen = ThemeCreationScreen(content, self.current_posts)
             content.mount(screen)
-            self.app.active_widget = "content"
             screen.focus()
             self.query_one(Sidebar).update_status("Create Theme")
         except Exception as e:
@@ -1566,7 +1632,6 @@ class RedditTUI(App):
             parent = content.parent
             content.remove()
             self.call_later(self._mount_messages_screen, parent)
-            self.app.active_widget = "content"
             self.query_one(Sidebar).update_status("Messages")
         except Exception as e:
             Logger().error(f"Error showing messages screen: {str(e)}", exc_info=True)
@@ -1599,6 +1664,56 @@ class RedditTUI(App):
                     os.execl(sys.executable, sys.executable, *sys.argv)
         except Exception as e:
             Logger().error(f"Error in account management: {str(e)}", exc_info=True)
+            self.notify(f"Error: {str(e)}", severity="error")
+
+    async def action_subreddit_management(self) -> None:
+        Logger().info("Action: subreddit management")
+        try:
+            if not self.reddit_service or not self.reddit_service.user:
+                self.notify("Please login first", severity="warning")
+                return
+
+            subreddit_screen = SubredditManagementScreen(self.reddit_service)
+            result = await self.push_screen(subreddit_screen)
+            
+            if result and result.get("action") == "view_posts":
+                subreddit = result.get("subreddit")
+                posts = result.get("posts")
+                if subreddit and posts:
+                    self.current_posts = posts
+                    self.query_one(PostList).update_posts(posts)
+                    self.query_one(Sidebar).update_status(f"r/{subreddit}")
+                    self.query_one(PostList).focus()
+        except Exception as e:
+            Logger().error(f"Error in subreddit management: {str(e)}", exc_info=True)
+            self.notify(f"Error: {str(e)}", severity="error")
+
+    async def action_search_subreddits(self) -> None:
+        Logger().info("Action: search subreddits")
+        try:
+            if not self.reddit_service or not self.reddit_service.user:
+                self.notify("Please login first", severity="warning")
+                return
+
+            screen = AdvancedSearchScreen(self.query_one("#content"), self.current_posts)
+            await self.push_screen(screen)
+            self.query_one(Sidebar).update_status("Subreddit Search")
+        except Exception as e:
+            Logger().error(f"Error searching subreddits: {str(e)}", exc_info=True)
+            self.notify(f"Error: {str(e)}", severity="error")
+
+    async def action_search_users(self) -> None:
+        Logger().info("Action: search users")
+        try:
+            if not self.reddit_service or not self.reddit_service.user:
+                self.notify("Please login first", severity="warning")
+                return
+
+            screen = AdvancedSearchScreen(self.query_one("#content"), self.current_posts)
+            await self.push_screen(screen)
+            self.query_one(Sidebar).update_status("User Search")
+        except Exception as e:
+            Logger().error(f"Error searching users: {str(e)}", exc_info=True)
             self.notify(f"Error: {str(e)}", severity="error")
 
 if __name__ == "__main__":
