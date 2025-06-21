@@ -19,7 +19,7 @@ from components.credits_screen import CreditsScreen
 from components.rate_limit_screen import RateLimitScreen
 from components.theme_creation_screen import ThemeCreationScreen
 from components.messages_screen import MessagesScreen
-from components.account_management_screen import AccountManagementScreen
+from components.account_management_screen import AccountManagementWidget
 from components.advanced_search_screen import AdvancedSearchScreen
 from components.subreddit_management_screen import SubredditManagementScreen
 from utils.logger import Logger
@@ -667,10 +667,11 @@ class RedditTUI(App):
         margin-top: 1;
     }
 
-    #account_container {
+    #account_management_container {
         width: 100%;
         height: 100%;
-        align: center middle;
+        align: center top;
+        padding: 1;
     }
 
     #account_list_container {
@@ -679,6 +680,12 @@ class RedditTUI(App):
         background: $surface;
         border: solid $primary;
         padding: 2;
+    }
+
+    #accounts_list_scroll {
+        height: 15;
+        border: solid $primary-lighten-2;
+        margin: 1 0;
     }
 
     #add_account_container {
@@ -692,7 +699,6 @@ class RedditTUI(App):
     .account {
         padding: 1;
         margin: 1 0;
-        border: solid $primary;
         background: $surface;
         transition: background 0.2s;
     }
@@ -1648,32 +1654,36 @@ class RedditTUI(App):
                 self.notify("Please login first", severity="warning")
                 return
 
-            account_screen = AccountManagementScreen(self.reddit_service)
-            result = await self.push_screen(account_screen)
-            
-            if result and result.get("action") == "restart":
-                account = result.get("account")
-                if account:
-                    self.notify(f"Restarting app with account: {account}", severity="information")
-                    Logger().info(f"Restarting app with account: {account}")
-                    import sys
-                    import os
-                    os.execl(sys.executable, sys.executable, *sys.argv)
-            elif result and result.get("action") == "switch":
-                account = result.get("account")
-                if account:
-                    Logger().info(f"Account switched to: {account}, reloading current feed")
-                    if self.current_feed == "hot":
-                        self.action_home()
-                    elif self.current_feed == "new":
-                        self.action_new()
-                    elif self.current_feed == "top":
-                        self.action_top()
-                    else:
-                        self.action_home()
+            content = self.query_one("#content")
+            content.remove_children()
+            account_widget = AccountManagementWidget(self.reddit_service)
+            content.mount(account_widget)
+            account_widget.focus()
+            self.query_one(Sidebar).update_status("Account Management")
         except Exception as e:
             Logger().error(f"Error in account management: {str(e)}", exc_info=True)
             self.notify(f"Error: {str(e)}", severity="error")
+
+    def on_account_management_widget_account_switched(self, message: AccountManagementWidget.AccountSwitched):
+        account = message.username
+        if account:
+            Logger().info(f"Account switched to: {account}, reloading current feed")
+            if self.current_feed == "hot":
+                self.action_home()
+            elif self.current_feed == "new":
+                self.action_new()
+            elif self.current_feed == "top":
+                self.action_top()
+            else:
+                self.action_home()
+
+    def on_account_management_widget_back_requested(self, message: AccountManagementWidget.BackRequested):
+        content = self.query_one("#content")
+        content.remove_children()
+        post_list = PostList(posts=self.current_posts, id="content")
+        content.mount(post_list)
+        post_list.focus()
+        self.query_one(Sidebar).update_status("Home Feed")
 
     async def action_subreddit_management(self) -> None:
         Logger().info("Action: subreddit management")
