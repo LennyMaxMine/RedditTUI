@@ -1,13 +1,13 @@
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical, Horizontal, ScrollableContainer
 from textual.widgets import Input, Button, Static, Select, DataTable
-from textual.screen import ModalScreen
+from textual.widget import Widget
 from utils.logger import Logger
 from services.reddit_service import RedditService
 from rich.text import Text
 from datetime import datetime
 
-class SubredditManagementScreen(ModalScreen):
+class SubredditManagementScreen(Widget):
     def __init__(self, reddit_service: RedditService):
         super().__init__()
         self.reddit_service = reddit_service
@@ -15,7 +15,6 @@ class SubredditManagementScreen(ModalScreen):
         self.subreddits = []
         self.search_query = ""
         self.current_view = "subscribed"
-        self.selected_subreddit = None
         
         self.view_options = [
             ("Subscribed", "subscribed"),
@@ -41,7 +40,6 @@ class SubredditManagementScreen(ModalScreen):
                     Button("Subscribe", id="subscribe_button", classes="action_btn"),
                     Button("Unsubscribe", id="unsubscribe_button", classes="action_btn"),
                     Button("View Posts", id="view_posts_button", classes="action_btn"),
-                    Button("Close", id="close_button", classes="action_btn"),
                     id="actions"
                 ),
                 id="subreddit_container"
@@ -69,6 +67,7 @@ class SubredditManagementScreen(ModalScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.logger.info(f"Button pressed: {event.button.id}")
         if event.button.id == "search_button":
+            self.search_query = self.query_one("#search_input", Input).value
             self.search_subreddits()
         elif event.button.id == "subscribe_button":
             self.subscribe_to_selected()
@@ -76,12 +75,16 @@ class SubredditManagementScreen(ModalScreen):
             self.unsubscribe_from_selected()
         elif event.button.id == "view_posts_button":
             self.view_posts_of_selected()
-        elif event.button.id == "close_button":
-            self.dismiss()
 
-    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        self.logger.info(f"Row selected: {event.row_key}")
-        self.selected_subreddit = event.row_key
+    def _get_selected_subreddit_name(self) -> str | None:
+        cursor_row = self.table.cursor_row
+        if cursor_row is None or cursor_row < 0:
+            return None
+        try:
+            row_key = self.table.get_row_at(cursor_row)[0]
+            return str(row_key)
+        except IndexError:
+            return None
 
     def load_subreddits(self):
         """Load subreddits based on current view."""
@@ -125,23 +128,22 @@ class SubredditManagementScreen(ModalScreen):
             try:
                 name = subreddit.display_name
                 title = subreddit.title[:50] + "..." if len(subreddit.title) > 50 else subreddit.title
-                subscribers = f"{subreddit.subscribers:,}" if hasattr(subreddit, 'subscribers') else "N/A"
-                active = f"{subreddit.active_user_count:,}" if hasattr(subreddit, 'active_user_count') else "N/A"
+                subscribers = f"{subreddit.subscribers:,}" if hasattr(subreddit, 'subscribers') and subreddit.subscribers is not None else "N/A"
+                active = f"{subreddit.active_user_count:,}" if hasattr(subreddit, 'active_user_count') and subreddit.active_user_count is not None else "N/A"
                 nsfw = "Yes" if getattr(subreddit, 'over18', False) else "No"
-                created = datetime.fromtimestamp(subreddit.created_utc).strftime("%Y-%m-%d") if hasattr(subreddit, 'created_utc') else "N/A"
+                created = datetime.fromtimestamp(subreddit.created_utc).strftime("%Y-%m-%d") if hasattr(subreddit, 'created_utc') and subreddit.created_utc is not None else "N/A"
                 
                 self.table.add_row(name, title, subscribers, active, nsfw, created, key=name)
             except Exception as e:
                 self.logger.error(f"Error adding subreddit to table: {str(e)}", exc_info=True)
 
     def subscribe_to_selected(self):
-        """Subscribe to the selected subreddit."""
-        if not self.selected_subreddit:
+        subreddit_name = self._get_selected_subreddit_name()
+        if not subreddit_name:
             self.notify("Please select a subreddit first", severity="warning")
             return
         
         try:
-            subreddit_name = str(self.selected_subreddit)
             if self.reddit_service.subscribe_subreddit(subreddit_name):
                 self.notify(f"Subscribed to r/{subreddit_name}", severity="information")
                 self.load_subreddits()
@@ -152,13 +154,12 @@ class SubredditManagementScreen(ModalScreen):
             self.notify(f"Error subscribing: {str(e)}", severity="error")
 
     def unsubscribe_from_selected(self):
-        """Unsubscribe from the selected subreddit."""
-        if not self.selected_subreddit:
+        subreddit_name = self._get_selected_subreddit_name()
+        if not subreddit_name:
             self.notify("Please select a subreddit first", severity="warning")
             return
         
         try:
-            subreddit_name = str(self.selected_subreddit)
             if self.reddit_service.unsubscribe_subreddit(subreddit_name):
                 self.notify(f"Unsubscribed from r/{subreddit_name}", severity="information")
                 self.load_subreddits()
@@ -169,16 +170,24 @@ class SubredditManagementScreen(ModalScreen):
             self.notify(f"Error unsubscribing: {str(e)}", severity="error")
 
     def view_posts_of_selected(self):
-        """View posts from the selected subreddit."""
-        if not self.selected_subreddit:
+        subreddit_name = self._get_selected_subreddit_name()
+        if not subreddit_name:
             self.notify("Please select a subreddit first", severity="warning")
             return
         
         try:
-            subreddit_name = str(self.selected_subreddit)
             posts = self.reddit_service.get_subreddit_posts(subreddit_name)
             if posts:
-                self.dismiss({"action": "view_posts", "subreddit": subreddit_name, "posts": posts})
+                app = self.app
+                setattr(app, "current_posts", posts)
+                content = app.query_one("#content")
+                content.remove_children()
+                from components.post_list import PostList
+                post_list = PostList(posts=posts, id="content")
+                content.mount(post_list)
+                post_list.focus()
+                from components.sidebar import Sidebar
+                app.query_one(Sidebar).update_status(f"r/{subreddit_name}")
             else:
                 self.notify(f"No posts found in r/{subreddit_name}", severity="warning")
         except Exception as e:

@@ -439,35 +439,137 @@ class RedditService:
             return False
 
     def subscribe_subreddit(self, subreddit_name: str) -> bool:
-        if not self.reddit:
-            self.logger.error("Cannot subscribe: Reddit instance not initialized")
-            return False
+        """Subscribe to a subreddit."""
         try:
-            self._check_rate_limit()
-            self.logger.info(f"Subscribing to subreddit: {subreddit_name}")
+            if not self.reddit or not self.user:
+                return False
+            
             subreddit = self.reddit.subreddit(subreddit_name)
-            response = subreddit.subscribe()
-            self._update_rate_limit(response)
-            self.logger.info("Subscribed successfully")
+            subreddit.subscribe()
+            self.logger.info(f"Subscribed to r/{subreddit_name}")
             return True
         except Exception as e:
-            self.logger.error(f"Error subscribing to subreddit: {str(e)}", exc_info=True)
+            self.logger.error(f"Error subscribing to r/{subreddit_name}: {str(e)}", exc_info=True)
             return False
 
     def unsubscribe_subreddit(self, subreddit_name: str) -> bool:
-        if not self.reddit:
-            self.logger.error("Cannot unsubscribe: Reddit instance not initialized")
-            return False
+        """Unsubscribe from a subreddit."""
         try:
-            self._check_rate_limit()
-            self.logger.info(f"Unsubscribing from subreddit: {subreddit_name}")
+            if not self.reddit or not self.user:
+                return False
+            
             subreddit = self.reddit.subreddit(subreddit_name)
-            response = subreddit.unsubscribe()
-            self._update_rate_limit(response)
-            self.logger.info("Unsubscribed successfully")
+            subreddit.unsubscribe()
+            self.logger.info(f"Unsubscribed from r/{subreddit_name}")
             return True
         except Exception as e:
-            self.logger.error(f"Error unsubscribing from subreddit: {str(e)}", exc_info=True)
+            self.logger.error(f"Error unsubscribing from r/{subreddit_name}: {str(e)}", exc_info=True)
+            return False
+
+    def get_subreddit_info(self, subreddit_name: str):
+        """Get information about a subreddit."""
+        try:
+            if not self.reddit:
+                return None
+            
+            subreddit = self.reddit.subreddit(subreddit_name)
+            return {
+                'display_name': subreddit.display_name,
+                'title': subreddit.title,
+                'description': subreddit.description,
+                'subscribers': subreddit.subscribers,
+                'active_user_count': subreddit.active_user_count,
+                'created_utc': subreddit.created_utc,
+                'over18': subreddit.over18,
+                'public_description': subreddit.public_description,
+                'url': subreddit.url
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting subreddit info for r/{subreddit_name}: {str(e)}", exc_info=True)
+            return None
+
+    def search_subreddits(self, query: str, limit: int = 10):
+        """Search for subreddits."""
+        try:
+            if not self.reddit:
+                return []
+            
+            subreddits = self.reddit.subreddits.search(query, limit=limit)
+            return list(subreddits)
+        except Exception as e:
+            self.logger.error(f"Error searching subreddits: {str(e)}", exc_info=True)
+            return []
+
+    def search_users(self, query: str, limit: int = 10):
+        """Search for users."""
+        try:
+            if not self.reddit:
+                return []
+            
+            users = self.reddit.redditors.search(query, limit=limit)
+            return list(users)
+        except Exception as e:
+            self.logger.error(f"Error searching users: {str(e)}", exc_info=True)
+            return []
+
+    def vote_comment(self, comment, vote_type: str) -> bool:
+        """Vote on a comment (upvote, downvote, or clear vote)."""
+        try:
+            if not self.reddit or not self.user:
+                return False
+            
+            if vote_type == "upvote":
+                comment.upvote()
+            elif vote_type == "downvote":
+                comment.downvote()
+            elif vote_type == "clear":
+                comment.clear_vote()
+            else:
+                return False
+            
+            self.logger.info(f"Voted on comment {comment.id}: {vote_type}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error voting on comment: {str(e)}", exc_info=True)
+            return False
+
+    def reply_to_comment(self, comment, reply_text: str) -> bool:
+        """Reply to a comment."""
+        try:
+            if not self.reddit or not self.user:
+                return False
+            
+            comment.reply(reply_text)
+            self.logger.info(f"Replied to comment {comment.id}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error replying to comment: {str(e)}", exc_info=True)
+            return False
+
+    def edit_comment(self, comment, new_text: str) -> bool:
+        """Edit a comment."""
+        try:
+            if not self.reddit or not self.user:
+                return False
+            
+            comment.edit(new_text)
+            self.logger.info(f"Edited comment {comment.id}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error editing comment: {str(e)}", exc_info=True)
+            return False
+
+    def delete_comment(self, comment) -> bool:
+        """Delete a comment."""
+        try:
+            if not self.reddit or not self.user:
+                return False
+            
+            comment.delete()
+            self.logger.info(f"Deleted comment {comment.id}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error deleting comment: {str(e)}", exc_info=True)
             return False
 
     def get_saved_posts(self, limit: int = 25):
@@ -566,6 +668,42 @@ class RedditService:
             return list(response)
         except Exception as e:
             self.logger.error(f"Error getting subreddit flairs: {str(e)}", exc_info=True)
+            return []
+
+    def get_trending_subreddits(self, limit: int = 10):
+        """Get trending subreddits."""
+        try:
+            if not self.reddit:
+                return []
+            
+            trending = self.reddit.trending_subreddits()
+            return list(trending)[:limit]
+        except Exception as e:
+            self.logger.error(f"Error getting trending subreddits: {str(e)}", exc_info=True)
+            return []
+
+    def get_popular_subreddits(self, limit: int = 25):
+        """Get popular subreddits."""
+        try:
+            if not self.reddit:
+                return []
+            
+            popular = self.reddit.subreddits.popular(limit=limit)
+            return list(popular)
+        except Exception as e:
+            self.logger.error(f"Error getting popular subreddits: {str(e)}", exc_info=True)
+            return []
+
+    def get_new_subreddits(self, limit: int = 25):
+        """Get new subreddits."""
+        try:
+            if not self.reddit:
+                return []
+            
+            new_subs = self.reddit.subreddits.new(limit=limit)
+            return list(new_subs)
+        except Exception as e:
+            self.logger.error(f"Error getting new subreddits: {str(e)}", exc_info=True)
             return []
 
     def _update_rate_limit(self, response):

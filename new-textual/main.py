@@ -818,15 +818,12 @@ class RedditTUI(App):
     #subreddit_management_container {
         width: 100%;
         height: 100%;
-        align: center middle;
     }
 
     #subreddit_container {
-        width: 80;
-        height: auto;
-        max-height: 80vh;
+        width: 100%;
+        height: 100%;
         background: $surface;
-        border: solid $primary;
         padding: 2;
     }
 
@@ -851,7 +848,7 @@ class RedditTUI(App):
     }
 
     #subreddits_table {
-        height: 20;
+        height: 1fr;
         margin: 1 0;
     }
 
@@ -1662,6 +1659,18 @@ class RedditTUI(App):
                     import sys
                     import os
                     os.execl(sys.executable, sys.executable, *sys.argv)
+            elif result and result.get("action") == "switch":
+                account = result.get("account")
+                if account:
+                    Logger().info(f"Account switched to: {account}, reloading current feed")
+                    if self.current_feed == "hot":
+                        self.action_home()
+                    elif self.current_feed == "new":
+                        self.action_new()
+                    elif self.current_feed == "top":
+                        self.action_top()
+                    else:
+                        self.action_home()
         except Exception as e:
             Logger().error(f"Error in account management: {str(e)}", exc_info=True)
             self.notify(f"Error: {str(e)}", severity="error")
@@ -1673,17 +1682,12 @@ class RedditTUI(App):
                 self.notify("Please login first", severity="warning")
                 return
 
+            content = self.query_one("#content")
+            content.remove_children()
             subreddit_screen = SubredditManagementScreen(self.reddit_service)
-            result = await self.push_screen(subreddit_screen)
-            
-            if result and result.get("action") == "view_posts":
-                subreddit = result.get("subreddit")
-                posts = result.get("posts")
-                if subreddit and posts:
-                    self.current_posts = posts
-                    self.query_one(PostList).update_posts(posts)
-                    self.query_one(Sidebar).update_status(f"r/{subreddit}")
-                    self.query_one(PostList).focus()
+            content.mount(subreddit_screen)
+            subreddit_screen.focus()
+            self.query_one(Sidebar).update_status("Subreddit Management")
         except Exception as e:
             Logger().error(f"Error in subreddit management: {str(e)}", exc_info=True)
             self.notify(f"Error: {str(e)}", severity="error")
