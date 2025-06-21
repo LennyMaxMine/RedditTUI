@@ -903,6 +903,54 @@ class RedditTUI(App):
     .help_btn {
         min-width: 10;
     }
+
+    #account_management_wrapper {
+        align: center middle;
+        height: 100%;
+    }
+
+    #account_management_widget {
+        width: 60;
+        max-height: 80vh;
+        background: $surface;
+        border: solid $primary;
+        padding: 1;
+    }
+
+    #view_container {
+        height: 1fr;
+        border: solid $primary-lighten-2;
+        margin: 1 0;
+    }
+
+    .add_account_form {
+        padding: 0 1;
+    }
+
+    .add_account_form Input {
+        margin-bottom: 1;
+    }
+
+    #account_actions {
+        width: 100%;
+        align: center middle;
+        margin-top: 2;
+    }
+
+    #add_account_actions {
+        align: center middle;
+        margin-top: 2;
+    }
+
+    #add_account_actions Button {
+        margin: 0 1;
+        min-width: 10;
+    }
+
+    #add_account_container Input {
+        width: 100%;
+        margin: 1 0;
+    }
     """
 
     BINDINGS = [
@@ -1655,9 +1703,12 @@ class RedditTUI(App):
                 return
 
             content = self.query_one("#content")
+            if content.query("#account_management_wrapper"):
+                return
+
             content.remove_children()
             account_widget = AccountManagementWidget(self.reddit_service)
-            content.mount(account_widget)
+            content.mount(Container(account_widget, id="account_management_wrapper"))
             account_widget.focus()
             self.query_one(Sidebar).update_status("Account Management")
         except Exception as e:
@@ -1668,6 +1719,10 @@ class RedditTUI(App):
         account = message.username
         if account:
             Logger().info(f"Account switched to: {account}, reloading current feed")
+            
+            content = self.query_one("#content")
+            content.remove_children()
+
             if self.current_feed == "hot":
                 self.action_home()
             elif self.current_feed == "new":
@@ -1680,10 +1735,15 @@ class RedditTUI(App):
     def on_account_management_widget_back_requested(self, message: AccountManagementWidget.BackRequested):
         content = self.query_one("#content")
         content.remove_children()
-        post_list = PostList(posts=self.current_posts, id="content")
-        content.mount(post_list)
-        post_list.focus()
-        self.query_one(Sidebar).update_status("Home Feed")
+        content.focus()
+        
+        status = "Home Feed"
+        if self.current_feed == "new":
+            status = "New Feed"
+        elif self.current_feed == "top":
+            status = "Top Feed"
+        
+        self.query_one(Sidebar).update_status(status)
 
     async def action_subreddit_management(self) -> None:
         Logger().info("Action: subreddit management")

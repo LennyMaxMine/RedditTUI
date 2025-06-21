@@ -71,7 +71,7 @@ class AccountList(Widget):
         elif event.key == "enter":
             if 0 <= self.selected_index < len(self.accounts):
                 self.post_message(self.AccountSelected(self.accounts[self.selected_index]))
-            event.prevent_default()
+            event.stop()
         
         return event
 
@@ -92,7 +92,7 @@ class AddAccountForm(Widget):
         self.logger = Logger()
 
     def compose(self):
-        with Vertical(id="add_account_form"):
+        with Vertical(classes="add_account_form"):
             yield Static("Add New Account", classes="section_title")
             yield Input(placeholder="Username", id="username_input")
             yield Input(placeholder="Client ID", id="client_id_input")
@@ -156,33 +156,40 @@ class AddAccountForm(Widget):
     class Cancelled(Message):
         pass
 
-class AccountManagementWidget(Widget):
+class AccountManagementWidget(Vertical):
     def __init__(self, reddit_service, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(id="account_management_widget", **kwargs)
         self.reddit_service = reddit_service
         self.logger = Logger()
-        self.mode = "list"
 
     def compose(self):
-        with Container(id="account_management_container"):
-            with Vertical(id="account_list_container"):
-                yield Static("Account Management", classes="title")
-                yield Static("Current Accounts:", classes="section_title")
-                with ScrollableContainer(id="accounts_list_scroll"):
-                    yield AccountList(self.reddit_service, id="account_list")
-                
-                with Horizontal(id="account_actions"):
-                    yield Button("Add Account", id="add_account_button")
-                    yield Button("Remove Account", id="remove_account_button")
-                    yield Button("Switch Account", id="switch_account_button")
-                    yield Button("Back to Posts", id="back_button")
-            
-            with Vertical(id="add_account_container", classes="hidden"):
-                yield AddAccountForm(self.reddit_service, id="add_account_form")
+        yield Static("Account Management", classes="title")
+        yield ScrollableContainer(id="view_container")
+        with Horizontal(id="account_actions"):
+            yield Button("Add Account", id="add_account_button")
+            yield Button("Remove Account", id="remove_account_button")
+            yield Button("Switch Account", id="switch_account_button")
+            yield Button("Back to Posts", id="back_button")
 
     def on_mount(self):
         self.logger.info("AccountManagementWidget mounted")
-        self.query_one("#account_list").focus()
+        self.show_account_list()
+
+    def show_account_list(self):
+        container = self.query_one("#view_container", ScrollableContainer)
+        container.remove_children()
+        account_list = AccountList(self.reddit_service, id="account_list")
+        container.mount(account_list)
+        account_list.focus()
+        self.query_one("#account_actions").display = True
+
+    def show_add_account_form(self):
+        container = self.query_one("#view_container", ScrollableContainer)
+        container.remove_children()
+        add_form = AddAccountForm(self.reddit_service, id="add_account_form")
+        container.mount(add_form)
+        add_form.focus()
+        self.query_one("#account_actions").display = False
 
     def on_button_pressed(self, event: Button.Pressed):
         button_id = event.button.id
@@ -196,45 +203,39 @@ class AccountManagementWidget(Widget):
         elif button_id == "back_button":
             self.post_message(self.BackRequested())
 
-    def show_add_account_form(self):
-        self.mode = "add"
-        self.query_one("#account_list_container").add_class("hidden")
-        self.query_one("#add_account_container").remove_class("hidden")
-
-    def show_account_list(self):
-        self.mode = "list"
-        self.query_one("#account_list_container").remove_class("hidden")
-        self.query_one("#add_account_container").add_class("hidden")
-        self.query_one("#account_list").focus()
-        self.refresh_account_list()
-
     def remove_selected_account(self):
-        account_list = self.query_one("#account_list", AccountList)
-        selected_account = account_list.get_selected_account()
-        
-        if not selected_account:
-            self.notify("No account selected", severity="warning")
-            return
-        
-        if selected_account == self.reddit_service.get_current_account():
-            self.notify("Cannot remove the currently active account", severity="warning")
-            return
-        
-        if self.reddit_service.remove_account(selected_account):
-            self.notify(f"Account {selected_account} removed successfully", severity="information")
-            account_list.load_accounts()
-        else:
-            self.notify(f"Failed to remove account {selected_account}", severity="error")
+        try:
+            account_list = self.query_one("#account_list", AccountList)
+            selected_account = account_list.get_selected_account()
+            
+            if not selected_account:
+                self.notify("No account selected", severity="warning")
+                return
+            
+            if selected_account == self.reddit_service.get_current_account():
+                self.notify("Cannot remove the currently active account", severity="warning")
+                return
+            
+            if self.reddit_service.remove_account(selected_account):
+                self.notify(f"Account {selected_account} removed successfully", severity="information")
+                account_list.load_accounts()
+            else:
+                self.notify(f"Failed to remove account {selected_account}", severity="error")
+        except Exception:
+            self.notify("Not in account list view. (Error)", severity="error")
 
     def switch_selected_account(self):
-        account_list = self.query_one("#account_list", AccountList)
-        selected_account = account_list.get_selected_account()
-        
-        if not selected_account:
-            self.notify("No account selected", severity="warning")
-            return
-        
-        self.switch_to_account(selected_account)
+        try:
+            account_list = self.query_one("#account_list", AccountList)
+            selected_account = account_list.get_selected_account()
+            
+            if not selected_account:
+                self.notify("No account selected", severity="warning")
+                return
+            
+            self.switch_to_account(selected_account)
+        except Exception:
+            self.notify("Not in account list view. (Error)", severity="error")
 
     def switch_to_account(self, username):
         self.logger.info(f"Switching to account: {username}")
@@ -247,10 +248,6 @@ class AccountManagementWidget(Widget):
             self.post_message(self.AccountSwitched(username))
         else:
             self.notify(f"Failed to switch to account: {username}", severity="error")
-
-    def refresh_account_list(self):
-        account_list = self.query_one("#account_list", AccountList)
-        account_list.load_accounts()
 
     def on_account_list_account_selected(self, message: AccountList.AccountSelected):
         self.switch_to_account(message.username)
