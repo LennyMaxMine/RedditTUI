@@ -34,7 +34,7 @@ class ThemeCreationScreen(Widget):
         self.logger.info("Composing ThemeCreationScreen UI")
         with Container(id="theme_container"):
             with ScrollableContainer(id="theme_form"):
-                yield Static("Create New Theme", classes="title")
+                yield Static("Create New Theme (Currently broken! Rework in progress. You can still manually create themes in files though.)", classes="title")
                 yield Input(placeholder="Theme Name", id="theme_name")
                 yield Static("Theme Colors", classes="section_title")
                 with Vertical():
@@ -61,24 +61,41 @@ class ThemeCreationScreen(Widget):
     def on_mount(self) -> None:
         self.logger.info("Theme creation screen mounted")
         self._update_color_previews()
+        theme_name_input = self.query_one("#theme_name", Input)
+        if theme_name_input:
+            theme_name_input.focus()
+
+    def on_focus(self, event):
+        self.logger.info("Theme creation screen focused")
+        theme_name_input = self.query_one("#theme_name", Input)
+        if theme_name_input:
+            theme_name_input.focus()
+
+    def on_key(self, event):
+        self.logger.info(f"Key pressed in theme creation: {event.key}")
+        return event
 
     def on_input_changed(self, event: Input.Changed) -> None:
+        self.logger.info(f"Input changed: {event.input.id} = '{event.value}'")
         if event.input.id == "theme_name":
             self.theme_name = event.value
-            event.input.value = self.theme_name
+            self.logger.info(f"Theme name updated to: '{self.theme_name}'")
         elif event.input.id.startswith("color_"):
             color_key = event.input.id.replace("color_", "")
             color_value = event.value.strip()
-            if color_value == "":
+            self.logger.info(f"Color input: {color_key} = '{color_value}'")
+            
+            if not color_value:
                 self.theme_data[color_key] = ""
-                event.input.value = ""
                 return
+                
             if not color_value.startswith('#'):
                 color_value = '#' + color_value
+                
             if self._is_valid_color(color_value):
                 self.theme_data[color_key] = color_value
                 self._update_color_preview(color_key)
-                event.input.value = color_value
+                self.logger.info(f"Color updated: {color_key} = {color_value}")
             else:
                 self.notify(f"Invalid color format. Please use hex color codes (e.g., #ff0000)", severity="error")
 
@@ -104,7 +121,6 @@ class ThemeCreationScreen(Widget):
             self.parent_content.remove_children()
             post_list = PostList(posts=self.current_posts, id="content")
             self.parent_content.mount(post_list)
-            self.app.active_widget = "content"
             post_list.focus()
 
     def _save_theme(self) -> None:
@@ -120,11 +136,10 @@ class ThemeCreationScreen(Widget):
         try:
             with open(theme_path, "w") as f:
                 json.dump(self.theme_data, f, indent=4)
-            self.notify("Theme saved successfully!", severity="success")
+            self.notify("Theme saved successfully!", severity="information")
             self.parent_content.remove_children()
             post_list = PostList(posts=self.current_posts, id="content")
             self.parent_content.mount(post_list)
-            self.app.active_widget = "content"
             post_list.focus()
         except Exception as e:
             self.logger.error(f"Error saving theme: {str(e)}", exc_info=True)

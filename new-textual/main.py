@@ -22,6 +22,7 @@ from components.messages_screen import MessagesScreen
 from components.account_management_screen import AccountManagementWidget
 from components.advanced_search_screen import AdvancedSearchScreen
 from components.subreddit_management_screen import SubredditManagementScreen
+from components.help_screen import HelpScreen
 from utils.logger import Logger
 import json
 import os
@@ -1072,12 +1073,19 @@ class RedditTUI(App):
         if not self.reddit_service:
             self.notify("Reddit service not initialized", severity="error")
             return
-        self.current_feed = "hot"
-        posts = self.reddit_service.get_hot_posts()
-        self.current_posts = posts
-        self.query_one(PostList).update_posts(posts)
-        self.query_one(Sidebar).update_status("Home Feed")
-        self.query_one(PostList).focus()
+        try:
+            self.current_feed = "hot"
+            posts = self.reddit_service.get_hot_posts()
+            self.current_posts = posts
+            self.query_one(PostList).update_posts(posts)
+            self.query_one(Sidebar).update_status("Home Feed")
+            self.query_one(PostList).focus()
+        except ConnectionError as e:
+            Logger().error(f"Network connection error: {str(e)}", exc_info=True)
+            self.notify("Error: No internet connection", severity="error")
+        except Exception as e:
+            Logger().error(f"Error loading home feed: {str(e)}", exc_info=True)
+            self.notify(f"Error loading home feed: {str(e)}", severity="error")
 
     def action_new(self) -> None:
         Logger().info("Action: new feed")
@@ -1088,12 +1096,19 @@ class RedditTUI(App):
         if not self.reddit_service:
             self.notify("Reddit service not initialized", severity="error")
             return
-        self.current_feed = "new"
-        posts = self.reddit_service.get_new_posts()
-        self.current_posts = posts
-        self.query_one(PostList).update_posts(posts)
-        self.query_one(Sidebar).update_status("New Feed")
-        self.query_one(PostList).focus()
+        try:
+            self.current_feed = "new"
+            posts = self.reddit_service.get_new_posts()
+            self.current_posts = posts
+            self.query_one(PostList).update_posts(posts)
+            self.query_one(Sidebar).update_status("New Feed")
+            self.query_one(PostList).focus()
+        except ConnectionError as e:
+            Logger().error(f"Network connection error: {str(e)}", exc_info=True)
+            self.notify("Error: No internet connection", severity="error")
+        except Exception as e:
+            Logger().error(f"Error loading new feed: {str(e)}", exc_info=True)
+            self.notify(f"Error loading new feed: {str(e)}", severity="error")
 
     def action_top(self) -> None:
         Logger().info("Action: top feed")
@@ -1104,12 +1119,19 @@ class RedditTUI(App):
         if not self.reddit_service:
             self.notify("Reddit service not initialized", severity="error")
             return
-        self.current_feed = "top"
-        posts = self.reddit_service.get_top_posts()
-        self.current_posts = posts
-        self.query_one(PostList).update_posts(posts)
-        self.query_one(Sidebar).update_status("Top Feed")
-        self.query_one(PostList).focus()
+        try:
+            self.current_feed = "top"
+            posts = self.reddit_service.get_top_posts()
+            self.current_posts = posts
+            self.query_one(PostList).update_posts(posts)
+            self.query_one(Sidebar).update_status("Top Feed")
+            self.query_one(PostList).focus()
+        except ConnectionError as e:
+            Logger().error(f"Network connection error: {str(e)}", exc_info=True)
+            self.notify("Error: No internet connection", severity="error")
+        except Exception as e:
+            Logger().error(f"Error loading top feed: {str(e)}", exc_info=True)
+            self.notify(f"Error loading top feed: {str(e)}", severity="error")
 
     async def action_search(self) -> None:
         Logger().info("Action: search")
@@ -1169,9 +1191,14 @@ class RedditTUI(App):
                         self.query_one(Sidebar).update_auth_status(True, current_account)
                     self.action_home()
 
-    def action_help(self) -> None:
+    async def action_help(self) -> None:
         Logger().info("Action: help")
-        pass
+        try:
+            help_screen = HelpScreen()
+            await self.push_screen(help_screen)
+        except Exception as e:
+            Logger().error(f"Error showing help screen: {str(e)}", exc_info=True)
+            self.notify(f"Error showing help: {str(e)}", severity="error")
 
     async def action_settings(self) -> None:
         Logger().info("Action: settings")
@@ -1207,8 +1234,15 @@ class RedditTUI(App):
                     settings = json.load(f)
                     Logger().info("Settings loaded successfully")
                     return {**default_settings, **settings}
+        except PermissionError as e:
+            Logger().error(f"Permission error loading settings: {str(e)}", exc_info=True)
+            self.notify("Warning: Cannot access settings file due to permissions", severity="warning")
+        except json.JSONDecodeError as e:
+            Logger().error(f"Invalid JSON in settings file: {str(e)}", exc_info=True)
+            self.notify("Warning: Settings file corrupted, using defaults", severity="warning")
         except Exception as e:
             Logger().error(f"Error loading settings: {str(e)}", exc_info=True)
+            self.notify("Warning: Error loading settings, using defaults", severity="warning")
         
         return default_settings
 
@@ -1222,6 +1256,12 @@ class RedditTUI(App):
             with open(settings_file, "w") as f:
                 json.dump(self.settings, f, indent=4)
             Logger().info("Settings saved successfully")
+        except PermissionError as e:
+            Logger().error(f"Permission error saving settings: {str(e)}", exc_info=True)
+            self.notify("Error: Cannot save settings due to permissions", severity="error")
+        except OSError as e:
+            Logger().error(f"OS error saving settings: {str(e)}", exc_info=True)
+            self.notify("Error: Cannot save settings due to system error", severity="error")
         except Exception as e:
             Logger().error(f"Error saving settings: {str(e)}", exc_info=True)
             self.notify("Error saving settings", severity="error")
@@ -1271,6 +1311,7 @@ class RedditTUI(App):
                     yield SystemCommand("Copy Post Title", "Copy the post's title to clipboard", self.copy_post_title)
                     yield SystemCommand("Open in Browser", "Open the post in your default browser", self.open_in_browser)
                     yield SystemCommand("Show QR Code", "Display QR code for the post URL", self.show_qr_code)
+                    yield SystemCommand("Share Post URL", "Copy post URL for sharing", self.share_post_url)
                     yield SystemCommand("Sort Comments: Best", "Sort comments by best", lambda: self.sort_comments("best"))
                     yield SystemCommand("Sort Comments: Top", "Sort comments by top", lambda: self.sort_comments("top"))
                     yield SystemCommand("Sort Comments: New", "Sort comments by new", lambda: self.sort_comments("new"))
@@ -1289,6 +1330,7 @@ class RedditTUI(App):
                         yield SystemCommand("Copy Post Title", "Copy the post's title to clipboard", self.copy_post_title)
                         yield SystemCommand("Open in Browser", "Open the post in your default browser", self.open_in_browser)
                         yield SystemCommand("Show QR Code", "Display QR code for the post URL", self.show_qr_code)
+                        yield SystemCommand("Share Post URL", "Copy post URL for sharing", self.share_post_url)
                     yield SystemCommand("Create Post", "Create a new post", self.action_create_post)
         except Exception as e:
             Logger().error(f"Error checking for PostViewScreen: {str(e)}", exc_info=True)
@@ -1720,6 +1762,7 @@ class RedditTUI(App):
             content.mount(screen)
             screen.focus()
             self.query_one(Sidebar).update_status("Create Theme")
+            self.call_after_refresh(screen.focus)
         except Exception as e:
             Logger().error(f"Error creating theme: {str(e)}", exc_info=True)
             self.notify(f"Error creating theme: {str(e)}", severity="error")
@@ -1841,6 +1884,31 @@ class RedditTUI(App):
         except Exception as e:
             Logger().error(f"Error searching users: {str(e)}", exc_info=True)
             self.notify(f"Error: {str(e)}", severity="error")
+
+    def share_post_url(self):
+        try:
+            content = self.query_one("#content")
+            children = list(content.children)
+            if len(children) == 1:
+                if isinstance(children[0], PostViewScreen):
+                    post = children[0].post
+                elif isinstance(children[0], PostList):
+                    post = children[0].get_selected_post()
+                else:
+                    self.notify("No post selected", severity="warning")
+                    return
+
+                if post:
+                    import pyperclip
+                    url = f"https://reddit.com{post.permalink}"
+                    pyperclip.copy(url)
+                    self.notify("Post URL copied to clipboard!", severity="information")
+                    Logger().info(f"Copied post URL: {url}")
+                else:
+                    self.notify("No post selected", severity="warning")
+        except Exception as e:
+            Logger().error(f"Error copying post URL: {str(e)}", exc_info=True)
+            self.notify(f"Error copying URL: {str(e)}", severity="error")
 
 if __name__ == "__main__":
     if os.path.exists("log_sending.permission.jhna"):

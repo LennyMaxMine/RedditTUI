@@ -82,7 +82,7 @@ RedditTUI requires authentication to access Reddit content. The app will automat
 | `q` | Quit | Exit the application |
 
 ## Pages & Screens
-a
+
 ### 1. Home Feed (`h`)
 **Description**: The main Reddit front page showing hot posts from your subscribed subreddits.
 

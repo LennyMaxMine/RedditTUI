@@ -1,9 +1,0 @@
-- Login to your account -> done
-- multi-account -> todo
-- upvote
-- share
-- open post -> kinda done
-- open subreddit -> todo
-- search -> kinda done
-- settings -> todo
-- help screen -> kinda done

@@ -223,18 +223,30 @@ class PostViewScreen(Widget):
                 post_list.focus()
             elif event.button.id == "upvote_button":
                 self.logger.info("Upvote button pressed")
-                # TODO: Implement upvote
+                try:
+                    self.post.upvote()
+                    self.notify("Post upvoted!", severity="information")
+                    self.logger.info(f"Upvoted post: {self.post.title}")
+                except Exception as e:
+                    self.logger.error(f"Error upvoting post: {str(e)}", exc_info=True)
+                    self.notify(f"Error upvoting post: {str(e)}", severity="error")
             elif event.button.id == "downvote_button":
                 self.logger.info("Downvote button pressed")
-                # TODO: Implement downvote
+                try:
+                    self.post.downvote()
+                    self.notify("Post downvoted!", severity="information")
+                    self.logger.info(f"Downvoted post: {self.post.title}")
+                except Exception as e:
+                    self.logger.error(f"Error downvoting post: {str(e)}", exc_info=True)
+                    self.notify(f"Error downvoting post: {str(e)}", severity="error")
             elif event.button.id == "copy_link_button":
                 import pyperclip
                 pyperclip.copy(self.post.url)
-                self.notify("Link copied to clipboard!", severity="success")
+                self.notify("Link copied to clipboard!", severity="information")
             elif event.button.id == "open_link_button":
                 import webbrowser
                 webbrowser.open(self.post.url)
-                self.notify("Opening link in browser...", severity="info")
+                self.notify("Opening link in browser...", severity="information")
         except Exception as e:
             self.logger.error(f"Error handling button press: {str(e)}", exc_info=True)
 
