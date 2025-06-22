@@ -22,10 +22,39 @@ python main.py
 ## Quick Start
 
 1. **First Launch**: The app will prompt you to set up logging preferences
-2. **Login**: Press `l` to access the login screen
+2. **Login**: If no account is logged in, the login screen will appear automatically
 3. **Browse**: Use `h`, `n`, `t` to switch between Hot, New, and Top feeds
 4. **Navigate**: Use arrow keys to move between posts, Enter to select
 5. **Quit**: Press `q` to exit
+
+## Authentication
+
+RedditTUI requires authentication to access Reddit content. The app will automatically show the login screen if:
+
+- No accounts are configured
+- Auto-login fails
+- You're not currently logged in
+
+**To login:**
+1. Press `l` or the login screen will appear automatically
+2. Enter your Reddit API credentials:
+   - **Client ID**: From your Reddit app
+   - **Client Secret**: From your Reddit app  
+   - **Username**: Your Reddit username
+   - **Password**: Your Reddit password
+3. Press `Enter` to login
+
+**Reddit API Setup:**
+1. Go to https://www.reddit.com/prefs/apps
+2. Click "create another app..."
+3. Fill in the details:
+   - Name: TUI
+   - Type: script
+   - Description: A TUI client for Reddit
+   - About URL: (leave blank)
+   - Redirect URI: http://localhost:8080
+4. Click "create app"
+5. Note down the client ID (under the app name) and client secret
 
 ## Key Bindings
 
@@ -98,10 +127,11 @@ a
 - Press `Enter` to search
 
 ### 5. Login Screen (`l`)
-**Description**: Authenticate with Reddit using OAuth credentials.
+**Description**: Authenticate with Reddit using OAuth credentials. This screen appears automatically when no account is logged in.
 
 **Tutorial**:
-- Press `l` to access login
+- The login screen will appear automatically if you're not authenticated
+- Press `l` to manually access login screen
 - Enter your Reddit API credentials:
   - **Client ID**: From your Reddit app
   - **Client Secret**: From your Reddit app
@@ -109,6 +139,7 @@ a
   - **Password**: Your Reddit password
 - Press `Enter` to login
 - Credentials are saved for future use
+- After successful login, you'll be redirected to the home feed
 
 ### 6. Settings (`c`)
 **Description**: Configure app preferences and behavior.

@@ -1013,13 +1013,25 @@ class RedditTUI(App):
                     self.query_one(Sidebar).update_sidebar_account(current_account)
                 Logger().info(f"Auto-login successful")
             else:
-                Logger().info(f"Auto-login failed, attempting manual login")
-                await self.action_login()
+                Logger().info(f"Auto-login failed, showing login screen")
+                self.query_one(Sidebar).update_auth_status(False)
+                await self.show_login_if_not_authenticated()
         else:
-            Logger().info("No accounts found, attempting manual login")
-            await self.action_login()
+            Logger().info("No accounts found, showing login screen")
+            self.query_one(Sidebar).update_auth_status(False)
+            await self.show_login_if_not_authenticated()
 
         Logger().info("================================ On_mount finished ==================================")
+
+    async def show_login_if_not_authenticated(self):
+        if not self.reddit_service or not self.reddit_service.user:
+            Logger().info("User not authenticated, showing login screen")
+            await self.action_login()
+        else:
+            Logger().info("User is already authenticated")
+
+    def is_authenticated(self) -> bool:
+        return bool(self.reddit_service and self.reddit_service.user is not None)
 
     def compose(self) -> ComposeResult:
         Logger().info("Composing main UI")
@@ -1040,6 +1052,10 @@ class RedditTUI(App):
 
     def action_select(self) -> None:
         Logger().info("Action: select")
+        if not self.is_authenticated():
+            Logger().info("User not authenticated, showing login screen")
+            self.call_later(self.show_login_if_not_authenticated)
+            return
         post = self.query_one(PostList).get_selected_post()
         if post:
             Logger().info(f"Selected post: {getattr(post, 'title', str(post))}")
@@ -1049,6 +1065,10 @@ class RedditTUI(App):
 
     def action_home(self) -> None:
         Logger().info("Action: home feed")
+        if not self.is_authenticated():
+            Logger().info("User not authenticated, showing login screen")
+            self.call_later(self.show_login_if_not_authenticated)
+            return
         if not self.reddit_service:
             self.notify("Reddit service not initialized", severity="error")
             return
@@ -1061,6 +1081,10 @@ class RedditTUI(App):
 
     def action_new(self) -> None:
         Logger().info("Action: new feed")
+        if not self.is_authenticated():
+            Logger().info("User not authenticated, showing login screen")
+            self.call_later(self.show_login_if_not_authenticated)
+            return
         if not self.reddit_service:
             self.notify("Reddit service not initialized", severity="error")
             return
@@ -1073,6 +1097,10 @@ class RedditTUI(App):
 
     def action_top(self) -> None:
         Logger().info("Action: top feed")
+        if not self.is_authenticated():
+            Logger().info("User not authenticated, showing login screen")
+            self.call_later(self.show_login_if_not_authenticated)
+            return
         if not self.reddit_service:
             self.notify("Reddit service not initialized", severity="error")
             return
@@ -1104,18 +1132,42 @@ class RedditTUI(App):
                 Logger().info("Login successful, attempting auto-login")
                 if self.reddit_service and self.reddit_service.auto_login():
                     Logger().info("Auto-login successful after manual login")
+                    if self.reddit_service:
+                        current_account = self.reddit_service.get_current_account()
+                        if current_account:
+                            self.query_one(Sidebar).update_auth_status(True, current_account)
                     self.action_home()
                 else:
                     Logger().error("Failed to auto-login after manual login")
                     self.notify("Error: Failed to initialize Reddit service", severity="error")
-                    self.action_home()
+                    self.query_one(Sidebar).update_auth_status(False)
+                    # Try to show login screen again if auto-login fails
+                    await self.show_login_if_not_authenticated()
             else:
-                Logger().info("Login cancelled or failed, returning to home")
-                self.action_home()
+                Logger().info("Login cancelled or failed")
+                # If login was cancelled and user is still not authenticated, show login again
+                if not self.is_authenticated():
+                    self.query_one(Sidebar).update_auth_status(False)
+                    await self.show_login_if_not_authenticated()
+                else:
+                    if self.reddit_service:
+                        current_account = self.reddit_service.get_current_account()
+                        if current_account:
+                            self.query_one(Sidebar).update_auth_status(True, current_account)
+                        self.action_home()
         except Exception as e:
             Logger().error(f"Exception in action_login: {str(e)}", exc_info=True)
             self.notify(f"Error: {str(e)}", severity="error")
-            self.action_home()
+            # Try to show login screen again if there was an error
+            if not self.is_authenticated():
+                self.query_one(Sidebar).update_auth_status(False)
+                await self.show_login_if_not_authenticated()
+            else:
+                if self.reddit_service:
+                    current_account = self.reddit_service.get_current_account()
+                    if current_account:
+                        self.query_one(Sidebar).update_auth_status(True, current_account)
+                    self.action_home()
 
     def action_help(self) -> None:
         Logger().info("Action: help")
