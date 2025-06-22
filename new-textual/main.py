@@ -1083,6 +1083,9 @@ class RedditTUI(App):
         except ConnectionError as e:
             Logger().error(f"Network connection error: {str(e)}", exc_info=True)
             self.notify("Error: No internet connection", severity="error")
+        except TimeoutError as e:
+            Logger().error(f"Request timeout: {str(e)}", exc_info=True)
+            self.notify("Error: Request timed out. Please try again.", severity="error")
         except Exception as e:
             Logger().error(f"Error loading home feed: {str(e)}", exc_info=True)
             self.notify(f"Error loading home feed: {str(e)}", severity="error")
@@ -1106,6 +1109,9 @@ class RedditTUI(App):
         except ConnectionError as e:
             Logger().error(f"Network connection error: {str(e)}", exc_info=True)
             self.notify("Error: No internet connection", severity="error")
+        except TimeoutError as e:
+            Logger().error(f"Request timeout: {str(e)}", exc_info=True)
+            self.notify("Error: Request timed out. Please try again.", severity="error")
         except Exception as e:
             Logger().error(f"Error loading new feed: {str(e)}", exc_info=True)
             self.notify(f"Error loading new feed: {str(e)}", severity="error")
@@ -1129,6 +1135,9 @@ class RedditTUI(App):
         except ConnectionError as e:
             Logger().error(f"Network connection error: {str(e)}", exc_info=True)
             self.notify("Error: No internet connection", severity="error")
+        except TimeoutError as e:
+            Logger().error(f"Request timeout: {str(e)}", exc_info=True)
+            self.notify("Error: Request timed out. Please try again.", severity="error")
         except Exception as e:
             Logger().error(f"Error loading top feed: {str(e)}", exc_info=True)
             self.notify(f"Error loading top feed: {str(e)}", severity="error")

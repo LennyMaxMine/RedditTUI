@@ -208,9 +208,15 @@ class RedditService:
             posts = list(response)
             self.logger.info(f"Retrieved {len(posts)} hot posts")
             if len(posts) == 0:
-                self.logger.warning("No posts retrieved - this might indicate an API issue")
+                self.logger.warning("No posts retrieved - this might indicate an API issue")a
             self._update_rate_limit(response)
             return posts
+        except ConnectionError as e:
+            self.logger.error(f"Network connection error getting hot posts: {str(e)}", exc_info=True)
+            raise
+        except TimeoutError as e:
+            self.logger.error(f"Request timeout getting hot posts: {str(e)}", exc_info=True)
+            raise
         except Exception as e:
             self.logger.error(f"Error getting hot posts: {str(e)}", exc_info=True)
             return []
@@ -228,6 +234,12 @@ class RedditService:
             self.logger.info(f"Retrieved {len(posts)} new posts")
             self._update_rate_limit(response)
             return posts
+        except ConnectionError as e:
+            self.logger.error(f"Network connection error getting new posts: {str(e)}", exc_info=True)
+            raise
+        except TimeoutError as e:
+            self.logger.error(f"Request timeout getting new posts: {str(e)}", exc_info=True)
+            raise
         except Exception as e:
             self.logger.error(f"Error getting new posts: {str(e)}", exc_info=True)
             return []
@@ -245,6 +257,12 @@ class RedditService:
             self.logger.info(f"Retrieved {len(posts)} top posts")
             self._update_rate_limit(response)
             return posts
+        except ConnectionError as e:
+            self.logger.error(f"Network connection error getting top posts: {str(e)}", exc_info=True)
+            raise
+        except TimeoutError as e:
+            self.logger.error(f"Request timeout getting top posts: {str(e)}", exc_info=True)
+            raise
         except Exception as e:
             self.logger.error(f"Error getting top posts: {str(e)}", exc_info=True)
             return []
