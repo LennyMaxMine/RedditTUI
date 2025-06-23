@@ -208,7 +208,7 @@ class RedditService:
             posts = list(response)
             self.logger.info(f"Retrieved {len(posts)} hot posts")
             if len(posts) == 0:
-                self.logger.warning("No posts retrieved - this might indicate an API issue")a
+                self.logger.warning("No posts retrieved - this might indicate an API issue")
             self._update_rate_limit(response)
             return posts
         except ConnectionError as e:
