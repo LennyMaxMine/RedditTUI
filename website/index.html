@@ -237,7 +237,7 @@
             </div>
             <div class="prompt">
                 <span class="prompt-symbol">$</span>
-                <span>cd RedditTUI</span>
+                <span>cd RedditTUI/new-textual</span>
             </div>
             <div class="prompt">
                 <span class="prompt-symbol">$</span>
@@ -245,7 +245,7 @@
             </div>
             <div class="prompt">
                 <span class="prompt-symbol">$</span>
-                <span>python src/main.py</span>
+                <span>python main.py</span>
             </div>
 
             <h2>Links</h2>
@@ -270,7 +270,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             const terminalContent = document.querySelector('.terminal-content');
             
-            // Add a simple click event to simulate typing new commands
             terminalContent.addEventListener('click', () => {
                 const randomCommands = [
                     'echo "RedditTUI is a simple, lightweight, and efficient Terminal User Interface for browsing Reddit."',
@@ -283,7 +282,6 @@
                     'echo "Created by LennyMaxMine"'
                 ];
                 
-                // Get all typing elements and change the last one
                 const typingElements = document.querySelectorAll('.typing');
                 const lastTypingElement = typingElements[typingElements.length - 1];
                 
