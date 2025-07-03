@@ -3,10 +3,17 @@ from textual.widgets import Static, Button
 from textual.containers import Container, Vertical, ScrollableContainer
 from utils.logger import Logger
 from pathlib import Path
+import os
+import sys
 from rich.text import Text
 from rich.panel import Panel
 from rich.console import Console
 from rich.markdown import Markdown
+
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
+    return os.path.join(base_path, relative_path)
 
 class HelpScreen(Screen):
     def __init__(self):
@@ -26,14 +33,14 @@ class HelpScreen(Screen):
 
     def _get_help_content(self):
         try:
-            readme_path = Path("README.md")
-            if readme_path.exists():
+            readme_path = get_resource_path("README.md")
+            if os.path.exists(readme_path):
                 with open(readme_path, "r", encoding="utf-8") as f:
                     content = f.read()
                     self.logger.info("Loaded README.md for help screen")
                     return self._format_markdown(content)
             else:
-                self.logger.warning("README.md not found, using fallback help content")
+                self.logger.warning(f"README.md not found at: {readme_path}, using fallback help content")
                 return self._get_fallback_content()
         except Exception as e:
             self.logger.error(f"Error reading README.md: {str(e)}", exc_info=True)

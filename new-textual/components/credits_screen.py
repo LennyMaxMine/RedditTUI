@@ -4,6 +4,12 @@ from textual.widgets import Static, Button, Markdown
 from textual.screen import ModalScreen
 from utils.logger import Logger
 import os
+import sys
+
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
+    return os.path.join(base_path, relative_path)
 
 class CreditsScreen(ModalScreen):
     def compose(self) -> ComposeResult:
@@ -28,10 +34,14 @@ class CreditsScreen(ModalScreen):
 
     def load_credits(self):
         try:
-            credits_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "CREDITS.md")
-            with open(credits_path, "r") as f:
-                credits_content = f.read()
-            self.query_one("#credits_content", Markdown).update(credits_content)
+            credits_path = get_resource_path("CREDITS.md")
+            if os.path.exists(credits_path):
+                with open(credits_path, "r") as f:
+                    credits_content = f.read()
+                self.query_one("#credits_content", Markdown).update(credits_content)
+            else:
+                Logger().warning(f"Credits file not found at: {credits_path}")
+                self.query_one("#credits_content", Markdown).update("Credits file not found.")
         except Exception as e:
             Logger().error(f"Error loading credits: {str(e)}", exc_info=True)
             self.query_one("#credits_content", Markdown).update("Error loading credits file.")

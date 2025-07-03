@@ -1,0 +1,111 @@
+# hooks/hook-praw.py
+# PyInstaller hook for PRAW (Reddit API wrapper)
+
+from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_submodules
+
+# Collect all PRAW modules and data
+datas, binaries, hiddenimports = collect_all('praw')
+
+# Add additional PRAW modules that might be missed
+hiddenimports += [
+    'praw',
+    'praw.config',
+    'praw.const',
+    'praw.exceptions',
+    'praw.models',
+    'praw.models.auth',
+    'praw.models.base',
+    'praw.models.comment_forest',
+    'praw.models.listing',
+    'praw.models.reddit',
+    'praw.models.redditors',
+    'praw.models.subreddits',
+    'praw.models.user',
+    'praw.models.util',
+    'praw.objector',
+    'praw.reddit',
+    'praw.util',
+    'praw.util.token_manager',
+    'prawcore',
+    'prawcore.auth',
+    'prawcore.const',
+    'prawcore.exceptions',
+    'prawcore.rate_limit',
+    'prawcore.requestor',
+    'prawcore.sessions',
+    'prawcore.util',
+    'requests',
+    'requests.adapters',
+    'requests.auth',
+    'requests.cert',
+    'requests.compat',
+    'requests.cookies',
+    'requests.exceptions',
+    'requests.hooks',
+    'requests.models',
+    'requests.packages',
+    'requests.packages.urllib3',
+    'requests.packages.urllib3.util',
+    'requests.packages.urllib3.util.retry',
+    'requests.sessions',
+    'requests.status_codes',
+    'requests.structures',
+    'requests.utils',
+    'urllib3',
+    'urllib3.util',
+    'urllib3.util.retry',
+    'urllib3.util.ssl_',
+    'urllib3.util.timeout',
+    'urllib3.util.url',
+    'urllib3.exceptions',
+    'urllib3.poolmanager',
+    'urllib3.connectionpool',
+    'urllib3.connection',
+    'urllib3.response',
+    'urllib3.request',
+    'urllib3.filepost',
+    'urllib3.fields',
+    'urllib3._collections',
+    'urllib3.packages',
+    'urllib3.packages.ssl_match_hostname',
+    'certifi',
+    'charset_normalizer',
+    'charset_normalizer.api',
+    'charset_normalizer.cd',
+    'charset_normalizer.constant',
+    'charset_normalizer.legacy',
+    'charset_normalizer.models',
+    'charset_normalizer.utils',
+    'charset_normalizer.version',
+    'idna',
+    'idna.core',
+    'idna.codec',
+    'idna.compat',
+    'idna.intranges',
+    'idna.package_data',
+    'idna.uts46data',
+    'websocket',
+    'websocket._abnf',
+    'websocket._app',
+    'websocket._core',
+    'websocket._exceptions',
+    'websocket._handshake',
+    'websocket._http',
+    'websocket._logging',
+    'websocket._socket',
+    'websocket._ssl_compat',
+    'websocket._url',
+    'websocket._utils',
+    'update_checker',
+    'update_checker.update_checker',
+]
+
+# Collect certificates and data files
+datas += collect_data_files('certifi')
+datas += collect_data_files('requests')
+
+# Add any configuration files
+try:
+    datas += collect_data_files('praw', includes=['*.ini', '*.cfg', '*.conf'])
+except:
+    pass

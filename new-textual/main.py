@@ -7,7 +7,7 @@ from textual.theme import Theme
 from services.reddit_service import RedditService
 from components.post_list import PostList
 from components.sidebar import Sidebar
-from components.login_screen import LoginScreen
+
 from components.post_view_screen import PostViewScreen
 from components.settings_screen import SettingsScreen
 from components.user_profile_screen import UserProfileScreen
@@ -26,8 +26,15 @@ from components.help_screen import HelpScreen
 from utils.logger import Logger
 import json
 import os
+import sys
 from pathlib import Path
 from datetime import datetime
+
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    # PyInstaller creates a temp folder and stores path in _MEIPASS
+    base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
+    return os.path.join(base_path, relative_path)
 
 class ReportReasonScreen(ModalScreen):
     def __init__(self, reasons):
@@ -912,7 +919,7 @@ class RedditTUI(App):
 
     #account_management_widget {
         width: 60;
-        max-height: 80vh;
+        max-height: 90vh;
         background: $surface;
         border: solid $primary;
         padding: 1;
@@ -920,6 +927,7 @@ class RedditTUI(App):
 
     #view_container {
         height: 1fr;
+        min-height: 20;
         border: solid $primary-lighten-2;
         margin: 1 0;
     }
@@ -938,15 +946,7 @@ class RedditTUI(App):
         margin-top: 2;
     }
 
-    #add_account_actions {
-        align: center middle;
-        margin-top: 2;
-    }
 
-    #add_account_actions Button {
-        margin: 0 1;
-        min-width: 10;
-    }
 
     #add_account_container Input {
         width: 100%;
@@ -991,13 +991,17 @@ class RedditTUI(App):
     async def on_mount(self) -> None:
         Logger().info("================================ App mounted ==================================")
 
-        for file in os.listdir("themes"):
-            if file.endswith(".theme"):
-                Logger().info(f"Loading theme: {file}")
-                with open(os.path.join("themes", file), "r") as f:
-                    theme = json.load(f)
-                    self.register_theme(Theme(**theme))
-                    Logger().info(f"Registered theme: {theme['name']}")
+        themes_dir = get_resource_path("themes")
+        if os.path.exists(themes_dir):
+            for file in os.listdir(themes_dir):
+                if file.endswith(".theme"):
+                    Logger().info(f"Loading theme: {file}")
+                    with open(os.path.join(themes_dir, file), "r") as f:
+                        theme = json.load(f)
+                        self.register_theme(Theme(**theme))
+                        Logger().info(f"Registered theme: {theme['name']}")
+        else:
+            Logger().warning(f"Themes directory not found at: {themes_dir}")
 
         self.theme = self.settings.get("theme", "dark")
 
@@ -1014,20 +1018,17 @@ class RedditTUI(App):
                     self.query_one(Sidebar).update_sidebar_account(current_account)
                 Logger().info(f"Auto-login successful")
             else:
-                Logger().info(f"Auto-login failed, showing login screen")
+                Logger().info(f"Auto-login failed")
                 self.query_one(Sidebar).update_auth_status(False)
-                await self.show_login_if_not_authenticated()
         else:
-            Logger().info("No accounts found, showing login screen")
+            Logger().info("No accounts found, app started without login")
             self.query_one(Sidebar).update_auth_status(False)
-            await self.show_login_if_not_authenticated()
 
+    async def show_account_management_if_not_authenticated(self):
         Logger().info("================================ On_mount finished ==================================")
-
-    async def show_login_if_not_authenticated(self):
         if not self.reddit_service or not self.reddit_service.user:
-            Logger().info("User not authenticated, showing login screen")
-            await self.action_login()
+            Logger().info("User not authenticated, showing account management")
+            await self.action_account_management()
         else:
             Logger().info("User is already authenticated")
 
@@ -1054,8 +1055,8 @@ class RedditTUI(App):
     def action_select(self) -> None:
         Logger().info("Action: select")
         if not self.is_authenticated():
-            Logger().info("User not authenticated, showing login screen")
-            self.call_later(self.show_login_if_not_authenticated)
+            Logger().info("User not authenticated, showing account management")
+            self.call_later(self.show_account_management_if_not_authenticated)
             return
         post = self.query_one(PostList).get_selected_post()
         if post:
@@ -1067,8 +1068,8 @@ class RedditTUI(App):
     def action_home(self) -> None:
         Logger().info("Action: home feed")
         if not self.is_authenticated():
-            Logger().info("User not authenticated, showing login screen")
-            self.call_later(self.show_login_if_not_authenticated)
+            Logger().info("User not authenticated, showing account management")
+            self.call_later(self.show_account_management_if_not_authenticated)
             return
         if not self.reddit_service:
             self.notify("Reddit service not initialized", severity="error")
@@ -1093,8 +1094,8 @@ class RedditTUI(App):
     def action_new(self) -> None:
         Logger().info("Action: new feed")
         if not self.is_authenticated():
-            Logger().info("User not authenticated, showing login screen")
-            self.call_later(self.show_login_if_not_authenticated)
+            Logger().info("User not authenticated, showing account management")
+            self.call_later(self.show_account_management_if_not_authenticated)
             return
         if not self.reddit_service:
             self.notify("Reddit service not initialized", severity="error")
@@ -1119,8 +1120,8 @@ class RedditTUI(App):
     def action_top(self) -> None:
         Logger().info("Action: top feed")
         if not self.is_authenticated():
-            Logger().info("User not authenticated, showing login screen")
-            self.call_later(self.show_login_if_not_authenticated)
+            Logger().info("User not authenticated, showing account management")
+            self.call_later(self.show_account_management_if_not_authenticated)
             return
         if not self.reddit_service:
             self.notify("Reddit service not initialized", severity="error")
@@ -1153,52 +1154,8 @@ class RedditTUI(App):
             self.notify(f"Error: {str(e)}", severity="error")
 
     async def action_login(self) -> None:
-        Logger().info("Action: login")
-        try:
-            login_screen = LoginScreen()
-            Logger().info("Pushing login screen")
-            result = await self.push_screen(login_screen)
-            Logger().info(f"Login screen result: {result}")
-            if result:
-                Logger().info("Login successful, attempting auto-login")
-                if self.reddit_service and self.reddit_service.auto_login():
-                    Logger().info("Auto-login successful after manual login")
-                    if self.reddit_service:
-                        current_account = self.reddit_service.get_current_account()
-                        if current_account:
-                            self.query_one(Sidebar).update_auth_status(True, current_account)
-                    self.action_home()
-                else:
-                    Logger().error("Failed to auto-login after manual login")
-                    self.notify("Error: Failed to initialize Reddit service", severity="error")
-                    self.query_one(Sidebar).update_auth_status(False)
-                    # Try to show login screen again if auto-login fails
-                    await self.show_login_if_not_authenticated()
-            else:
-                Logger().info("Login cancelled or failed")
-                # If login was cancelled and user is still not authenticated, show login again
-                if not self.is_authenticated():
-                    self.query_one(Sidebar).update_auth_status(False)
-                    await self.show_login_if_not_authenticated()
-                else:
-                    if self.reddit_service:
-                        current_account = self.reddit_service.get_current_account()
-                        if current_account:
-                            self.query_one(Sidebar).update_auth_status(True, current_account)
-                        self.action_home()
-        except Exception as e:
-            Logger().error(f"Exception in action_login: {str(e)}", exc_info=True)
-            self.notify(f"Error: {str(e)}", severity="error")
-            # Try to show login screen again if there was an error
-            if not self.is_authenticated():
-                self.query_one(Sidebar).update_auth_status(False)
-                await self.show_login_if_not_authenticated()
-            else:
-                if self.reddit_service:
-                    current_account = self.reddit_service.get_current_account()
-                    if current_account:
-                        self.query_one(Sidebar).update_auth_status(True, current_account)
-                    self.action_home()
+        Logger().info("Action: login - redirecting to account management")
+        await self.action_account_management()
 
     async def action_help(self) -> None:
         Logger().info("Action: help")

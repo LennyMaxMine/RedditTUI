@@ -5,7 +5,13 @@ from utils.logger import Logger
 from components.post_list import PostList
 import json
 import os
+import sys
 import re
+
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
+    return os.path.join(base_path, relative_path)
 
 class ThemeCreationScreen(Widget):
     def __init__(self, parent_content=None, current_posts=None):
@@ -132,15 +138,25 @@ class ThemeCreationScreen(Widget):
                 self.notify(f"Invalid color format for {key}. Please use hex color codes (e.g., #ff0000)", severity="error")
                 return
         self.theme_data["name"] = self.theme_name
-        theme_path = os.path.join("themes", f"{self.theme_name.lower()}.theme")
+        themes_dir = get_resource_path("themes")
+        if not os.path.exists(themes_dir):
+            try:
+                os.makedirs(themes_dir)
+            except Exception as e:
+                self.logger.error(f"Error creating themes directory: {str(e)}", exc_info=True)
+                self.notify(f"Error creating themes directory: {str(e)}", severity="error")
+                return
+        
+        theme_path = os.path.join(themes_dir, f"{self.theme_name.lower()}.theme")
         try:
             with open(theme_path, "w") as f:
                 json.dump(self.theme_data, f, indent=4)
             self.notify("Theme saved successfully!", severity="information")
-            self.parent_content.remove_children()
-            post_list = PostList(posts=self.current_posts, id="content")
-            self.parent_content.mount(post_list)
-            post_list.focus()
+            if self.parent_content:
+                self.parent_content.remove_children()
+                post_list = PostList(posts=self.current_posts, id="content")
+                self.parent_content.mount(post_list)
+                post_list.focus()
         except Exception as e:
             self.logger.error(f"Error saving theme: {str(e)}", exc_info=True)
             self.notify(f"Error saving theme: {str(e)}", severity="error") 

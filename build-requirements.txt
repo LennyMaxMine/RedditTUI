@@ -1,0 +1,27 @@
+# build-requirements.txt
+# Additional dependencies needed for building standalone binaries
+
+# Core build tools
+pyinstaller>=5.13.0
+setuptools>=68.0.0
+wheel>=0.41.0
+
+# Dependency analysis tools
+pipreqs>=0.4.13
+pydeps>=1.12.0
+
+# Common Python packages that might be needed
+packaging>=23.0
+importlib-metadata>=6.0.0
+
+# Windows-specific dependencies
+pywin32>=306; sys_platform == "win32"
+pywin32-ctypes>=0.2.2; sys_platform == "win32"
+
+# macOS-specific dependencies
+pyobjc-core>=9.0; sys_platform == "darwin"
+pyobjc-framework-Cocoa>=9.0; sys_platform == "darwin"
+
+# Linux-specific dependencies - usually handled by system packages
+# but including some common ones just in case
+distro>=1.8.0; sys_platform == "linux"

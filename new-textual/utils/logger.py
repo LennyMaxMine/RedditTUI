@@ -7,6 +7,11 @@ import platform
 from datetime import datetime
 from pathlib import Path
 
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
+    return os.path.join(base_path, relative_path)
+
 class Logger:
     _instance = None
     send_logs_to_developer = False
@@ -22,7 +27,7 @@ class Logger:
         self.logger = logging.getLogger("RedditTUI")
         self.logger.setLevel(logging.DEBUG)
 
-        log_dir = Path("logs")
+        log_dir = Path(get_resource_path("logs"))
         log_dir.mkdir(exist_ok=True)
 
         self.log_file = log_dir / "textual_tui.log"
@@ -92,7 +97,8 @@ class Logger:
         try:
             traceback_text = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
             system_info = self._get_system_info()
-            with open("./logs/crash_report.txt", "w") as f:
+            crash_report_path = os.path.join(get_resource_path("logs"), "crash_report.txt")
+            with open(crash_report_path, "w") as f:
                 f.write(f"=== Crash Report ===\n")
                 f.write(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write(f"Exception Type: {exc_type.__name__}\n")

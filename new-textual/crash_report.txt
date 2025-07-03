@@ -1,0 +1,84 @@
+=== System Information ===
+OS: Linux
+OS Version: #1 SMP PREEMPT_DYNAMIC Wed, 04 Jun 2025 18:52:35 +0000
+Python Version: 3.13.3
+Architecture: x86_64
+Processor: 
+
+=== Log Content ===
+2025-06-14 18:56:34,497 - INFO - Logger initialized
+2025-06-14 18:56:34,497 - INFO - Importing utils package
+2025-06-14 18:56:34,497 - INFO - Importing services package
+2025-06-14 18:56:34,497 - INFO - Importing components package
+2025-06-14 18:56:34,497 - INFO - Imported utils package
+2025-06-14 18:56:34,497 - INFO - Imported services package
+2025-06-14 18:56:34,518 - INFO - Imported components package
+2025-06-14 18:56:56,549 - INFO - =============================================================== Starting RedditTUI app at: 2025-06-14 18:56:56 ================================================================
+2025-06-14 18:56:56,549 - INFO - RedditTUI app initializing
+2025-06-14 18:56:56,561 - INFO - Ensuring config dir: /home/lenny/.config/reddit-tui
+2025-06-14 18:56:56,561 - INFO - Loading settings
+2025-06-14 18:56:56,561 - INFO - Registered bindings: [Binding(key='q', action='quit', description='Quit', show=True, key_display=None, priority=False, tooltip='', id=None, system=False), Binding(key='enter', action='select', description='Select', show=True, key_display=None, priority=False, tooltip='', id=None, system=False), Binding(key='h', action='home', description='Home', show=True, key_display=None, priority=False, tooltip='', id=None, system=False), Binding(key='n', action='new', description='New', show=True, key_display=None, priority=False, tooltip='', id=None, system=False), Binding(key='t', action='top', description='Top', show=True, key_display=None, priority=False, tooltip='', id=None, system=False), Binding(key='s', action='advanced_search', description='Advanced Search', show=True, key_display=None, priority=False, tooltip='', id=None, system=False), Binding(key='l', action='login', description='Login', show=True, key_display=None, priority=False, tooltip='', id=None, system=False), Binding(key='?', action='help', description='Help', show=True, key_display=None, priority=False, tooltip='', id=None, system=False), Binding(key='c', action='settings', description='Settings', show=True, key_display=None, priority=False, tooltip='', id=None, system=False), Binding(key='u', action='my_profile', description='My Profile', show=True, key_display=None, priority=False, tooltip='', id=None, system=False), Binding(key='b', action='saved_posts', description='Saved Posts', show=True, key_display=None, priority=False, tooltip='', id=None, system=False), Binding(key='r', action='subscribed_subreddits', description='Subscribed Subreddits', show=True, key_display=None, priority=False, tooltip='', id=None, system=False)]
+2025-06-14 18:56:56,581 - INFO - Composing main UI
+2025-06-14 18:56:56,581 - INFO - Initializing Sidebar widget
+2025-06-14 18:56:56,582 - INFO - Initializing PostList widget
+2025-06-14 18:56:56,591 - INFO - Composing Sidebar UI
+2025-06-14 18:56:56,594 - INFO - Composing PostList UI
+2025-06-14 18:56:56,607 - INFO - Sidebar mounted
+2025-06-14 18:56:56,608 - INFO - PostList mounted
+2025-06-14 18:56:56,608 - INFO - Updating posts in PostList: 0 posts
+2025-06-14 18:56:56,609 - INFO - ================================ App mounted ==================================
+2025-06-14 18:56:56,609 - INFO - Loading theme: oceanic.theme
+2025-06-14 18:56:56,609 - INFO - Registered theme: oceanic
+2025-06-14 18:56:56,609 - INFO - Loading theme: dark.theme
+2025-06-14 18:56:56,609 - INFO - Registered theme: dark
+2025-06-14 18:56:56,609 - INFO - Loading theme: light.theme
+2025-06-14 18:56:56,609 - INFO - Registered theme: light
+2025-06-14 18:56:56,609 - INFO - Attempting auto-login
+2025-06-14 18:56:56,609 - INFO - RedditService.auto_login called
+2025-06-14 18:56:56,609 - INFO - Loading credentials from /home/lenny/.config/reddit-tui/sanfrancisco.jhna
+2025-06-14 18:56:56,609 - INFO - Credentials loaded.
+2025-06-14 18:56:56,609 - INFO - Credentials found, attempting auto-login...
+2025-06-14 18:56:56,609 - INFO - RedditService.login called
+2025-06-14 18:56:56,609 - INFO - Initializing Reddit instance
+2025-06-14 18:56:56,610 - INFO - Attempting to authenticate with Reddit API...
+2025-06-14 18:56:57,987 - INFO - Reddit authentication successful. Logged in as: privacy2live
+2025-06-14 18:56:57,987 - INFO - Saving credentials...
+2025-06-14 18:56:57,987 - INFO - Saving credentials to /home/lenny/.config/reddit-tui/sanfrancisco.jhna
+2025-06-14 18:56:57,987 - INFO - Credentials file written successfully.
+2025-06-14 18:56:57,987 - INFO - Credentials saved successfully.
+2025-06-14 18:56:57,987 - INFO - Action: home feed
+2025-06-14 18:56:58,895 - INFO - Updating posts in PostList: 25 posts
+2025-06-14 18:56:58,895 - INFO - Updating sidebar status to: Home Feed
+2025-06-14 18:56:58,895 - INFO - Updating sidebar account to: privacy2live
+2025-06-14 18:56:58,895 - INFO - Auto-login successful
+2025-06-14 18:56:58,896 - INFO - ================================ On_mount finished ==================================
+2025-06-14 18:56:58,918 - DEBUG - PostList focused
+2025-06-14 18:56:58,952 - DEBUG - PostList render called, updating static content
+2025-06-14 18:56:58,961 - DEBUG - Sidebar render called, updating static content
+2025-06-14 18:57:00,324 - DEBUG - PostList unfocused
+2025-06-14 18:57:00,341 - DEBUG - PostList render called, updating static content
+2025-06-14 18:57:06,750 - DEBUG - PostList focused
+2025-06-14 18:57:06,876 - DEBUG - PostList render called, updating static content
+2025-06-14 18:57:07,368 - INFO - Key pressed: enter
+2025-06-14 18:57:07,368 - INFO - Action: select
+2025-06-14 18:57:07,369 - INFO - Selected post at index 0
+2025-06-14 18:57:07,369 - INFO - Selected post: First person view of a very close call a missile strike Tel Aviv
+2025-06-14 18:57:07,370 - INFO - Composing PostViewScreen UI
+2025-06-14 18:57:07,371 - DEBUG - No comments to display
+2025-06-14 18:57:07,396 - DEBUG - PostList render called, updating static content
+2025-06-14 18:57:07,411 - INFO - PostViewScreen mounted
+2025-06-14 18:57:07,411 - INFO - Loading comments
+2025-06-14 18:57:07,411 - INFO - Loading comments for post: First person view of a very close call a missile strike Tel Aviv
+2025-06-14 18:57:07,411 - INFO - Getting comments for post: 1lb5yec
+2025-06-14 18:57:09,733 - INFO - Retrieved 78 comments
+2025-06-14 18:57:09,733 - INFO - Loaded 78 comments
+2025-06-14 18:57:09,900 - DEBUG - PostList render called, updating static content
+2025-06-14 18:57:10,012 - DEBUG - PostList render called, updating static content
+2025-06-14 18:57:13,436 - DEBUG - PostList unfocused
+2025-06-14 18:57:13,780 - DEBUG - PostList render called, updating static content
+2025-06-14 18:57:13,789 - DEBUG - Sidebar render called, updating static content
+2025-06-14 18:59:42,805 - DEBUG - PostList focused
+2025-06-14 18:59:42,908 - DEBUG - PostList render called, updating static content
+2025-06-14 18:59:44,494 - DEBUG - App quitting.
+2025-06-14 18:59:44,697 - DEBUG - PostList unfocused
+
