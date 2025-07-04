@@ -12,12 +12,8 @@ A modern terminal-based Reddit client built with Python and Textual framework. B
 
 ## Installation
 
-```bash
-git clone https://github.com/LennyMaxMine/RedditTUI
-cd RedditTUI/new-textual
-pip install -r requirements.txt
-python main.py
-```
+Easiest way: Go to the release page and download the application for your system.
+Advanced way: You can also build it yourself using build.sh or build.bat (pls know what you are doing)
 
 ## Quick Start
 
