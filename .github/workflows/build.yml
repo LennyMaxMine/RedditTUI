@@ -60,6 +60,7 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -r requirements.txt
         python -m pip install -r build-requirements.txt
+        python -m pip install pipreqs
 
     - name: Create PyInstaller hooks
       shell: bash
@@ -133,8 +134,8 @@ jobs:
       shell: bash
       run: |
         cd build
-        python -m pipreqs --force --mode no-pin .
-        echo "Generated requirements:"
+        python -m pipreqs --force --mode no-pin . || echo "pipreqs failed, continuing with existing requirements.txt"
+        echo "Current requirements:"
         cat requirements.txt
 
     - name: Create PyInstaller spec file
