@@ -12,8 +12,8 @@ A modern terminal-based Reddit client built with Python and Textual framework. B
 
 ## Installation
 
-Easiest way: Go to the release page and download the application for your system.
-Advanced way: You can also build it yourself using build.sh or build.bat (pls know what you are doing)
+- Easiest way -> Go to the release page and download the application for your system.
+- Advanced way -> You can also build it yourself using build.sh or build.bat (pls know what you are doing)
 
 ## Quick Start
 
