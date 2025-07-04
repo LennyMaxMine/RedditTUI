@@ -44,6 +44,7 @@ jobs:
           ${{ runner.os }}-pip-
 
     - name: Create build directory and copy files
+      shell: bash
       run: |
         mkdir -p build
         cd build
@@ -53,6 +54,7 @@ jobs:
         rm -rf .git build dist __pycache__ *.egg-info
 
     - name: Install dependencies
+      shell: bash
       run: |
         cd build
         python -m pip install --upgrade pip
@@ -60,6 +62,7 @@ jobs:
         python -m pip install -r build-requirements.txt
 
     - name: Create PyInstaller hooks
+      shell: bash
       run: |
         cd build
         mkdir -p hooks
@@ -127,6 +130,7 @@ jobs:
         EOF
 
     - name: Analyze dependencies
+      shell: bash
       run: |
         cd build
         python -m pipreqs --force --mode no-pin .
@@ -134,6 +138,7 @@ jobs:
         cat requirements.txt
 
     - name: Create PyInstaller spec file
+      shell: bash
       run: |
         cd build
         cat > reddittui.spec << 'EOF'
@@ -281,6 +286,7 @@ jobs:
 
     - name: Build with PyInstaller (Linux)
       if: matrix.os == 'ubuntu-latest'
+      shell: bash
       run: |
         cd build
         pyinstaller --clean reddittui.spec
@@ -290,13 +296,15 @@ jobs:
 
     - name: Build with PyInstaller (Windows)
       if: matrix.os == 'windows-latest'
+      shell: bash
       run: |
         cd build
         pyinstaller --clean reddittui.spec
-        dir dist
+        ls -la dist
 
     - name: Build with PyInstaller (macOS)
       if: matrix.os == 'macos-latest'
+      shell: bash
       run: |
         cd build
         pyinstaller --clean reddittui.spec
@@ -317,6 +325,7 @@ jobs:
 
     - name: Create Windows Installer
       if: matrix.os == 'windows-latest'
+      shell: bash
       run: |
         cd build
         # Create NSIS installer script
@@ -375,6 +384,7 @@ jobs:
 
     - name: Create macOS DMG
       if: matrix.os == 'macos-latest'
+      shell: bash
       run: |
         cd build
         # Create a DMG file
