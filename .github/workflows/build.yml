@@ -56,8 +56,8 @@ jobs:
       run: |
         cd build
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r build-requirements.txt
+        python -m pip install -r requirements.txt
+        python -m pip install -r build-requirements.txt
 
     - name: Create PyInstaller hooks
       run: |

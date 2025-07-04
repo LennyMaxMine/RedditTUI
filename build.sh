@@ -18,8 +18,8 @@ rm -rf .git build dist __pycache__ *.egg-info
 
 # Install dependencies
 echo "📦 Installing dependencies..."
-pip install -r requirements.txt
-pip install -r build-requirements.txt
+python -m pip install -r requirements.txt
+python -m pip install -r build-requirements.txt
 
 # Create hooks directory
 mkdir -p hooks

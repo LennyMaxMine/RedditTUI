@@ -19,8 +19,8 @@ if exist __pycache__ rmdir /S /Q __pycache__ >nul 2>&1
 
 REM Install dependencies
 echo 📦 Installing dependencies...
-pip install -r requirements.txt
-pip install -r build-requirements.txt
+python -m pip install -r requirements.txt
+python -m pip install -r build-requirements.txt
 
 REM Create hooks directory
 if not exist hooks mkdir hooks
@@ -89,7 +89,7 @@ echo datas += collect_data_files^('requests'^)
 
 REM Analyze dependencies
 echo 🔍 Analyzing dependencies...
-pipreqs --force --mode no-pin .
+python -m pipreqs --force --mode no-pin .
 echo Generated requirements:
 type requirements.txt
 
