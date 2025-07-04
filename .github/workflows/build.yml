@@ -323,23 +323,20 @@ jobs:
 
     - name: Create Windows Installer
       if: matrix.os == 'windows-latest'
-      shell: bash
+      shell: powershell
       run: |
         cd build
+        
         # Create NSIS installer script
-        cat > installer.nsi << 'EOF'
+        @"
         !include "MUI2.nsh"
         
         Name "RedditTUI"
         OutFile "reddittui-windows-installer.exe"
-        InstallDir "$PROGRAMFILES\RedditTUI"
+        InstallDir "`$PROGRAMFILES\RedditTUI"
         RequestExecutionLevel admin
         
-        !define MUI_ICON "icon.ico"
-        !define MUI_UNICON "icon.ico"
-        
         !insertmacro MUI_PAGE_WELCOME
-        !insertmacro MUI_PAGE_LICENSE "LICENSE"
         !insertmacro MUI_PAGE_DIRECTORY
         !insertmacro MUI_PAGE_INSTFILES
         !insertmacro MUI_PAGE_FINISH
@@ -352,25 +349,25 @@ jobs:
         !insertmacro MUI_LANGUAGE "English"
         
         Section "RedditTUI" SecMain
-            SetOutPath "$INSTDIR"
+            SetOutPath "`$INSTDIR"
             File "dist\reddittui.exe"
-            CreateShortCut "$DESKTOP\RedditTUI.lnk" "$INSTDIR\reddittui.exe"
-            CreateDirectory "$SMPROGRAMS\RedditTUI"
-            CreateShortCut "$SMPROGRAMS\RedditTUI\RedditTUI.lnk" "$INSTDIR\reddittui.exe"
-            CreateShortCut "$SMPROGRAMS\RedditTUI\Uninstall.lnk" "$INSTDIR\uninstall.exe"
-            WriteUninstaller "$INSTDIR\uninstall.exe"
+            CreateShortCut "`$DESKTOP\RedditTUI.lnk" "`$INSTDIR\reddittui.exe"
+            CreateDirectory "`$SMPROGRAMS\RedditTUI"
+            CreateShortCut "`$SMPROGRAMS\RedditTUI\RedditTUI.lnk" "`$INSTDIR\reddittui.exe"
+            CreateShortCut "`$SMPROGRAMS\RedditTUI\Uninstall.lnk" "`$INSTDIR\uninstall.exe"
+            WriteUninstaller "`$INSTDIR\uninstall.exe"
         SectionEnd
         
         Section "Uninstall"
-            Delete "$INSTDIR\reddittui.exe"
-            Delete "$INSTDIR\uninstall.exe"
-            Delete "$DESKTOP\RedditTUI.lnk"
-            Delete "$SMPROGRAMS\RedditTUI\RedditTUI.lnk"
-            Delete "$SMPROGRAMS\RedditTUI\Uninstall.lnk"
-            RMDir "$SMPROGRAMS\RedditTUI"
-            RMDir "$INSTDIR"
+            Delete "`$INSTDIR\reddittui.exe"
+            Delete "`$INSTDIR\uninstall.exe"
+            Delete "`$DESKTOP\RedditTUI.lnk"
+            Delete "`$SMPROGRAMS\RedditTUI\RedditTUI.lnk"
+            Delete "`$SMPROGRAMS\RedditTUI\Uninstall.lnk"
+            RMDir "`$SMPROGRAMS\RedditTUI"
+            RMDir "`$INSTDIR"
         SectionEnd
-        EOF
+        "@ | Out-File -FilePath "installer.nsi" -Encoding utf8
         
         # Create a dummy LICENSE file if it doesn't exist
         if (!(Test-Path "LICENSE")) {
