@@ -3,7 +3,7 @@ name: Build Standalone Binaries
 on:
   push:
     tags:
-      - 'v*'  # Triggers on version tags like v1.0.0
+      - 'v*'  # Triggers on version tags
   pull_request:
     branches: [ main ]
   workflow_dispatch:  # Allow manual triggery
