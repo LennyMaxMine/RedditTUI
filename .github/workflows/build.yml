@@ -313,16 +313,14 @@ jobs:
 
     - name: Install NSIS (Windows)
       if: matrix.os == 'windows-latest'
+      shell: bash
       run: |
-        # Download and install NSIS
-        Invoke-WebRequest -Uri "https://nsis.sourceforge.io/Download" -OutFile "nsis.html"
-        $nsisDownloadUrl = (Invoke-WebRequest -Uri "https://sourceforge.net/projects/nsis/files/latest/download" -MaximumRedirection 0 -ErrorAction SilentlyContinue).Headers.Location
-        Invoke-WebRequest -Uri $nsisDownloadUrl -OutFile "nsis-installer.exe"
-        Start-Process -FilePath "nsis-installer.exe" -ArgumentList "/S" -Wait
+        # Download and install NSIS using direct URL
+        curl -L -o nsis-installer.exe "https://sourceforge.net/projects/nsis/files/nsis-3.08/nsis-3.08-setup.exe/download"
+        ./nsis-installer.exe /S
         
         # Add NSIS to PATH
-        $env:PATH += ";C:\Program Files (x86)\NSIS"
-        echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        echo "C:\Program Files (x86)\NSIS" >> $GITHUB_PATH
 
     - name: Create Windows Installer
       if: matrix.os == 'windows-latest'
