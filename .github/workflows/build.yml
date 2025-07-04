@@ -313,14 +313,13 @@ jobs:
 
     - name: Install NSIS (Windows)
       if: matrix.os == 'windows-latest'
-      shell: bash
+      shell: powershell
       run: |
-        # Download and install NSIS using direct URL
-        curl -L -o nsis-installer.exe "https://sourceforge.net/projects/nsis/files/nsis-3.08/nsis-3.08-setup.exe/download"
-        ./nsis-installer.exe /S
+        # Install NSIS using Chocolatey (pre-installed on GitHub Actions Windows runners)
+        choco install nsis -y
         
         # Add NSIS to PATH
-        echo "C:\Program Files (x86)\NSIS" >> $GITHUB_PATH
+        echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
     - name: Create Windows Installer
       if: matrix.os == 'windows-latest'
