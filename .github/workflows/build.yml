@@ -129,7 +129,7 @@ jobs:
     - name: Analyze dependencies
       run: |
         cd build
-        pipreqs --force --mode no-pin .
+        python -m pipreqs --force --mode no-pin .
         echo "Generated requirements:"
         cat requirements.txt
 
