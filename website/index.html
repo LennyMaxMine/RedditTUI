@@ -230,7 +230,18 @@
             </div>
             
             <h2>Installation</h2>
-            <p>Get started with RedditTUI in a few simple steps:</p>
+            <p>You can download the latest release of RedditTUI directly for your operating system from the following links:</p>
+
+            <ul class="features-list">
+                <li><a href="https://github.com/LennyMaxMine/RedditTUI/releases/download/v2.4.0/reddittui-macos.dmg" target="_blank">Download for macOS (.dmg)</a></li>
+                <li><a href="https://github.com/LennyMaxMine/RedditTUI/releases/download/v2.4.0/reddittui-windows-installer.exe" target="_blank">Download for Windows (.exe)</a></li>
+                <li><a href="https://github.com/LennyMaxMine/RedditTUI/releases/download/v2.4.0/reddittui-linux.tar.gz" target="_blank">Download for Linux (.tar.gz)</a></li>
+            </ul>
+
+            <p>Or visit the complete <a href="https://github.com/LennyMaxMine/RedditTUI/releases/tag/v2.4.0" target="_blank">Release-Page (v2.4.0)</a> on GitHub.</p>   
+
+            <h3>Optional: Manual Building for Developers (only do this if you know what you are doing)</h3>
+
             <div class="prompt">
                 <span class="prompt-symbol">$</span>
                 <span>git clone https://github.com/LennyMaxMine/RedditTUI</span>
@@ -241,14 +252,28 @@
             </div>
             <div class="prompt">
                 <span class="prompt-symbol">$</span>
-                <span>pip -r install requirements.py</span>
+                <span>py -m venv venv</span>
+            </div>
+
+            <h3>Macos & Linux</h3>
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>source venv/bin/activate</span>
             </div>
             <div class="prompt">
                 <span class="prompt-symbol">$</span>
-                <span>python main.py</span>
+                <span>./build.sh</span>
             </div>
-
-            <h2>Links</h2>
+            <h3>Windows</h3>
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>.\venv\Scripts\activate</span>
+            </div>
+            <div class="prompt">
+                <span class="prompt-symbol">$</span>
+                <span>./build.bat</span>
+            </div>
+            <p> </p>
             <p>
                 <a href="https://github.com/LennyMaxMine/RedditTUI" target="_blank">GitHub Repository</a> |
                 <a href="https://github.com/LennyMaxMine/RedditTUI/issues" target="_blank">Report Issues</a> |
