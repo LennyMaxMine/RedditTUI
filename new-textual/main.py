@@ -55,6 +55,20 @@ class ReportReasonScreen(ModalScreen):
             self.dismiss(event.button.label)
 
 class RedditTUI(App):
+    def __init__(self):
+        Logger().info("RedditTUI app initializing")
+        super().__init__()
+        self.reddit_service = None
+        self.current_feed = "hot"
+        self.current_posts = []
+        self.settings = self.load_settings()
+        self.logger = Logger()
+        Logger().info("Registered bindings: " + str(self.BINDINGS))
+        
+
+
+
+
     CSS = """
     Screen {
         background: $surface;
@@ -978,16 +992,6 @@ class RedditTUI(App):
         Binding("g", "search_users", "Search Users", show=True),
     ]
 
-    def __init__(self):
-        Logger().info("RedditTUI app initializing")
-        super().__init__()
-        self.reddit_service = None
-        self.current_feed = "hot"
-        self.current_posts = []
-        self.settings = self.load_settings()
-        self.logger = Logger()
-        Logger().info("Registered bindings: " + str(self.BINDINGS))
-
     async def on_mount(self) -> None:
         Logger().info("================================ App mounted ==================================")
 
@@ -1907,7 +1911,7 @@ if __name__ == "__main__":
     Logger().info(f"=============================================================== Starting RedditTUI app at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ================================================================")
     app = RedditTUI()
     try:
-        app.run()
+        app.run(size=(120, 40))
     except Exception as e:
         Logger().error("Unhandled exception occurred", exc_info=True)
         Logger().send_crash_report(type(e), e, e.__traceback__)

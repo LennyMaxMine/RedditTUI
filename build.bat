@@ -22,8 +22,42 @@ echo 📦 Installing dependencies...
 python -m pip install -r requirements.txt
 python -m pip install -r build-requirements.txt
 
-REM Create hooks directory
+REM Create hooks directory and Windows manifest
 if not exist hooks mkdir hooks
+
+REM Create Windows UAC manifest file for admin privileges
+echo 🔧 Creating Windows UAC manifest...
+(
+echo ^<?xml version="1.0" encoding="UTF-8" standalone="yes"?^>
+echo ^<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0"^>
+echo   ^<assemblyIdentity
+echo     version="1.0.0.0"
+echo     processorArchitecture="*"
+echo     name="RedditTUI"
+echo     type="win32"
+echo   /^>
+echo   ^<description^>RedditTUI - Terminal User Interface for Reddit^</description^>
+echo   ^<trustInfo xmlns="urn:schemas-microsoft-com:asm.v3"^>
+echo     ^<security^>
+echo       ^<requestedPrivileges^>
+echo         ^<requestedExecutionLevel level="requireAdministrator" uiAccess="false"/^>
+echo       ^</requestedPrivileges^>
+echo     ^</security^>
+echo   ^</trustInfo^>
+echo   ^<compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1"^>
+echo     ^<application^>
+echo       ^<!-- Windows 10 and 11 --^>
+echo       ^<supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/^>
+echo       ^<!-- Windows 8.1 --^>
+echo       ^<supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/^>
+echo       ^<!-- Windows 8 --^>
+echo       ^<supportedOS Id="{4a2f28e3-53b9-4441-ba9c-d69d4a4a6e38}"/^>
+echo       ^<!-- Windows 7 --^>
+echo       ^<supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a2440225f93a}"/^>
+echo     ^</application^>
+echo   ^</compatibility^>
+echo ^</assembly^>
+) > reddittui.exe.manifest
 
 REM Create hook files
 echo 🔧 Creating PyInstaller hooks...
@@ -124,6 +158,11 @@ echo if os.path.exists^('config'^):
 echo     datas += [^('config', 'config'^)]
 echo if os.path.exists^('assets'^):
 echo     datas += [^('assets', 'assets'^)]
+echo.
+echo # Windows manifest for admin privileges
+echo manifest_file = None
+echo if is_windows and os.path.exists^('reddittui.exe.manifest'^):
+echo     manifest_file = 'reddittui.exe.manifest'
 echo.
 echo # Base hidden imports
 echo base_hiddenimports = [
@@ -235,6 +274,9 @@ echo     target_arch=None,
 echo     codesign_identity=None,
 echo     entitlements_file=None,
 echo     icon=None,
+echo     uac_admin=True,
+echo     uac_uiaccess=False,
+echo     manifest=manifest_file,
 echo ^)
 ) > reddittui.spec
 

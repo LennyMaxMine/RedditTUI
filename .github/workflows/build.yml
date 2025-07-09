@@ -67,11 +67,44 @@ jobs:
         python -m pip install -r build-requirements.txt
         python -m pip install pipreqs
 
-    - name: Create PyInstaller hooks
+    - name: Create PyInstaller hooks and Windows manifest
       shell: bash
       run: |
         cd build
         mkdir -p hooks
+        
+        # Create Windows UAC manifest file for admin privileges
+        cat > reddittui.exe.manifest << 'EOF'
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+          <assemblyIdentity
+            version="1.0.0.0"
+            processorArchitecture="*"
+            name="RedditTUI"
+            type="win32"
+          />
+          <description>RedditTUI - Terminal User Interface for Reddit</description>
+          <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+            <security>
+              <requestedPrivileges>
+                <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+              </requestedPrivileges>
+            </security>
+          </trustInfo>
+          <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+            <application>
+              <!-- Windows 10 and 11 -->
+              <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+              <!-- Windows 8.1 -->
+              <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/>
+              <!-- Windows 8 -->
+              <supportedOS Id="{4a2f28e3-53b9-4441-ba9c-d69d4a4a6e38}"/>
+              <!-- Windows 7 -->
+              <supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a2440225f93a}"/>
+            </application>
+          </compatibility>
+        </assembly>
+        EOF
         
         # Create hook-textual.py
         cat > hooks/hook-textual.py << 'EOF'
@@ -176,6 +209,11 @@ jobs:
             datas += [('config', 'config')]
         if os.path.exists('assets'):
             datas += [('assets', 'assets')]
+            
+        # Windows manifest for admin privileges
+        manifest_file = None
+        if is_windows and os.path.exists('reddittui.exe.manifest'):
+            manifest_file = 'reddittui.exe.manifest'
 
         # Base hidden imports
         base_hiddenimports = [
@@ -287,6 +325,9 @@ jobs:
             codesign_identity=None,
             entitlements_file=None,
             icon=None,
+            uac_admin=True,  # Request admin privileges on Windows
+            uac_uiaccess=False,
+            manifest=manifest_file,  # Use Windows manifest for admin privileges
         )
         EOF
 
@@ -353,13 +394,35 @@ jobs:
         
         !insertmacro MUI_LANGUAGE "English"
         
+        Function CreateAdminShortcut
+            # Function to create shortcuts that request admin privileges
+            # Parameters: `$0 = shortcut path, `$1 = target exe path
+            
+            # Create the shortcut
+            CreateShortCut "`$0" "`$1"
+            
+            # Use PowerShell to set the shortcut to run as administrator
+            DetailPrint "Setting shortcut to run as administrator: `$0"
+            nsExec::ExecToLog 'powershell -Command "& {`$WScript = New-Object -ComObject WScript.Shell; `$Shortcut = `$WScript.CreateShortcut(''`$0''); `$Shortcut.Save(); `$bytes = [System.IO.File]::ReadAllBytes(''`$0''); `$bytes[21] = `$bytes[21] -bor 32; [System.IO.File]::WriteAllBytes(''`$0'', `$bytes)}"'
+        FunctionEnd
+        
         Section "RedditTUI" SecMain
             SetOutPath "`$INSTDIR"
             File "dist\reddittui.exe"
-            CreateShortCut "`$DESKTOP\RedditTUI.lnk" "`$INSTDIR\reddittui.exe"
+            
+            # Create desktop shortcut with admin privileges
+            StrCpy `$0 "`$DESKTOP\RedditTUI.lnk"
+            StrCpy `$1 "`$INSTDIR\reddittui.exe"
+            Call CreateAdminShortcut
+            
+            # Create start menu shortcuts
             CreateDirectory "`$SMPROGRAMS\RedditTUI"
-            CreateShortCut "`$SMPROGRAMS\RedditTUI\RedditTUI.lnk" "`$INSTDIR\reddittui.exe"
+            StrCpy `$0 "`$SMPROGRAMS\RedditTUI\RedditTUI.lnk"
+            StrCpy `$1 "`$INSTDIR\reddittui.exe"
+            Call CreateAdminShortcut
+            
             CreateShortCut "`$SMPROGRAMS\RedditTUI\Uninstall.lnk" "`$INSTDIR\uninstall.exe"
+            
             WriteUninstaller "`$INSTDIR\uninstall.exe"
         SectionEnd
         
