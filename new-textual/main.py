@@ -1092,7 +1092,7 @@ class RedditTUI(App):
             
             content = self.query_one("#content")
             content.remove_children()
-            post_list = PostList(posts=posts, id="content")
+            post_list = PostList(posts=posts)
             content.mount(post_list)
             
             self.query_one(Sidebar).update_status("Home Feed")
@@ -1123,7 +1123,7 @@ class RedditTUI(App):
             
             content = self.query_one("#content")
             content.remove_children()
-            post_list = PostList(posts=posts, id="content")
+            post_list = PostList(posts=posts)
             content.mount(post_list)
             
             self.query_one(Sidebar).update_status("New Feed")
@@ -1154,7 +1154,7 @@ class RedditTUI(App):
             
             content = self.query_one("#content")
             content.remove_children()
-            post_list = PostList(posts=posts, id="content")
+            post_list = PostList(posts=posts)
             content.mount(post_list)
             
             self.query_one(Sidebar).update_status("Top Feed")
@@ -1462,7 +1462,7 @@ class RedditTUI(App):
             
             content = self.query_one("#content")
             content.remove_children()
-            post_list = PostList(posts=posts, id="content")
+            post_list = PostList(posts=posts)
             content.mount(post_list)
             
             self.query_one(Sidebar).update_status("Saved Posts")
@@ -1714,7 +1714,7 @@ class RedditTUI(App):
             children = list(content.children)
             if len(children) == 1 and isinstance(children[0], PostViewScreen):
                 content.remove_children()
-                post_list = PostList(posts=self.current_posts, id="content")
+                post_list = PostList(posts=self.current_posts)
                 content.mount(post_list)
                 post_list.focus()
                 Logger().info("Returned to post list")
