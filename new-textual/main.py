@@ -1062,7 +1062,14 @@ class RedditTUI(App):
             Logger().info("User not authenticated, showing account management")
             self.call_later(self.show_account_management_if_not_authenticated)
             return
-        post = self.query_one(PostList).get_selected_post()
+        
+        # Try to get selected post from PostList if it exists
+        try:
+            post = self.query_one(PostList).get_selected_post()
+        except:
+            # No PostList widget found, nothing to select
+            return
+            
         if post:
             Logger().info(f"Selected post: {getattr(post, 'title', str(post))}")
             content = self.query_one("#content")
@@ -1082,9 +1089,14 @@ class RedditTUI(App):
             self.current_feed = "hot"
             posts = self.reddit_service.get_hot_posts()
             self.current_posts = posts
-            self.query_one(PostList).update_posts(posts)
+            
+            content = self.query_one("#content")
+            content.remove_children()
+            post_list = PostList(posts=posts, id="content")
+            content.mount(post_list)
+            
             self.query_one(Sidebar).update_status("Home Feed")
-            self.query_one(PostList).focus()
+            post_list.focus()
         except ConnectionError as e:
             Logger().error(f"Network connection error: {str(e)}", exc_info=True)
             self.notify("Error: No internet connection", severity="error")
@@ -1108,9 +1120,14 @@ class RedditTUI(App):
             self.current_feed = "new"
             posts = self.reddit_service.get_new_posts()
             self.current_posts = posts
-            self.query_one(PostList).update_posts(posts)
+            
+            content = self.query_one("#content")
+            content.remove_children()
+            post_list = PostList(posts=posts, id="content")
+            content.mount(post_list)
+            
             self.query_one(Sidebar).update_status("New Feed")
-            self.query_one(PostList).focus()
+            post_list.focus()
         except ConnectionError as e:
             Logger().error(f"Network connection error: {str(e)}", exc_info=True)
             self.notify("Error: No internet connection", severity="error")
@@ -1134,9 +1151,14 @@ class RedditTUI(App):
             self.current_feed = "top"
             posts = self.reddit_service.get_top_posts()
             self.current_posts = posts
-            self.query_one(PostList).update_posts(posts)
+            
+            content = self.query_one("#content")
+            content.remove_children()
+            post_list = PostList(posts=posts, id="content")
+            content.mount(post_list)
+            
             self.query_one(Sidebar).update_status("Top Feed")
-            self.query_one(PostList).focus()
+            post_list.focus()
         except ConnectionError as e:
             Logger().error(f"Network connection error: {str(e)}", exc_info=True)
             self.notify("Error: No internet connection", severity="error")
@@ -1246,12 +1268,25 @@ class RedditTUI(App):
             if self.current_posts:
                 posts = getattr(self.reddit_service, f"get_{self.current_feed}_posts")(limit=self.settings["posts_per_page"])
                 self.current_posts = posts
-                self.query_one(PostList).update_posts(posts)
+                
+                # Try to update existing PostList if it exists, otherwise skip
+                try:
+                    post_list = self.query_one(PostList)
+                    post_list.update_posts(posts)
+                except:
+                    # PostList doesn't exist, skip updating
+                    pass
 
             # Apply NSFW filter
             if not self.settings["show_nsfw"]:
                 self.current_posts = [post for post in self.current_posts if not getattr(post, "over_18", False)]
-                self.query_one(PostList).update_posts(self.current_posts)
+                # Try to update existing PostList if it exists, otherwise skip
+                try:
+                    post_list = self.query_one(PostList)
+                    post_list.update_posts(self.current_posts)
+                except:
+                    # PostList doesn't exist, skip updating
+                    pass
 
             self.refresh()
             Logger().info("Settings applied successfully")
@@ -1424,9 +1459,14 @@ class RedditTUI(App):
 
             posts = self.reddit_service.get_saved_posts()
             self.current_posts = posts
-            self.query_one(PostList).update_posts(posts)
+            
+            content = self.query_one("#content")
+            content.remove_children()
+            post_list = PostList(posts=posts, id="content")
+            content.mount(post_list)
+            
             self.query_one(Sidebar).update_status("Saved Posts")
-            self.query_one(PostList).focus()
+            post_list.focus()
         except Exception as e:
             Logger().error(f"Error loading saved posts: {str(e)}", exc_info=True)
             self.notify(f"Error loading saved posts: {str(e)}", severity="error")
@@ -1911,7 +1951,11 @@ if __name__ == "__main__":
     Logger().info(f"=============================================================== Starting RedditTUI app at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ================================================================")
     app = RedditTUI()
     try:
-        app.run(size=(120, 40))
+        p = input("Launch RedditTUI in predefined size? (highly recommended) (y/n): ")
+        if p.lower() == "y":
+            app.run(size=(120, 40))
+        else:
+            app.run()
     except Exception as e:
         Logger().error("Unhandled exception occurred", exc_info=True)
         Logger().send_crash_report(type(e), e, e.__traceback__)
