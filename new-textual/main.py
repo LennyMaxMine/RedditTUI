@@ -1063,18 +1063,22 @@ class RedditTUI(App):
             self.call_later(self.show_account_management_if_not_authenticated)
             return
         
-        # Try to get selected post from PostList if it exists
-        try:
-            post = self.query_one(PostList).get_selected_post()
-        except:
-            # No PostList widget found, nothing to select
-            return
-            
-        if post:
-            Logger().info(f"Selected post: {getattr(post, 'title', str(post))}")
-            content = self.query_one("#content")
-            content.remove_children()
-            content.mount(PostViewScreen(post, content, self.current_posts))
+        content = self.query_one("#content")
+        children = list(content.children)
+        
+        if len(children) == 1:
+            if isinstance(children[0], PostList):
+                post = children[0].get_selected_post()
+                if post:
+                    Logger().info(f"Selected post: {getattr(post, 'title', str(post))}")
+                    content.remove_children()
+                    content.mount(PostViewScreen(post, content, self.current_posts))
+                else:
+                    self.notify("No post selected", severity="warning")
+            else:
+                self.notify("Select not available on this screen", severity="information")
+        else:
+            self.notify("No content to select", severity="warning")
 
     def action_home(self) -> None:
         Logger().info("Action: home feed")
