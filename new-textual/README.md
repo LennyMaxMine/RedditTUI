@@ -2,10 +2,9 @@
 
 A modern terminal-based Reddit client built with Python and Textual framework. Browse Reddit with a beautiful, keyboard-driven interface.
 
-![Account Management Page](https://media.discordapp.net/attachments/1187850686273159188/1390444680260620550/image.png?ex=686ce544&is=686b93c4&hm=bcd8b946699cfd28f7c4e2fff54c4b0d2072100f4b40cfb157bcf28012f0b0ae&=&format=webp&quality=lossless)
-![Home Page](https://media.discordapp.net/attachments/1187850686273159188/1386666396728954961/image.png?ex=686cfe37&is=686bacb7&hm=eabf4292db7977d137112f4114d018cfd7be3360854f7a5a9710654e5a553d81&=&format=webp&quality=lossless&width=1580&height=852)
-![Post View Page](https://media.discordapp.net/attachments/1187850686273159188/1386666673507143680/image.png?ex=686cfe79&is=686bacf9&hm=763c08b42b3fc0364715112b3e44fcd576dacee20e12610763be7aeecb9b16d7&=&format=webp&quality=lossless&width=1585&height=852)
-![Credits Page](https://media.discordapp.net/attachments/1187850686273159188/1386666744273305700/image.png?ex=686cfe8a&is=686bad0a&hm=c5791a68aadbf6e6a7186401131be01c6cef2d6fda7d013036a029032120a200&=&format=webp&quality=lossless&width=1583&height=852)
+![Homepage](https://hc-cdn.hel1.your-objectstorage.com/s/v3/d7dd1630a7108eb53df5e3a4180ddc6559f95a63_image.png)
+
+![Shipwrecked Icon](https://hc-cdn.hel1.your-objectstorage.com/s/v3/739361f1d440b17fc9e2f74e49fc185d86cbec14_badge.png)
 
 ## Features
 
